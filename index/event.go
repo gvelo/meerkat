@@ -1,7 +1,11 @@
 package index
 
-import "strings"
-import "github.com/derekparker/trie"
+import (
+	"strings"
+
+	"github.com/RoaringBitmap/roaring"
+	"github.com/derekparker/trie"
+)
 
 // FieldType represent the type of a field.
 type FieldType int
@@ -15,73 +19,54 @@ const (
 	FieldTypeKeyword
 )
 
-type EventID uint32
-
 // Event represent an indexable event.
 type Event struct {
 	Timestamp uint64
 	Fields    map[string]interface{}
 }
 
-func newIndex(name string, fieldsInfo map[string]FieldType) {
-
-}
-
-type Dictionary interface {
-	addTerm(fieldName string, term string, eventID EventID)
-	addTerms(fieldName string, terms []string, eventID EventID)
-	lookupTerm(fieldName string, term string) *PostingList
-	lookupTermPrefix(fieldName string, termPrefix string) *PostingList
-}
-
-type PostingList interface {
-	add(eventID EventID)
-}
-
 type PostingStore interface {
-	Get(id uint) PostingList
-	New() (uint, PostingList)
+	Get(int) *roaring.Bitmap
+	New() (int, *roaring.Bitmap)
 }
 
 type postingInfo struct {
-	numOfRows EventID
-	postingID uint
+	numOfRows uint32
+	postingID int
+	posting   *roaring.Bitmap
 }
 
 type EventStore interface {
-	store(eventID EventID, event *Event)
-	retrieve(eventID EventID) *Event
-	retrieveFields(fieldNames []string, eventID EventID) map[string]interface{}
+	store(eventID uint32, event *Event)
+	retrieve(eventID uint32) *Event
+	retrieveFields(fieldNames []string, eventID uint32) map[string]interface{}
 }
 
 type InMemEventStore struct {
 	eventStore []*Event
 }
 
-func (s InMemEventStore) store(eventID EventID, event *Event) {
+func (s InMemEventStore) store(eventID uint32, event *Event) {
 	s.eventStore = append(s.eventStore, event)
 }
 
-func (s InMemEventStore) retrieve(eventID EventID) *Event {
+func (s InMemEventStore) retrieve(eventID uint32) *Event {
 	return s.eventStore[eventID]
 }
 
-func (s InMemEventStore) retrieveFields(fieldNames []string, eventID EventID) map[string]interface{} {
+func (s InMemEventStore) retrieveFields(fieldNames []string, eventID uint32) map[string]interface{} {
 	//TODO
 	return nil
 }
 
-type Tokenizer interface {
-	tokenize(text string) []string
+func newInMemEventStore() EventStore {
+	return &InMemEventStore{
+		eventStore: make([]*Event, 1024),
+	}
 }
 
-type Index struct {
-	fieldInfo    map[string]FieldType
-	eventID      EventID
-	tokenizer    Tokenizer
-	dict         Dictionary
-	store        EventStore
-	postingStore PostingStore
+type Tokenizer interface {
+	tokenize(text string) []string
 }
 
 type NaiveTokenizer struct{}
@@ -91,31 +76,33 @@ func (tokenizer *NaiveTokenizer) tokenize(text string) []string {
 }
 
 type InMemPostingStore struct {
-	postings []PostingList
+	postings  []*roaring.Bitmap
+	postingID int
 }
 
-func (postingStore InMemPostingStore) New() (uint, *InMemPostingList) {
-
-	newPostingList := &InMemPostingList{
-		list: make([]EventID, 1024),
-	}
-
-	postingStore.postings = append(postingStore.postings, newPostingList)
-
-	return uint(len(postingStore.postings)), newPostingList
-
+func (postingStore InMemPostingStore) New() (int, *roaring.Bitmap) {
+	bitmap := roaring.New()
+	postingStore.postings = append(postingStore.postings, bitmap)
+	postingStore.postingID++
+	return postingStore.postingID, bitmap
 }
 
-func (postingStore InMemPostingStore) get(id uint) PostingList {
+func (postingStore InMemPostingStore) Get(id int) *roaring.Bitmap {
 	return postingStore.postings[id]
 }
 
-type InMemPostingList struct {
-	list []EventID
+func newInMemPostingStore() PostingStore {
+	return &InMemPostingStore{
+		postings:  make([]*roaring.Bitmap, 1024),
+		postingID: -1,
+	}
 }
 
-func (postingList InMemPostingList) add(id EventID) {
-	postingList.list = append(postingList.list, id)
+type Dictionary interface {
+	addTerm(fieldName string, term string, eventID uint32)
+	addTerms(fieldName string, terms []string, eventID uint32)
+	lookupTerm(fieldName string, term string) *roaring.Bitmap
+	lookupTermPrefix(fieldName string, termPrefix string) *roaring.Bitmap
 }
 
 type InMemDict struct {
@@ -125,7 +112,8 @@ type InMemDict struct {
 
 func newDict() *InMemDict {
 	return &InMemDict{
-		tries: make(map[string]*trie.Trie),
+		tries:        make(map[string]*trie.Trie),
+		postingStore: newInMemPostingStore(),
 	}
 }
 
@@ -137,37 +125,64 @@ func (dict *InMemDict) getTrieForField(fieldName string) *trie.Trie {
 	}
 	return fieldTrie
 }
-func (dict *InMemDict) addTerm(fieldName string, term string, eventID EventID) {
-
+func (dict *InMemDict) addTerm(fieldName string, term string, eventID uint32) {
 	fieldTrie := dict.getTrieForField(fieldName)
+	dict.addTermToTrie(fieldTrie, term, eventID)
+}
 
-	node, found := fieldTrie.Find(term)
+func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint32) {
+	node, found := trie.Find(term)
 
 	if found {
 		pinfo := node.Meta().(*postingInfo)
 		pinfo.numOfRows++
-		postingList := dict.postingStore.Get(pinfo.postingID)
-		postingList.add(eventID)
+		pinfo.posting.Add(eventID)
 		return
 	}
 
-	postingID, postingList := dict.postingStore.New()
-	postingList.add(eventID)
+	postingID, bitmap := dict.postingStore.New()
+	bitmap.Add(eventID)
 	pinfo := &postingInfo{
 		numOfRows: 1,
 		postingID: postingID,
+		posting:   bitmap,
 	}
-	fieldTrie.Add(term, pinfo)
+	trie.Add(term, pinfo)
 
 }
 
-func (dict *InMemDict) addTerms(fieldName string, terms []string, eventID EventID) {
-
+func (dict *InMemDict) addTerms(fieldName string, terms []string, eventID uint32) {
+	fieldTrie := dict.getTrieForField(fieldName)
+	for _, term := range terms {
+		dict.addTermToTrie(fieldTrie, term, eventID)
+	}
 }
-func (dict *InMemDict) lookupTerm(fieldName string, term string) *PostingList {
 
+func (dict *InMemDict) lookupTerm(fieldName string, term string) *roaring.Bitmap {
+	return nil
 }
-func (dict *InMemDict) lookupTermPrefix(fieldName string, termPrefix string) *PostingList {
+func (dict *InMemDict) lookupTermPrefix(fieldName string, termPrefix string) *roaring.Bitmap {
+	return nil
+}
+
+type Index struct {
+	fieldInfo    map[string]FieldType
+	eventID      uint32
+	tokenizer    Tokenizer
+	dict         Dictionary
+	store        EventStore
+	postingStore PostingStore
+}
+
+func newIndex(name string, fieldsInfo map[string]FieldType) *Index {
+	return &Index{
+		fieldInfo:    fieldsInfo,
+		eventID:      0,
+		tokenizer:    &NaiveTokenizer{},
+		dict:         newDict(),
+		store:        newInMemEventStore(),
+		postingStore: newInMemPostingStore(),
+	}
 
 }
 
@@ -188,8 +203,3 @@ func (index *Index) addEvent(event *Event) {
 	}
 
 }
-
-//index
-//posting
-//column store
-//dict por campo
