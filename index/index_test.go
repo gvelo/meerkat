@@ -42,7 +42,7 @@ func TestCardinalityKeyword(T *testing.T) {
 	fieldInfo["msg"] = FieldTypeText
 	fieldInfo["source"] = FieldTypeKeyword
 
-	index := newIndex("test", fieldInfo)
+	index := newInMemoryIndex("test", fieldInfo)
 
 	events := createEvents()
 
@@ -73,7 +73,7 @@ func TestCardinalityText(T *testing.T) {
 	fieldInfo["msg"] = FieldTypeText
 	fieldInfo["source"] = FieldTypeKeyword
 
-	index := newIndex("test", fieldInfo)
+	index := newInMemoryIndex("test", fieldInfo)
 
 	events := createEvents()
 
@@ -104,7 +104,7 @@ func TestBitmapOr(T *testing.T) {
 	fieldInfo["msg"] = FieldTypeText
 	fieldInfo["source"] = FieldTypeKeyword
 
-	index := newIndex("test", fieldInfo)
+	index := newInMemoryIndex("test", fieldInfo)
 
 	events := createEvents()
 
