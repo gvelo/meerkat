@@ -158,12 +158,12 @@ func (dict *InMemDict) addTerms(fieldName string, terms []string, eventID uint32
 	}
 }
 
-func (dict *InMemDict) lookupTerm(fieldName string, term string) (*roaring.Bitmap, bool) {
+func (dict *InMemDict) lookupTerm(fieldName string, term string) *roaring.Bitmap {
 	node, found := dict.getTrieForField(fieldName).Find(term)
 	if found {
-		return node.Meta.(postingInfo), true
+		return node.Meta().(*postingInfo).posting
 	}
-	return nil, false
+	return nil
 }
 
 func (dict *InMemDict) lookupTermPrefix(fieldName string, termPrefix string) *roaring.Bitmap {
@@ -207,4 +207,8 @@ func (index *Index) addEvent(event *Event) {
 		}
 	}
 
+}
+
+func (index *Index) lookup(fieldName string, term string) *roaring.Bitmap {
+	return index.dict.lookupTerm(fieldName, term)
 }
