@@ -37,12 +37,14 @@ func createEvents() []*Event {
 
 func TestCardinalityKeyword(T *testing.T) {
 
-	fieldInfo := make(map[string]FieldType)
+	fieldInfo := make([]FieldInfo, 2)
 
-	fieldInfo["msg"] = FieldTypeText
-	fieldInfo["source"] = FieldTypeKeyword
+	fieldInfo[0].fieldType = FieldTypeText
+	fieldInfo[0].fieldName = "msg"
+	fieldInfo[1].fieldType = FieldTypeKeyword
+	fieldInfo[1].fieldName = "source"
 
-	index := newInMemoryIndex("test", fieldInfo)
+	index := newInMemoryIndex(fieldInfo)
 
 	events := createEvents()
 
@@ -50,14 +52,14 @@ func TestCardinalityKeyword(T *testing.T) {
 		index.addEvent(e)
 	}
 
-	bitmap := index.lookup("source", "log")
+	bitmap := index.lookup(fieldInfo[1], "log")
 	cardinallity := bitmap.GetCardinality()
 
 	if cardinallity != 2 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
-	bitmap = index.lookup("source", "other")
+	bitmap = index.lookup(fieldInfo[1], "other")
 	cardinallity = bitmap.GetCardinality()
 
 	if cardinallity != 1 {
@@ -67,13 +69,14 @@ func TestCardinalityKeyword(T *testing.T) {
 }
 
 func TestCardinalityText(T *testing.T) {
+	fieldInfo := make([]FieldInfo, 2)
 
-	fieldInfo := make(map[string]FieldType)
+	fieldInfo[0].fieldType = FieldTypeText
+	fieldInfo[0].fieldName = "msg"
+	fieldInfo[1].fieldType = FieldTypeKeyword
+	fieldInfo[1].fieldName = "source"
 
-	fieldInfo["msg"] = FieldTypeText
-	fieldInfo["source"] = FieldTypeKeyword
-
-	index := newInMemoryIndex("test", fieldInfo)
+	index := newInMemoryIndex(fieldInfo)
 
 	events := createEvents()
 
@@ -81,14 +84,14 @@ func TestCardinalityText(T *testing.T) {
 		index.addEvent(e)
 	}
 
-	bitmap := index.lookup("msg", "test")
+	bitmap := index.lookup(fieldInfo[0], "test")
 	cardinallity := bitmap.GetCardinality()
 
 	if cardinallity != 3 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
-	bitmap = index.lookup("msg", "three")
+	bitmap = index.lookup(fieldInfo[0], "three")
 	cardinallity = bitmap.GetCardinality()
 
 	if cardinallity != 1 {
@@ -99,12 +102,14 @@ func TestCardinalityText(T *testing.T) {
 
 func TestBitmapOr(T *testing.T) {
 
-	fieldInfo := make(map[string]FieldType)
+	fieldInfo := make([]FieldInfo, 2)
 
-	fieldInfo["msg"] = FieldTypeText
-	fieldInfo["source"] = FieldTypeKeyword
+	fieldInfo[0].fieldType = FieldTypeText
+	fieldInfo[0].fieldName = "msg"
+	fieldInfo[1].fieldType = FieldTypeKeyword
+	fieldInfo[1].fieldName = "source"
 
-	index := newInMemoryIndex("test", fieldInfo)
+	index := newInMemoryIndex(fieldInfo)
 
 	events := createEvents()
 
@@ -112,21 +117,21 @@ func TestBitmapOr(T *testing.T) {
 		index.addEvent(e)
 	}
 
-	bitmap1 := index.lookup("msg", "one")
+	bitmap1 := index.lookup(fieldInfo[0], "one")
 	cardinallity := bitmap1.GetCardinality()
 
 	if cardinallity != 1 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
-	bitmap2 := index.lookup("msg", "two")
+	bitmap2 := index.lookup(fieldInfo[0], "two")
 	cardinallity = bitmap2.GetCardinality()
 
 	if cardinallity != 1 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
-	bitmap3 := index.lookup("msg", "three")
+	bitmap3 := index.lookup(fieldInfo[0], "three")
 	cardinallity = bitmap3.GetCardinality()
 
 	if cardinallity != 1 {

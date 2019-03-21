@@ -2,6 +2,7 @@ package index
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"github.com/tinylib/msgp/msgp"
 )
 
 // FieldType represent the type of a field.
@@ -16,6 +17,12 @@ const (
 	FieldTypeKeyword
 )
 
+// Field Info represents the info about a field.
+type FieldInfo struct {
+	fieldName string
+	fieldType FieldType
+}
+
 // Event represent an indexable event. Event is the unit of indexing.
 // An Event is a set of fields, Each Field has a name and a type that
 // represent the kind of data that it holds.
@@ -25,7 +32,7 @@ type Event struct {
 }
 
 // PostingStore implements a storage facility for posting lists
-// a posting list for eatch term is stored in disk and indexed
+// a posting list for each term is stored in disk and indexed
 // by the posting ID.
 type PostingStore interface {
 	Get(int) *roaring.Bitmap
@@ -49,10 +56,11 @@ type Tokenizer interface {
 // A Dictionary represents a map between terms and posting list holding
 // the list of events id for that term.
 type Dictionary interface {
-	addTerm(fieldName string, term string, eventID uint32)
-	addTerms(fieldName string, terms []string, eventID uint32)
-	lookupTerm(fieldName string, term string) *roaring.Bitmap
-	lookupTermPrefix(fieldName string, termPrefix string) *roaring.Bitmap
+	addTerm(fieldInfo FieldInfo, term string, eventID uint32)
+	addNumber(fieldInfo FieldInfo, number msgp.Number, eventID uint32)
+	addTerms(fieldInfo FieldInfo, terms []string, eventID uint32)
+	lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap
+	lookupTermPrefix(fieldInfo FieldInfo, termPrefix string) *roaring.Bitmap
 }
 
 // An Index is the basic engine. Is the event indexing entry point.

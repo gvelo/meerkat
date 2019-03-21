@@ -1,6 +1,9 @@
 package index
 
 import (
+	"fmt"
+	"github.com/deepfabric/bkdtree"
+	"github.com/tinylib/msgp/msgp"
 	"strings"
 
 	"github.com/RoaringBitmap/roaring"
@@ -67,33 +70,50 @@ func newInMemPostingStore() PostingStore {
 	}
 }
 
-// InMemDict implements a naive in memory non persisten Dictionary
+// InMemDict implements a naive in memory non persistent Dictionary
 // using an in-memory prefix trie.
 type InMemDict struct {
-	tries        map[string]*trie.Trie
+	trees        map[string]interface{}
 	postingStore PostingStore
 }
 
 func newDict() *InMemDict {
 	return &InMemDict{
-		tries:        make(map[string]*trie.Trie),
+		trees:        make(map[string]interface{}),
 		postingStore: newInMemPostingStore(),
 	}
 }
 
 // return the trie for the specified Field, if not trie was found
 // create a new one.
-func (dict *InMemDict) getTrieForField(fieldName string) *trie.Trie {
-	fieldTrie := dict.tries[fieldName]
-	if fieldTrie == nil {
-		fieldTrie = trie.New()
-		dict.tries[fieldName] = fieldTrie
+func (dict *InMemDict) getTreeForField(fieldInfo FieldInfo) interface{} {
+
+	fieldTree := dict.trees[fieldInfo.fieldName]
+	if fieldTree == nil {
+		if fieldInfo.fieldType == FieldTypeInt {
+			// TODO: REVISAR!
+			const MaxMBInMem = 100                  // para que no guarde a disco...
+			const DefaultMaxPointsInLeafNode = 1024 // default en solr
+			const IntraCap = 4                      // Ni idea, lo vi en los test de la lib
+			const NumDimensions = 1                 // 1 numero solo
+			const BytesPerDim = 8                   // bytes por dimension, como lo guarda.
+			const Dir = "tmp"                       // directorio donde baja el indice.
+			const Prefix = "bdk"                    // lo vi en los test de la lib
+
+			// que hago si explota, ver como manejarlo.
+			fieldTree, _ = bkdtree.NewBkdTree(MaxMBInMem, DefaultMaxPointsInLeafNode, IntraCap, NumDimensions, BytesPerDim, Dir, Prefix)
+
+		} else {
+			fieldTree = trie.New()
+			dict.trees[fieldInfo.fieldName] = fieldTree
+		}
 	}
-	return fieldTrie
+	return fieldTree
 }
-func (dict *InMemDict) addTerm(fieldName string, term string, eventID uint32) {
-	fieldTrie := dict.getTrieForField(fieldName)
-	dict.addTermToTrie(fieldTrie, term, eventID)
+
+func (dict *InMemDict) addTerm(fieldInfo FieldInfo, term string, eventID uint32) {
+	fieldTrie := dict.getTreeForField(fieldInfo)
+	dict.addTermToTrie(fieldTrie.(*trie.Trie), term, eventID)
 }
 
 func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint32) {
@@ -117,29 +137,58 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 
 }
 
-func (dict *InMemDict) addTerms(fieldName string, terms []string, eventID uint32) {
-	fieldTrie := dict.getTrieForField(fieldName)
+func (dict *InMemDict) addNumber(fieldName FieldInfo, number msgp.Number, eventID uint32) {
+	fieldBkdTree := dict.getTreeForField(fieldName)
+	dict.addNumberToBkdTree(fieldBkdTree.(*bkdtree.BkdTree), number, eventID)
+}
+
+func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number msgp.Number, eventID uint32) {
+	/*
+		numbers := make([]uint64 ,1)
+		append(numbers, number.Int())
+		node, found := bkdTree.Insert(bkdtree.Point{ Vals:  })
+
+		if found {
+			pinfo := node.Meta().(*postingInfo)
+			pinfo.numOfRows++
+			pinfo.posting.Add(eventID)
+			return
+		}
+
+		postingID, bitmap := dict.postingStore.New()
+		bitmap.Add(eventID)
+		pinfo := &postingInfo{
+			numOfRows: 1,
+			postingID: postingID,
+			posting:   bitmap,
+		}
+		trie.Add(term, pinfo)
+	*/
+}
+
+func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uint32) {
+	fieldTrie := dict.getTreeForField(fieldInfo)
 	for _, term := range terms {
-		dict.addTermToTrie(fieldTrie, term, eventID)
+		dict.addTermToTrie(fieldTrie.(*trie.Trie), term, eventID)
 	}
 }
 
-func (dict *InMemDict) lookupTerm(fieldName string, term string) *roaring.Bitmap {
-	node, found := dict.getTrieForField(fieldName).Find(term)
+func (dict *InMemDict) lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap {
+	node, found := dict.getTreeForField(fieldInfo).(*trie.Trie).Find(term)
 	if found {
 		return node.Meta().(*postingInfo).posting
 	}
 	return nil
 }
 
-func (dict *InMemDict) lookupTermPrefix(fieldName string, termPrefix string) *roaring.Bitmap {
+func (dict *InMemDict) lookupTermPrefix(fieldInfo FieldInfo, termPrefix string) *roaring.Bitmap {
 	return nil
 }
 
 // InMemoryIndex implements a in memory Index using in-memory
 // implementations of Dictionary, EventStore and PostingStore.
 type InMemoryIndex struct {
-	fieldInfo    map[string]FieldType
+	fieldInfo    []FieldInfo
 	eventID      uint32
 	tokenizer    Tokenizer
 	dict         Dictionary
@@ -148,7 +197,7 @@ type InMemoryIndex struct {
 }
 
 // Create a new in-memory Index.
-func newInMemoryIndex(name string, fieldsInfo map[string]FieldType) *InMemoryIndex {
+func newInMemoryIndex(fieldsInfo []FieldInfo) *InMemoryIndex {
 	return &InMemoryIndex{
 		fieldInfo:    fieldsInfo,
 		eventID:      0,
@@ -164,13 +213,16 @@ func (index *InMemoryIndex) addEvent(event *Event) {
 
 	index.eventID++
 
-	for fieldName, fieldType := range index.fieldInfo {
-		if fieldValue, ok := event.Fields[fieldName]; ok {
-			if fieldType == FieldTypeText {
+	for _, fieldInfo := range index.fieldInfo {
+		if fieldValue, ok := event.Fields[fieldInfo.fieldName]; ok {
+			switch fieldInfo.fieldType {
+			case FieldTypeKeyword:
+				index.dict.addTerm(fieldInfo, fieldValue.(string), index.eventID)
+			case FieldTypeInt:
+				index.dict.addNumber(fieldInfo, selectNumberType(fieldValue), index.eventID)
+			case FieldTypeText:
 				terms := index.tokenizer.tokenize(fieldValue.(string))
-				index.dict.addTerms(fieldName, terms, index.eventID)
-			} else {
-				index.dict.addTerm(fieldName, fieldValue.(string), index.eventID)
+				index.dict.addTerms(fieldInfo, terms, index.eventID)
 			}
 			index.store.store(index.eventID, event)
 		}
@@ -178,8 +230,34 @@ func (index *InMemoryIndex) addEvent(event *Event) {
 
 }
 
-func (index *InMemoryIndex) lookup(fieldName string, term string) *roaring.Bitmap {
-	return index.dict.lookupTerm(fieldName, term)
+func selectNumberType(number interface{}) msgp.Number {
+	res := msgp.Number{}
+	switch x := number.(type) {
+	case uint8:
+	case uint16:
+	case uint32:
+	case uint64:
+		res.AsUint(x)
+		return res
+	case int8:
+	case int16:
+	case int32:
+	case int64:
+		res.AsInt(x)
+		return res
+	case float32:
+		res.AsFloat32(x)
+		return res
+	case float64:
+		res.AsFloat64(x)
+		return res
+	}
+	panic(fmt.Sprint("Invalid input for a Number field ", number))
+
+}
+
+func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term string) *roaring.Bitmap {
+	return index.dict.lookupTerm(fieldInfo, term)
 }
 
 // posingInfo holds information about the term posting list.
