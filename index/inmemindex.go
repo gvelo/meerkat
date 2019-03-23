@@ -2,7 +2,7 @@ package index
 
 import (
 	"fmt"
-	"github.com/deepfabric/bkdtree"
+	"github.com/sebad78/bkdtree"
 	"github.com/tinylib/msgp/msgp"
 	"strings"
 
@@ -143,18 +143,34 @@ func (dict *InMemDict) addNumber(fieldName FieldInfo, number msgp.Number, eventI
 }
 
 func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number msgp.Number, eventID uint32) {
-	/*
-		numbers := make([]uint64 ,1)
-		append(numbers, number.Int())
-		node, found := bkdTree.Insert(bkdtree.Point{ Vals:  })
 
-		if found {
-			pinfo := node.Meta().(*postingInfo)
-			pinfo.numOfRows++
-			pinfo.posting.Add(eventID)
-			return
+	var lowPoint, highPoint bkdtree.Point
+	var visitor *bkdtree.IntersectCollector
+
+	var num, _ = number.Uint()
+	var numeArray = make([]uint64, 1)
+	numeArray = append(numeArray, num)
+
+	//some intersect
+	lowPoint = bkdtree.Point{Vals: numeArray}
+	highPoint = lowPoint
+	visitor = &bkdtree.IntersectCollector{lowPoint, highPoint, make([]bkdtree.Point, 0)}
+	var err = bkdTree.Intersect(visitor)
+	if err != nil {
+		panic("Error")
+	}
+
+	if len(visitor.Points) <= 0 {
+		// insert into
+		for _, element := range visitor.Points {
+			if element.Equal(lowPoint) {
+				pinfo := element.UserData.(*postingInfo)
+				pinfo.numOfRows++
+				pinfo.posting.Add(eventID)
+				return
+			}
 		}
-
+	} else {
 		postingID, bitmap := dict.postingStore.New()
 		bitmap.Add(eventID)
 		pinfo := &postingInfo{
@@ -162,8 +178,10 @@ func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number msgp.
 			postingID: postingID,
 			posting:   bitmap,
 		}
-		trie.Add(term, pinfo)
-	*/
+
+		lowPoint.UserData = pinfo
+		bkdTree.Insert(lowPoint)
+	}
 }
 
 func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uint32) {
@@ -206,7 +224,6 @@ func newInMemoryIndex(fieldsInfo []FieldInfo) *InMemoryIndex {
 		store:        newInMemEventStore(),
 		postingStore: newInMemPostingStore(),
 	}
-
 }
 
 func (index *InMemoryIndex) addEvent(event *Event) {
