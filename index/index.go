@@ -14,15 +14,14 @@ const (
 	FieldTypeText
 	// FieldTypeKeyword represent a single string field
 	FieldTypeKeyword
+	//
+	FieldTypeTimestamp
 )
 
 // Event represent an indexable event. Event is the unit of indexing.
 // An Event is a set of fields, Each Field has a name and a type that
 // represent the kind of data that it holds.
-type Event struct {
-	Timestamp uint64
-	Fields    map[string]interface{}
-}
+type Event map[string]interface{}
 
 // PostingStore implements a storage facility for posting lists
 // a posting list for eatch term is stored in disk and indexed
@@ -36,8 +35,8 @@ type PostingStore interface {
 // in the Event is store in their own specialized container
 // ie. integers are packed using delta encoding.
 type EventStore interface {
-	store(eventID uint32, event *Event)
-	retrieve(eventID uint32) *Event
+	store(eventID uint32, event Event)
+	retrieve(eventID uint32) Event
 	retrieveFields(fieldNames []string, eventID uint32) map[string]interface{}
 }
 

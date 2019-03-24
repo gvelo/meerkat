@@ -10,14 +10,14 @@ import (
 // InMemEventStore is a naive implementation of an EventStore
 // for testing pourposes. It holds the events list in an slice.
 type InMemEventStore struct {
-	eventStore []*Event
+	eventStore []Event
 }
 
-func (s InMemEventStore) store(eventID uint32, event *Event) {
+func (s InMemEventStore) store(eventID uint32, event Event) {
 	s.eventStore = append(s.eventStore, event)
 }
 
-func (s InMemEventStore) retrieve(eventID uint32) *Event {
+func (s InMemEventStore) retrieve(eventID uint32) Event {
 	return s.eventStore[eventID]
 }
 
@@ -29,7 +29,7 @@ func (s InMemEventStore) retrieveFields(fieldNames []string, eventID uint32) map
 // Create a new in memory EventStore.
 func newInMemEventStore() EventStore {
 	return &InMemEventStore{
-		eventStore: make([]*Event, 1024),
+		eventStore: make([]Event, 1024),
 	}
 }
 
@@ -160,12 +160,12 @@ func newInMemoryIndex(name string, fieldsInfo map[string]FieldType) *InMemoryInd
 
 }
 
-func (index *InMemoryIndex) addEvent(event *Event) {
+func (index *InMemoryIndex) addEvent(event Event) {
 
 	index.eventID++
 
 	for fieldName, fieldType := range index.fieldInfo {
-		if fieldValue, ok := event.Fields[fieldName]; ok {
+		if fieldValue, ok := event[fieldName]; ok {
 			if fieldType == FieldTypeText {
 				terms := index.tokenizer.tokenize(fieldValue.(string))
 				index.dict.addTerms(fieldName, terms, index.eventID)

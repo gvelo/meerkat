@@ -6,33 +6,24 @@ import (
 	"github.com/RoaringBitmap/roaring"
 )
 
-func newEvent() *Event {
-	return &Event{
-		Timestamp: 0,
-		Fields:    make(map[string]interface{}),
-	}
+func newEvent() Event {
+	return make(map[string]interface{})
 }
 
-func createEvents() []*Event {
-	return []*Event{{
-		Timestamp: 0,
-		Fields: map[string]interface{}{
-			"source": "log",
-			"msg":    "test message one",
-		},
-	}, {
-		Timestamp: 0,
-		Fields: map[string]interface{}{
+func createEvents() []Event {
+	return []Event{{
+		"source": "log",
+		"msg":    "test message one",
+	},
+		{
 			"source": "log",
 			"msg":    "test message two",
 		},
-	}, {
-		Timestamp: 0,
-		Fields: map[string]interface{}{
+		{
 			"source": "other",
 			"msg":    "test message three",
 		},
-	}}
+	}
 }
 
 func TestCardinalityKeyword(T *testing.T) {
