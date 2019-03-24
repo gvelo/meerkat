@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/sebad78/bkdtree"
 	"github.com/tinylib/msgp/msgp"
+	"log"
 	"strings"
 
 	"github.com/RoaringBitmap/roaring"
@@ -249,26 +250,38 @@ func (index *InMemoryIndex) addEvent(event *Event) {
 
 func selectNumberType(number interface{}) msgp.Number {
 	res := msgp.Number{}
+	fmt.Printf("%v \n", number)
 	switch x := number.(type) {
 	case uint8:
 	case uint16:
 	case uint32:
 	case uint64:
+		fmt.Printf("AsUint\n")
 		res.AsUint(x)
+		return res
+	case int:
+		log.Printf("AsInt\n")
+		res.AsInt(int64(x))
 		return res
 	case int8:
 	case int16:
 	case int32:
 	case int64:
+		fmt.Printf("AsInt64\n")
 		res.AsInt(x)
 		return res
 	case float32:
+		fmt.Printf("AsFloat32\n")
 		res.AsFloat32(x)
 		return res
 	case float64:
+		fmt.Printf("AsFloat64\n")
 		res.AsFloat64(x)
 		return res
+	default:
+		fmt.Printf("No types\n")
 	}
+	fmt.Printf("ERROR")
 	panic(fmt.Sprint("Invalid input for a Number field ", number))
 
 }

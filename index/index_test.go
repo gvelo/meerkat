@@ -34,18 +34,24 @@ func createEvents() []*Event {
 		Fields: map[string]interface{}{
 			"source": "log",
 			"msg":    "test message one",
+			"num1":   1,
+			"num2":   1.0,
 		},
 	}, {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "log",
 			"msg":    "test message two",
+			"num1":   2,
+			"num2":   2.0,
 		},
 	}, {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "other",
 			"msg":    "test message three",
+			"num1":   3,
+			"num2":   3.0,
 		},
 	}}
 }
@@ -144,14 +150,14 @@ func TestBitmapOr(T *testing.T) {
 }
 
 func TestInsertInFieldTypeInt(T *testing.T) {
+	/*
+		index := newInMemoryIndex(getFieldsInfo())
+		events := createEvents()
 
-	index := newInMemoryIndex(getFieldsInfo())
-	events := createEvents()
-
-	for _, e := range events {
-		index.addEvent(e)
-	}
-
+		for _, e := range events {
+			index.addEvent(e)
+		}
+	*/
 	//TODO: terminar el test.
 
 }
