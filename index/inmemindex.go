@@ -1,8 +1,6 @@
 package index
 
 import (
-	"strings"
-
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
 )
@@ -31,15 +29,6 @@ func newInMemEventStore() EventStore {
 	return &InMemEventStore{
 		eventStore: make([]Event, 1024),
 	}
-}
-
-// NaiveTokenizer tokenize fields spliting their contents around
-// each instance of one or more consecutive white space
-// characters, as defined by unicode.IsSpace, .
-type NaiveTokenizer struct{}
-
-func (tokenizer *NaiveTokenizer) tokenize(text string) []string {
-	return strings.Fields(text)
 }
 
 // InMemPostingStore implement a naive posting store using a slice.
@@ -152,7 +141,7 @@ func newInMemoryIndex(name string, fieldsInfo map[string]FieldType) *InMemoryInd
 	return &InMemoryIndex{
 		fieldInfo:    fieldsInfo,
 		eventID:      0,
-		tokenizer:    &NaiveTokenizer{},
+		tokenizer:    &UnicodeTokenizer{},
 		dict:         newDict(),
 		store:        newInMemEventStore(),
 		postingStore: newInMemPostingStore(),

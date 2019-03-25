@@ -40,11 +40,6 @@ type EventStore interface {
 	retrieveFields(fieldNames []string, eventID uint32) map[string]interface{}
 }
 
-// Tokenizer parse textual fields and provide the stream of tokens.
-type Tokenizer interface {
-	tokenize(text string) []string
-}
-
 // A Dictionary represents a map between terms and posting list holding
 // the list of events id for that term.
 type Dictionary interface {
