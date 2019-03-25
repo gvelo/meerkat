@@ -34,24 +34,32 @@ func createEvents() []*Event {
 		Fields: map[string]interface{}{
 			"source": "log",
 			"msg":    "test message one",
-			"num1":   1,
-			"num2":   1.0,
+			"num1":   uint64(1),
+			"num2":   uint64(1.0),
 		},
 	}, {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "log",
 			"msg":    "test message two",
-			"num1":   2,
-			"num2":   2.0,
+			"num1":   uint64(2),
+			"num2":   uint64(2.0),
 		},
 	}, {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "other",
-			"msg":    "test message three",
-			"num1":   3,
-			"num2":   3.0,
+			"msg":    "test message 2",
+			"num1":   uint64(3),
+			"num2":   uint64(3.0),
+		},
+	}, {
+		Timestamp: 0,
+		Fields: map[string]interface{}{
+			"source": "sother",
+			"msg":    "test message 1",
+			"num1":   uint64(1),
+			"num2":   uint64(1.0),
 		},
 	}}
 }
@@ -76,6 +84,13 @@ func TestCardinalityKeyword(T *testing.T) {
 	}
 
 	bitmap = index.lookup(fieldInfo[1], "other")
+	cardinallity = bitmap.GetCardinality()
+
+	if cardinallity != 1 {
+		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
+	}
+
+	bitmap = index.lookup(fieldInfo[2], uint64(1))
 	cardinallity = bitmap.GetCardinality()
 
 	if cardinallity != 1 {
@@ -150,14 +165,12 @@ func TestBitmapOr(T *testing.T) {
 }
 
 func TestInsertInFieldTypeInt(T *testing.T) {
-	/*
-		index := newInMemoryIndex(getFieldsInfo())
-		events := createEvents()
 
-		for _, e := range events {
-			index.addEvent(e)
-		}
-	*/
-	//TODO: terminar el test.
+	index := newInMemoryIndex(getFieldsInfo())
+	events := createEvents()
+
+	for _, e := range events {
+		index.addEvent(e)
+	}
 
 }

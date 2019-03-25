@@ -2,7 +2,6 @@ package index
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"github.com/tinylib/msgp/msgp"
 )
 
 // FieldType represent the type of a field.
@@ -57,9 +56,10 @@ type Tokenizer interface {
 // the list of events id for that term.
 type Dictionary interface {
 	addTerm(fieldInfo FieldInfo, term string, eventID uint32)
-	addNumber(fieldInfo FieldInfo, number msgp.Number, eventID uint32)
+	addNumber(fieldInfo FieldInfo, number uint64, eventID uint32)
 	addTerms(fieldInfo FieldInfo, terms []string, eventID uint32)
 	lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap
+	lookupNumber(fieldInfo FieldInfo, term uint64) *roaring.Bitmap
 	lookupTermPrefix(fieldInfo FieldInfo, termPrefix string) *roaring.Bitmap
 }
 

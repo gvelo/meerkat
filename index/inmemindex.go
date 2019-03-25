@@ -1,14 +1,10 @@
 package index
 
 import (
-	"fmt"
-	"github.com/sebad78/bkdtree"
-	"github.com/tinylib/msgp/msgp"
-	"log"
-	"strings"
-
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
+	"github.com/sebad78/bkdtree"
+	"strings"
 )
 
 // InMemEventStore is a naive implementation of an EventStore
@@ -93,21 +89,30 @@ func (dict *InMemDict) getTreeForField(fieldInfo FieldInfo) interface{} {
 	if fieldTree == nil {
 		if fieldInfo.fieldType == FieldTypeInt {
 			// TODO: REVISAR!
-			const MaxMBInMem = 100                  // para que no guarde a disco...
-			const DefaultMaxPointsInLeafNode = 1024 // default en solr
-			const IntraCap = 4                      // Ni idea, lo vi en los test de la lib
-			const NumDimensions = 1                 // 1 numero solo
-			const BytesPerDim = 8                   // bytes por dimension, como lo guarda.
-			const Dir = "tmp"                       // directorio donde baja el indice.
-			const Prefix = "bdk"                    // lo vi en los test de la lib
+			/*
+				const MaxMBInMem = 100                  // para que no guarde a disco...
+				const DefaultMaxPointsInLeafNode = 1024 // default en solr
+				const IntraCap = 4                      // Ni idea, lo vi en los test de la lib
+				const NumDimensions = 1                 // 1 numero solo
+				const BytesPerDim = 8                   // bytes por dimension, como lo guarda.
+				const Dir = "tmp"                       // directorio donde baja el indice.
+				const Prefix = "bdk"                    // lo vi en los test de la lib
+			*/
+			t0mCap := 1000
+			leafCap := 50
+			intraCap := 4
+			numDims := 1
+			bytesPerDim := 4
+			dir := "/tmp"
+			prefix := "bkd"
+			fieldTree, _ = bkdtree.NewBkdTree(t0mCap, leafCap, intraCap, numDims, bytesPerDim, dir, prefix)
 
 			// que hago si explota, ver como manejarlo.
-			fieldTree, _ = bkdtree.NewBkdTree(MaxMBInMem, DefaultMaxPointsInLeafNode, IntraCap, NumDimensions, BytesPerDim, Dir, Prefix)
-
+			//fieldTree, _ = bkdtree.NewBkdTree(MaxMBInMem, DefaultMaxPointsInLeafNode, IntraCap, NumDimensions, BytesPerDim, Dir, Prefix)
 		} else {
 			fieldTree = trie.New()
-			dict.trees[fieldInfo.fieldName] = fieldTree
 		}
+		dict.trees[fieldInfo.fieldName] = fieldTree
 	}
 	return fieldTree
 }
@@ -138,51 +143,61 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 
 }
 
-func (dict *InMemDict) addNumber(fieldName FieldInfo, number msgp.Number, eventID uint32) {
+func (dict *InMemDict) addNumber(fieldName FieldInfo, number uint64, eventID uint32) {
 	fieldBkdTree := dict.getTreeForField(fieldName)
 	dict.addNumberToBkdTree(fieldBkdTree.(*bkdtree.BkdTree), number, eventID)
 }
 
-func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number msgp.Number, eventID uint32) {
+func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number uint64, eventID uint32) {
+
+	node, found := findInBkdtree(bkdTree, number)
+	if found {
+		pinfo := node.UserData.(*postingInfo)
+		pinfo.numOfRows++
+		pinfo.posting.Add(eventID)
+		return
+	}
+
+	postingID, bitmap := dict.postingStore.New()
+	bitmap.Add(eventID)
+	pinfo := &postingInfo{
+		numOfRows: 1,
+		postingID: postingID,
+		posting:   bitmap,
+	}
+	list := make([]uint64, 1)
+	list = append(list, number)
+	node = bkdtree.Point{UserData: pinfo, Vals: list}
+	bkdTree.Insert(node)
+
+}
+
+func findInBkdtree(bkdTree *bkdtree.BkdTree, number uint64) (node bkdtree.Point, found bool) {
 
 	var lowPoint, highPoint bkdtree.Point
 	var visitor *bkdtree.IntersectCollector
 
-	var num, _ = number.Uint()
-	var numeArray = make([]uint64, 1)
-	numeArray = append(numeArray, num)
+	var numArray = make([]uint64, 0)
+	numArray = append(numArray, number)
 
 	//some intersect
-	lowPoint = bkdtree.Point{Vals: numeArray}
+	lowPoint = bkdtree.Point{Vals: numArray}
 	highPoint = lowPoint
 	visitor = &bkdtree.IntersectCollector{lowPoint, highPoint, make([]bkdtree.Point, 0)}
 	var err = bkdTree.Intersect(visitor)
 	if err != nil {
-		panic("Error")
+		return bkdtree.Point{}, false
 	}
 
-	if len(visitor.Points) <= 0 {
+	if len(visitor.Points) > 0 {
 		// insert into
 		for _, element := range visitor.Points {
 			if element.Equal(lowPoint) {
-				pinfo := element.UserData.(*postingInfo)
-				pinfo.numOfRows++
-				pinfo.posting.Add(eventID)
-				return
+				return element, true
 			}
 		}
-	} else {
-		postingID, bitmap := dict.postingStore.New()
-		bitmap.Add(eventID)
-		pinfo := &postingInfo{
-			numOfRows: 1,
-			postingID: postingID,
-			posting:   bitmap,
-		}
-
-		lowPoint.UserData = pinfo
-		bkdTree.Insert(lowPoint)
 	}
+	return bkdtree.Point{}, false
 }
 
 func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uint32) {
@@ -190,6 +205,15 @@ func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uin
 	for _, term := range terms {
 		dict.addTermToTrie(fieldTrie.(*trie.Trie), term, eventID)
 	}
+}
+
+func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring.Bitmap {
+	bkd := dict.getTreeForField(fieldInfo).(*bkdtree.BkdTree)
+	node, found := findInBkdtree(bkd, number)
+	if found {
+		return node.UserData.(*postingInfo).posting
+	}
+	return nil
 }
 
 func (dict *InMemDict) lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap {
@@ -237,7 +261,7 @@ func (index *InMemoryIndex) addEvent(event *Event) {
 			case FieldTypeKeyword:
 				index.dict.addTerm(fieldInfo, fieldValue.(string), index.eventID)
 			case FieldTypeInt:
-				index.dict.addNumber(fieldInfo, selectNumberType(fieldValue), index.eventID)
+				index.dict.addNumber(fieldInfo, fieldValue.(uint64), index.eventID)
 			case FieldTypeText:
 				terms := index.tokenizer.tokenize(fieldValue.(string))
 				index.dict.addTerms(fieldInfo, terms, index.eventID)
@@ -248,46 +272,13 @@ func (index *InMemoryIndex) addEvent(event *Event) {
 
 }
 
-func selectNumberType(number interface{}) msgp.Number {
-	res := msgp.Number{}
-	fmt.Printf("%v \n", number)
-	switch x := number.(type) {
-	case uint8:
-	case uint16:
-	case uint32:
-	case uint64:
-		fmt.Printf("AsUint\n")
-		res.AsUint(x)
-		return res
-	case int:
-		log.Printf("AsInt\n")
-		res.AsInt(int64(x))
-		return res
-	case int8:
-	case int16:
-	case int32:
-	case int64:
-		fmt.Printf("AsInt64\n")
-		res.AsInt(x)
-		return res
-	case float32:
-		fmt.Printf("AsFloat32\n")
-		res.AsFloat32(x)
-		return res
-	case float64:
-		fmt.Printf("AsFloat64\n")
-		res.AsFloat64(x)
-		return res
-	default:
-		fmt.Printf("No types\n")
+func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roaring.Bitmap {
+	if fieldInfo.fieldType == FieldTypeInt {
+		return index.dict.lookupNumber(fieldInfo, uint64(term.(uint64)))
+	} else {
+		return index.dict.lookupTerm(fieldInfo, term.(string))
 	}
-	fmt.Printf("ERROR")
-	panic(fmt.Sprint("Invalid input for a Number field ", number))
-
-}
-
-func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term string) *roaring.Bitmap {
-	return index.dict.lookupTerm(fieldInfo, term)
+	return nil
 }
 
 // posingInfo holds information about the term posting list.
