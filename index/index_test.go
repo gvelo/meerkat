@@ -21,40 +21,31 @@ func getFieldsInfo() []FieldInfo {
 	return fieldInfo
 }
 
-func createEvents() []*Event {
-	return []*Event{{
-		Timestamp: 0,
-		Fields: map[string]interface{}{
-			"source": "log",
-			"msg":    "test message one",
-			"num1":   uint64(1),
-			"num2":   uint64(1.0),
-		},
-	}, {
-		Timestamp: 0,
-		Fields: map[string]interface{}{
+func createEvents() []Event {
+	return []Event{{
+		"source": "log",
+		"msg":    "test message one",
+		"num1":   uint64(1),
+		"num2":   uint64(1.0),
+	},
+		{
+
 			"source": "log",
 			"msg":    "test message two",
 			"num1":   uint64(2),
 			"num2":   uint64(2.0),
 		},
-	}, {
-		Timestamp: 0,
-		Fields: map[string]interface{}{
+		{
 			"source": "other",
 			"msg":    "test message three",
 			"num1":   uint64(3),
 			"num2":   uint64(3.0),
-		},
-	}, {
-		Timestamp: 0,
-		Fields: map[string]interface{}{
+		}, {
 			"source": "sother",
 			"msg":    "test message four",
 			"num1":   uint64(1),
 			"num2":   uint64(1.0),
-		},
-	}}
+		}}
 }
 
 func TestCardinalityKeyword(T *testing.T) {

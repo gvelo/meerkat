@@ -1,10 +1,9 @@
 package index
 
 import (
+	"bitbucket.org/sebad/skiplist/list"
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
-	"github.com/sebad78/skip/list"
-	"strings"
 	"unsafe"
 )
 
@@ -198,7 +197,7 @@ func (index *InMemoryIndex) addEvent(event Event) {
 	index.eventID++
 
 	for _, fieldInfo := range index.fieldInfo {
-		if fieldValue, ok := event.Fields[fieldInfo.fieldName]; ok {
+		if fieldValue, ok := event[fieldInfo.fieldName]; ok {
 			switch fieldInfo.fieldType {
 			case FieldTypeKeyword:
 				index.dict.addTerm(fieldInfo, fieldValue.(string), index.eventID)

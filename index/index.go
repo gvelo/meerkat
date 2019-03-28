@@ -30,7 +30,7 @@ type FieldInfo struct {
 type Event map[string]interface{}
 
 // PostingStore implements a storage facility for posting lists
-// a posting list for each term is stored in disk and indexed
+// a posting list for eatch term is stored in disk and indexed
 // by the posting ID.
 type PostingStore interface {
 	Get(int) *roaring.Bitmap
