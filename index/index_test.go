@@ -6,13 +6,6 @@ import (
 	"github.com/RoaringBitmap/roaring"
 )
 
-func newEvent() *Event {
-	return &Event{
-		Timestamp: 0,
-		Fields:    make(map[string]interface{}),
-	}
-}
-
 func getFieldsInfo() []FieldInfo {
 	fieldInfo := make([]FieldInfo, 4)
 
@@ -49,7 +42,7 @@ func createEvents() []*Event {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "other",
-			"msg":    "test message 2",
+			"msg":    "test message three",
 			"num1":   uint64(3),
 			"num2":   uint64(3.0),
 		},
@@ -57,7 +50,7 @@ func createEvents() []*Event {
 		Timestamp: 0,
 		Fields: map[string]interface{}{
 			"source": "sother",
-			"msg":    "test message 1",
+			"msg":    "test message four",
 			"num1":   uint64(1),
 			"num2":   uint64(1.0),
 		},
@@ -93,7 +86,7 @@ func TestCardinalityKeyword(T *testing.T) {
 	bitmap = index.lookup(fieldInfo[2], uint64(1))
 	cardinallity = bitmap.GetCardinality()
 
-	if cardinallity != 1 {
+	if cardinallity != 2 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
@@ -111,7 +104,7 @@ func TestCardinalityText(T *testing.T) {
 	bitmap := index.lookup(getFieldsInfo()[0], "test")
 	cardinallity := bitmap.GetCardinality()
 
-	if cardinallity != 3 {
+	if cardinallity != 4 {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
@@ -154,23 +147,18 @@ func TestBitmapOr(T *testing.T) {
 		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
 	}
 
-	res := roaring.FastOr(bitmap1, bitmap2, bitmap3)
+	bitmap4 := index.lookup(getFieldsInfo()[2], uint64(1))
+	cardinallity = bitmap4.GetCardinality()
 
-	cardinallity = res.GetCardinality()
-
-	if cardinallity != 3 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
+	if cardinallity != 2 {
+		T.Errorf("wrong cardinallity expect %v got %v", 2, cardinallity)
 	}
 
-}
+	res := roaring.FastOr(bitmap1, bitmap2, bitmap3, bitmap4)
+	cardinallity = res.GetCardinality()
 
-func TestInsertInFieldTypeInt(T *testing.T) {
-
-	index := newInMemoryIndex(getFieldsInfo())
-	events := createEvents()
-
-	for _, e := range events {
-		index.addEvent(e)
+	if cardinallity != 4 {
+		T.Errorf("wrong cardinallity expect %v got %v", 4, cardinallity)
 	}
 
 }

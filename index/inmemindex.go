@@ -3,8 +3,9 @@ package index
 import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
-	"github.com/sebad78/bkdtree"
+	"github.com/sebad78/skip/list"
 	"strings"
+	"unsafe"
 )
 
 // InMemEventStore is a naive implementation of an EventStore
@@ -88,27 +89,7 @@ func (dict *InMemDict) getTreeForField(fieldInfo FieldInfo) interface{} {
 	fieldTree := dict.trees[fieldInfo.fieldName]
 	if fieldTree == nil {
 		if fieldInfo.fieldType == FieldTypeInt {
-			// TODO: REVISAR!
-			/*
-				const MaxMBInMem = 100                  // para que no guarde a disco...
-				const DefaultMaxPointsInLeafNode = 1024 // default en solr
-				const IntraCap = 4                      // Ni idea, lo vi en los test de la lib
-				const NumDimensions = 1                 // 1 numero solo
-				const BytesPerDim = 8                   // bytes por dimension, como lo guarda.
-				const Dir = "tmp"                       // directorio donde baja el indice.
-				const Prefix = "bdk"                    // lo vi en los test de la lib
-			*/
-			t0mCap := 1000
-			leafCap := 50
-			intraCap := 4
-			numDims := 1
-			bytesPerDim := 4
-			dir := "/tmp"
-			prefix := "bkd"
-			fieldTree, _ = bkdtree.NewBkdTree(t0mCap, leafCap, intraCap, numDims, bytesPerDim, dir, prefix)
-
-			// que hago si explota, ver como manejarlo.
-			//fieldTree, _ = bkdtree.NewBkdTree(MaxMBInMem, DefaultMaxPointsInLeafNode, IntraCap, NumDimensions, BytesPerDim, Dir, Prefix)
+			fieldTree = list.New(.5, 16)
 		} else {
 			fieldTree = trie.New()
 		}
@@ -145,14 +126,14 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 
 func (dict *InMemDict) addNumber(fieldName FieldInfo, number uint64, eventID uint32) {
 	fieldBkdTree := dict.getTreeForField(fieldName)
-	dict.addNumberToBkdTree(fieldBkdTree.(*bkdtree.BkdTree), number, eventID)
+	dict.addNumberToBkdTree(fieldBkdTree.(*list.SkipList), number, eventID)
 }
 
-func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number uint64, eventID uint32) {
+func (dict *InMemDict) addNumberToBkdTree(skipList *list.SkipList, number uint64, eventID uint32) {
 
-	node, found := findInBkdtree(bkdTree, number)
+	node, found := skipList.Search(number)
 	if found {
-		pinfo := node.UserData.(*postingInfo)
+		pinfo := (*postingInfo)(node.UserData)
 		pinfo.numOfRows++
 		pinfo.posting.Add(eventID)
 		return
@@ -165,39 +146,9 @@ func (dict *InMemDict) addNumberToBkdTree(bkdTree *bkdtree.BkdTree, number uint6
 		postingID: postingID,
 		posting:   bitmap,
 	}
-	list := make([]uint64, 1)
-	list = append(list, number)
-	node = bkdtree.Point{UserData: pinfo, Vals: list}
-	bkdTree.Insert(node)
 
-}
+	skipList.InsertOrUpdate(number, unsafe.Pointer(pinfo))
 
-func findInBkdtree(bkdTree *bkdtree.BkdTree, number uint64) (node bkdtree.Point, found bool) {
-
-	var lowPoint, highPoint bkdtree.Point
-	var visitor *bkdtree.IntersectCollector
-
-	var numArray = make([]uint64, 0)
-	numArray = append(numArray, number)
-
-	//some intersect
-	lowPoint = bkdtree.Point{Vals: numArray}
-	highPoint = lowPoint
-	visitor = &bkdtree.IntersectCollector{lowPoint, highPoint, make([]bkdtree.Point, 0)}
-	var err = bkdTree.Intersect(visitor)
-	if err != nil {
-		return bkdtree.Point{}, false
-	}
-
-	if len(visitor.Points) > 0 {
-		// insert into
-		for _, element := range visitor.Points {
-			if element.Equal(lowPoint) {
-				return element, true
-			}
-		}
-	}
-	return bkdtree.Point{}, false
 }
 
 func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uint32) {
@@ -208,10 +159,10 @@ func (dict *InMemDict) addTerms(fieldInfo FieldInfo, terms []string, eventID uin
 }
 
 func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring.Bitmap {
-	bkd := dict.getTreeForField(fieldInfo).(*bkdtree.BkdTree)
-	node, found := findInBkdtree(bkd, number)
+	skipList := dict.getTreeForField(fieldInfo).(*list.SkipList)
+	node, found := skipList.Search(number)
 	if found {
-		return node.UserData.(*postingInfo).posting
+		return (*postingInfo)(node.UserData).posting
 	}
 	return nil
 }
