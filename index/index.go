@@ -62,5 +62,5 @@ type Dictionary interface {
 // event store providing a unified api to queries executors.
 type Index interface {
 	addEvent(event *Event)
-	lookup(fieldName string, term string) *roaring.Bitmap
+	lookup(fieldName string, term interface{}) *roaring.Bitmap
 }
