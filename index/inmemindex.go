@@ -1,10 +1,11 @@
 package index
 
 import (
+	"unsafe"
+
 	"bitbucket.org/sebad/skiplist/list"
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
-	"unsafe"
 )
 
 // InMemEventStore is a naive implementation of an EventStore
@@ -233,6 +234,8 @@ type postingInfo struct {
 	// not used on in-memeroy implementation given that
 	// we use a pointer to a in-memory posting list
 	postingID int
+
+	offset int
 
 	// the term's in-memory posting list.
 	posting *roaring.Bitmap
