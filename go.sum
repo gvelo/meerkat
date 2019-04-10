@@ -1,5 +1,3 @@
-bitbucket.org/sebad/skiplist v1.0.0 h1:nwLolZJCX+KRxyQUPaGhHYEOiDweyVXutxbL1GQWo5w=
-bitbucket.org/sebad/skiplist v1.0.0/go.mod h1:kSYCw/DgkxCjpj98DE7Bhb5EKQrbnyi/njbpcf5JoZc=
 github.com/RoaringBitmap/roaring v0.4.17 h1:oCYFIFEMSQZrLHpywH7919esI1VSrQZ0pJXkZPGIJ78=
 github.com/RoaringBitmap/roaring v0.4.17/go.mod h1:D3qVegWTmfCaX4Bl5CrBE9hfrSrrXIr8KVNvRsDi1NI=
 github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f h1:kqbi9lqXLLs+zfWlgo1PIiRQ86n33K1JKotjj4rSYOg=
@@ -37,7 +35,6 @@ github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac/go.mod h1
 github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff h1:86HlEv0yBCry9syNuylzqznKXDK11p6D0DT596yNMys=
 github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff/go.mod h1:KSQcGKpxUMHk3nbYzs/tIBAM2iDooCn0BmttHOJEbLs=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=

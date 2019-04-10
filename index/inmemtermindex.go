@@ -3,6 +3,8 @@ package index
 import (
 	"fmt"
 	"strings"
+
+	"github.com/RoaringBitmap/roaring"
 )
 
 type node struct {
@@ -35,37 +37,26 @@ func (index *inMemTermIndex) addTerm(term string, eventID uint32) {
 
 	current := index.root
 
-	//fmt..Printf("agregando string: %q\n", s)
-
 	for i := 0; i < len(term); i++ {
 
-		fmt.Printf("iterando charactor %v %q de %q \n", i, string(term[i]), term)
 		if child, found := current.children[term[i]]; found {
-			//fmt..Printf("navegando a child %q\n", s[i])
 			current = child
 			continue
 		}
 
-		//fmt..Printf("buscando en contenido\n")
 		for _, record := range current.bucket {
-			fmt.Printf("record=%v term=%q\n", record, term[i])
 			if record.value == term[i:] {
 				// key exist, return
-				//fmt..Printf("encontrado en contenido , retornando\n")
 				record.posting.add(eventID)
 				return
 			}
 		}
 
-		//fmt..Printf("content lenght %v\n", len(current.content))
 		if len(current.bucket) == index.bucketSize {
-			//fmt..Printf("BURST !!!!\n")
-			//fmt..Printf("contenido %v\n", current.content)
 			// burst it
 			n := index.newNode()
 			newBucket := current.bucket[:0]
 			for _, c := range current.bucket {
-				//fmt..Printf("c= %q", c)
 
 				if c.value[0] == term[i] {
 					suffix := c.value[1:]
@@ -88,7 +79,6 @@ func (index *inMemTermIndex) addTerm(term string, eventID uint32) {
 			current = n
 			continue
 		}
-		//fmt..Printf("agregando a contenido  %v\n", current.content)
 		newRecord := &record{
 			value:   term[i:],
 			posting: newPostingList(eventID),
@@ -107,24 +97,55 @@ func (index *inMemTermIndex) addTerm(term string, eventID uint32) {
 	current.posting.bitmap.Add(eventID)
 }
 
-func (index *inMemTermIndex) printTrie() {
-	index.printNode(index.root, 0)
+func (index *inMemTermIndex) dumpTrie() {
+	index.dumpNode("ROOT", index.root, 0)
 }
 
-func (index *inMemTermIndex) printNode(node *node, level int) {
+func (index *inMemTermIndex) dumpNode(value string, node *node, level int) {
 
-	leveStr := strings.Repeat("|", level)
-	fmt.Printf("%v====content===\n", leveStr)
-	for _, c := range node.bucket {
-		fmt.Printf("%v%v %v\n", leveStr, c.value, c.posting.numOfEvents)
-	}
-	fmt.Printf("%v====childs===\n", leveStr)
-	for b, n := range node.children {
-		fmt.Printf("%v%v\n", leveStr, string(b))
-		index.printNode(n, level+1)
+	lPad := strings.Repeat(" ", level)
+	fmt.Printf("%v[node]\n", lPad)
+	fmt.Printf("%v %v \n", lPad, value)
+
+	if len(node.bucket) > 0 {
+		fmt.Printf("%v [bucket]\n", lPad)
+		for _, r := range node.bucket {
+			fmt.Printf("%v  %v\n", lPad, r.value)
+		}
 	}
 
-	fmt.Printf("%v=============\n", leveStr)
+	for c, n := range node.children {
+		index.dumpNode(string(c), n, level+1)
+	}
+
+}
+
+func (index *inMemTermIndex) lookup(term string) *roaring.Bitmap {
+
+	current := index.root
+
+	for i := 0; i < len(term); i++ {
+
+		if child, found := current.children[term[i]]; found {
+			current = child
+			continue
+		}
+
+		for _, record := range current.bucket {
+			if record.value == term[i:] {
+				return record.posting.bitmap
+			}
+		}
+
+		return nil
+	}
+
+	if current.posting != nil {
+		return current.posting.bitmap
+	}
+
+	return nil
+
 }
 
 func newInMemTermIndex() *inMemTermIndex {

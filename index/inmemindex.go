@@ -1,9 +1,8 @@
 package index
 
 import (
-	"unsafe"
+	"eventdb/list"
 
-	"bitbucket.org/sebad/skiplist/list"
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
 )
@@ -98,17 +97,15 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 	node, found := trie.Find(term)
 
 	if found {
-		pinfo := node.Meta().(*postingInfo)
-		pinfo.postingSize++
+		pinfo := node.Meta().(*postingList)
 		pinfo.bitmap.Add(eventID)
 		return
 	}
 
-	postingID, bitmap := dict.postingStore.New()
+	_, bitmap := dict.postingStore.New()
 	bitmap.Add(eventID)
-	pinfo := &postingInfo{
-		numOfEvents: 1,
-		posting:     bitmap,
+	pinfo := &postingList{
+		bitmap: bitmap,
 	}
 	trie.Add(term, pinfo)
 
@@ -123,21 +120,19 @@ func (dict *InMemDict) addNumberToBkdTree(skipList *list.SkipList, number uint64
 
 	node, found := skipList.Search(number)
 	if found {
-		pinfo := (*postingInfo)(node.UserData)
-		pinfo.numOfRows++
-		pinfo.posting.Add(eventID)
+		pinfo := (*postingList)(node.UserData)
+		pinfo.bitmap.Add(eventID)
 		return
 	}
 
-	postingID, bitmap := dict.postingStore.New()
-	bitmap.Add(eventID)
-	pinfo := &postingInfo{
-		numOfRows: 1,
-		postingID: postingID,
-		posting:   bitmap,
-	}
+	/*
+		_, bitmap := dict.postingStore.New()
+		bitmap.Add(eventID)
+		pinfo := &postingList{
+			bitmap: bitmap,
+		}*/
 
-	skipList.InsertOrUpdate(number, unsafe.Pointer(pinfo))
+	//skipList.InsertOrUpdate(number, nil,unsafe.Pointer(pinfo))
 
 }
 
@@ -152,7 +147,7 @@ func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring
 	skipList := dict.getTreeForField(fieldInfo).(*list.SkipList)
 	node, found := skipList.Search(number)
 	if found {
-		return (*postingInfo)(node.UserData).posting
+		return (*postingList)(node.UserData).bitmap
 	}
 	return nil
 }
@@ -160,7 +155,7 @@ func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring
 func (dict *InMemDict) lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap {
 	node, found := dict.getTreeForField(fieldInfo).(*trie.Trie).Find(term)
 	if found {
-		return node.Meta().(*postingInfo).posting
+		return node.Meta().(*postingList).bitmap
 	}
 	return nil
 }
@@ -224,8 +219,6 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 
 // postingList holds  the term posting list.
 type postingList struct {
-	// the posting list size
-	size uint32
 
 	// offset on disk
 	offset int
@@ -235,9 +228,8 @@ type postingList struct {
 }
 
 func newPostingList(eventID uint32) *postingList {
-	p := &postingInfo{
-		numOfEvents: 1,
-		bitmap:      roaring.New(),
+	p := &postingList{
+		bitmap: roaring.New(),
 	}
 	p.bitmap.Add(eventID)
 	return p
@@ -245,5 +237,4 @@ func newPostingList(eventID uint32) *postingList {
 
 func (posting *postingList) add(eventID uint32) {
 	posting.bitmap.Add(eventID)
-	posting.size++
 }
