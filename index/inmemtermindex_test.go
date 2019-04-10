@@ -11,7 +11,10 @@ func Test_inMemTermIndex_addTerm(t *testing.T) {
 
 	idx := newInMemTermIndex()
 
-	for i := 0; i < 65; i++ {
+	for i := 0; i < 650; i++ {
+		idx.addTerm(fmt.Sprintf("%v%v", "A", i), uint32(i))
+	}
+	for i := 0; i < 650; i++ {
 		idx.addTerm(fmt.Sprintf("%v%v", "A", i), uint32(i))
 	}
 

@@ -99,17 +99,16 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 
 	if found {
 		pinfo := node.Meta().(*postingInfo)
-		pinfo.numOfRows++
-		pinfo.posting.Add(eventID)
+		pinfo.postingSize++
+		pinfo.bitmap.Add(eventID)
 		return
 	}
 
 	postingID, bitmap := dict.postingStore.New()
 	bitmap.Add(eventID)
 	pinfo := &postingInfo{
-		numOfRows: 1,
-		postingID: postingID,
-		posting:   bitmap,
+		numOfEvents: 1,
+		posting:     bitmap,
 	}
 	trie.Add(term, pinfo)
 
@@ -223,20 +222,28 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 	return nil
 }
 
-// posingInfo holds information about the term posting list.
-type postingInfo struct {
-	// the cardinality of the term. not very usefull
-	// in an in-memory implementation. In on-disk
-	// implementation should save a seek.
-	numOfRows uint32
+// postingList holds  the term posting list.
+type postingList struct {
+	// the posting list size
+	size uint32
 
-	// Used as postig list index in on-disk implementation.
-	// not used on in-memeroy implementation given that
-	// we use a pointer to a in-memory posting list
-	postingID int
-
+	// offset on disk
 	offset int
 
-	// the term's in-memory posting list.
-	posting *roaring.Bitmap
+	// the bitmap backing the list
+	bitmap *roaring.Bitmap
+}
+
+func newPostingList(eventID uint32) *postingList {
+	p := &postingInfo{
+		numOfEvents: 1,
+		bitmap:      roaring.New(),
+	}
+	p.bitmap.Add(eventID)
+	return p
+}
+
+func (posting *postingList) add(eventID uint32) {
+	posting.bitmap.Add(eventID)
+	posting.size++
 }
