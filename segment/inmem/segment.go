@@ -6,7 +6,7 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/derekparker/trie"
 )
-
+/* 
 // InMemEventStore is a naive implementation of an EventStore
 // for testing pourposes. It holds the events list in an slice.
 type InMemEventStore struct {
@@ -125,14 +125,14 @@ func (dict *InMemDict) addNumberToBkdTree(skipList *list.SkipList, number uint64
 		return
 	}
 
-	/*
+	
 		_, bitmap := dict.postingStore.New()
 		bitmap.Add(eventID)
 		pinfo := &postingList{
 			bitmap: bitmap,
-		}*/
+		}
 
-	//skipList.InsertOrUpdate(number, nil,unsafe.Pointer(pinfo))
+	skipList.InsertOrUpdate(number, nil,unsafe.Pointer(pinfo))
 
 }
 
@@ -215,7 +215,7 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 		return index.dict.lookupTerm(fieldInfo, term.(string))
 	}
 	return nil
-}
+} */
 
 // postingList holds  the term posting list.
 type PostingList struct {
@@ -227,14 +227,14 @@ type PostingList struct {
 	bitmap *roaring.Bitmap
 }
 
+func (posting *PostingList) add(eventID uint32) {
+	posting.bitmap.Add(eventID)
+}
+
 func newPostingList(eventID uint32) *PostingList {
 	p := &PostingList{
 		bitmap: roaring.New(),
 	}
 	p.bitmap.Add(eventID)
 	return p
-}
-
-func (posting *PostingList) add(eventID uint32) {
-	posting.bitmap.Add(eventID)
 }
