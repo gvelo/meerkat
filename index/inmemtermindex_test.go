@@ -7,74 +7,74 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_inMemTermIndex_emptycardinality(t *testing.T) {
+func Test_btrie_emptycardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := newInMemTermIndex()
+	bt := newBtrie()
 
-	assert.Equal(0, idx.cardinality, "empty index should have cero cardinality")
+	assert.Equal(0, bt.cardinality, "empty index should have cero cardinality")
 
 }
 
-func Test_inMemTermIndex_cardinality(t *testing.T) {
+func Test_btrie_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := newInMemTermIndex()
+	bt := newBtrie()
 	for i := 0; i < 10; i++ {
-		idx.addTerm("test", 0)
+		bt.add("test", 0)
 	}
 
-	assert.Equal(1, idx.cardinality, "same term should not change index cardinality")
+	assert.Equal(1, bt.cardinality, "same term should not change index cardinality")
 
 }
 
-func Test_inMemTermIndex_multiple_cardinality(t *testing.T) {
+func Test_btrie_multiple_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := newInMemTermIndex()
+	bt := newBtrie()
 	for i := 0; i < 10; i++ {
-		idx.addTerm(fmt.Sprintf("test%v", i), 0)
+		bt.add(fmt.Sprintf("test%v", i), 0)
 	}
 
-	assert.Equal(10, idx.cardinality, "unique term should change index cardinality")
+	assert.Equal(10, bt.cardinality, "unique term should change index cardinality")
 
 }
 
-func Test_inMemTermIndex_bucketSize(t *testing.T) {
+func Test_btrie_bucketSize(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := &inMemTermIndex{
+	bt := &btrie{
 		bucketSize: 10,
 	}
-	idx.root = idx.newNode()
+	bt.root = bt.newNode()
 
 	for i := 0; i < 10; i++ {
-		idx.addTerm(fmt.Sprintf("test%v", i), 0)
+		bt.add(fmt.Sprintf("test%v", i), 0)
 	}
 
-	assert.Equal(1, idx.size, "size should be 1")
+	assert.Equal(1, bt.size, "size should be 1")
 
-	idx.addTerm("Test burst", 0)
+	bt.add("Test burst", 0)
 
-	assert.Equal(2, idx.size, "node burst should result in 2 nodes")
+	assert.Equal(2, bt.size, "node burst should result in 2 nodes")
 
 }
 
-func Test_inMemTermIndex_singlelookup(t *testing.T) {
+func Test_btrie_singlelookup(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := newInMemTermIndex()
+	bt := newBtrie()
 
-	assert.Nil(idx.lookup("test"), "non empty index")
+	assert.Nil(bt.lookup("test"), "non empty index")
 
-	idx.addTerm("test", 0)
+	bt.add("test", 0)
 
-	bitmap := idx.lookup("test")
+	bitmap := bt.lookup("test")
 
 	assert.NotNil(bitmap, "result should not be nil")
 
@@ -82,22 +82,22 @@ func Test_inMemTermIndex_singlelookup(t *testing.T) {
 
 }
 
-func Test_inMemTermIndex_lookup_cardinality(t *testing.T) {
+func Test_btrie_lookup_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	idx := newInMemTermIndex()
+	bt := newBtrie()
 
-	assert.Nil(idx.lookup("test"), "non empty index")
+	assert.Nil(bt.lookup("test"), "non empty index")
 
 	for i := 0; i < 100; i++ {
-		idx.addTerm("test", uint32(i))
+		bt.add("test", uint32(i))
 	}
 
-	bitmap := idx.lookup("test")
+	bitmap := bt.lookup("test")
 
 	assert.NotNil(bitmap, "result should not be nil")
 
 	assert.Equal(uint64(100), bitmap.GetCardinality(), "wrong bitmap cardinality")
-	assert.Equal(1, idx.cardinality, "wrong cardinallity")
+	assert.Equal(1, bt.cardinality, "wrong cardinallity")
 }

@@ -18,51 +18,51 @@ type record struct {
 	posting *postingList
 }
 
-type inMemTermIndex struct {
+type btrie struct {
 	root        *node
 	bucketSize  int
 	size        int
 	cardinality int
 }
 
-func (index *inMemTermIndex) newNode() *node {
-	index.size++
+func (bt *btrie) newNode() *node {
+	bt.size++
 	return &node{
 		children: make(map[byte]*node),
-		bucket:   make([]*record, index.bucketSize)[:0],
+		bucket:   make([]*record, bt.bucketSize)[:0],
 	}
 }
 
-func (index *inMemTermIndex) addTerm(term string, eventID uint32) {
+func (bt *btrie) add(str string, eventID uint32) {
 
-	current := index.root
+	current := bt.root
 
-	for i := 0; i < len(term); i++ {
+	for i := 0; i < len(str); i++ {
 
-		if child, found := current.children[term[i]]; found {
+		if child, found := current.children[str[i]]; found {
 			current = child
 			continue
 		}
 
 		for _, record := range current.bucket {
-			if record.value == term[i:] {
+			if record.value == str[i:] {
 				// key exist, return
 				record.posting.add(eventID)
 				return
 			}
 		}
 
-		if len(current.bucket) == index.bucketSize {
-			// burst it
-			n := index.newNode()
+		if len(current.bucket) == bt.bucketSize {
+			// burst
+			n := bt.newNode()
 			newBucket := current.bucket[:0]
 			for _, c := range current.bucket {
 
-				if c.value[0] == term[i] {
+				if c.value[0] == str[i] {
 					suffix := c.value[1:]
 					if len(suffix) == 0 {
 						n.posting = newPostingList(eventID)
-						index.cardinality++
+						bt.cardinality++
 						continue
 					}
 					newRecord := &record{
@@ -75,33 +75,33 @@ func (index *inMemTermIndex) addTerm(term string, eventID uint32) {
 				}
 			}
 			current.bucket = newBucket
-			current.children[term[i]] = n
+			current.children[str[i]] = n
 			current = n
 			continue
 		}
 		newRecord := &record{
-			value:   term[i:],
+			value:   str[i:],
 			posting: newPostingList(eventID),
 		}
 		current.bucket = append(current.bucket, newRecord)
-		index.cardinality++
+		bt.cardinality++
 		return
 	}
 
 	if current.posting == nil {
 		current.posting = newPostingList(eventID)
-		index.cardinality++
+		bt.cardinality++
 		return
 	}
 
 	current.posting.bitmap.Add(eventID)
 }
 
-func (index *inMemTermIndex) dumpTrie() {
-	index.dumpNode("ROOT", index.root, 0)
+func (bt *btrie) dumpTrie() {
+	bt.dumpNode("ROOT", bt.root, 0)
 }
 
-func (index *inMemTermIndex) dumpNode(value string, node *node, level int) {
+func (bt *btrie) dumpNode(value string, node *node, level int) {
 
 	lPad := strings.Repeat(" ", level)
 	fmt.Printf("%v[node]\n", lPad)
@@ -115,14 +115,14 @@ func (index *inMemTermIndex) dumpNode(value string, node *node, level int) {
 	}
 
 	for c, n := range node.children {
-		index.dumpNode(string(c), n, level+1)
+		bt.dumpNode(string(c), n, level+1)
 	}
 
 }
 
-func (index *inMemTermIndex) lookup(term string) *roaring.Bitmap {
+func (bt *btrie) lookup(term string) *roaring.Bitmap {
 
-	current := index.root
+	current := bt.root
 
 	for i := 0; i < len(term); i++ {
 
@@ -148,8 +148,8 @@ func (index *inMemTermIndex) lookup(term string) *roaring.Bitmap {
 
 }
 
-func newInMemTermIndex() *inMemTermIndex {
-	idx := &inMemTermIndex{
+func newBtrie() *btrie {
+	idx := &btrie{
 		bucketSize: 64,
 	}
 	idx.root = idx.newNode()
