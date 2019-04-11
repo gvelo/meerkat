@@ -1,4 +1,4 @@
-package index
+package inmem
 
 import (
 	"fmt"

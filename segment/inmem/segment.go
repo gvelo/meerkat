@@ -1,4 +1,4 @@
-package index
+package inmem
 
 import (
 	"eventdb/list"
@@ -97,14 +97,14 @@ func (dict *InMemDict) addTermToTrie(trie *trie.Trie, term string, eventID uint3
 	node, found := trie.Find(term)
 
 	if found {
-		pinfo := node.Meta().(*postingList)
+		pinfo := node.Meta().(*PostingList)
 		pinfo.bitmap.Add(eventID)
 		return
 	}
 
 	_, bitmap := dict.postingStore.New()
 	bitmap.Add(eventID)
-	pinfo := &postingList{
+	pinfo := &PostingList{
 		bitmap: bitmap,
 	}
 	trie.Add(term, pinfo)
@@ -120,7 +120,7 @@ func (dict *InMemDict) addNumberToBkdTree(skipList *list.SkipList, number uint64
 
 	node, found := skipList.Search(number)
 	if found {
-		pinfo := (*postingList)(node.UserData)
+		pinfo := (*PostingList)(node.UserData)
 		pinfo.bitmap.Add(eventID)
 		return
 	}
@@ -147,7 +147,7 @@ func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring
 	skipList := dict.getTreeForField(fieldInfo).(*list.SkipList)
 	node, found := skipList.Search(number)
 	if found {
-		return (*postingList)(node.UserData).bitmap
+		return (*PostingList)(node.UserData).bitmap
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func (dict *InMemDict) lookupNumber(fieldInfo FieldInfo, number uint64) *roaring
 func (dict *InMemDict) lookupTerm(fieldInfo FieldInfo, term string) *roaring.Bitmap {
 	node, found := dict.getTreeForField(fieldInfo).(*trie.Trie).Find(term)
 	if found {
-		return node.Meta().(*postingList).bitmap
+		return node.Meta().(*PostingList).bitmap
 	}
 	return nil
 }
@@ -218,7 +218,7 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 }
 
 // postingList holds  the term posting list.
-type postingList struct {
+type PostingList struct {
 
 	// offset on disk
 	offset int
@@ -227,14 +227,14 @@ type postingList struct {
 	bitmap *roaring.Bitmap
 }
 
-func newPostingList(eventID uint32) *postingList {
-	p := &postingList{
+func newPostingList(eventID uint32) *PostingList {
+	p := &PostingList{
 		bitmap: roaring.New(),
 	}
 	p.bitmap.Add(eventID)
 	return p
 }
 
-func (posting *postingList) add(eventID uint32) {
+func (posting *PostingList) add(eventID uint32) {
 	posting.bitmap.Add(eventID)
 }

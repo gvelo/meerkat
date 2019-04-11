@@ -1,4 +1,4 @@
-package list
+package inmem
 
 import (
 	"github.com/stretchr/testify/assert"
