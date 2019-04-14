@@ -133,12 +133,12 @@ func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
 	return nil
 }
 
-type FileReader struct {
+type BinaryReader struct {
 	bytes  []byte
 	Offset int
 }
 
-func newFileReader(name string) (*FileReader, error) {
+func newBinaryReader(name string) (*BinaryReader, error) {
 
 	b, err := mmap.Map(name)
 
@@ -146,7 +146,7 @@ func newFileReader(name string) (*FileReader, error) {
 		return nil, err
 	}
 
-	fr := &FileReader{
+	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
 	}
@@ -156,7 +156,7 @@ func newFileReader(name string) (*FileReader, error) {
 // errOverflow is returned when an integer is too large to be represented.
 var errOverflow = errors.New("proto: integer overflow")
 
-func (fr *FileReader) decodeVarintSlow() (x uint64, err error) {
+func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
 		if fr.Offset >= len(fr.bytes) {
 			err = io.ErrUnexpectedEOF
@@ -179,7 +179,7 @@ func (fr *FileReader) decodeVarintSlow() (x uint64, err error) {
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
-func (fr *FileReader) DecodeVarint() (x uint64, err error) {
+func (fr *BinaryReader) DecodeVarint() (x uint64, err error) {
 	i := fr.Offset
 	if fr.Offset >= len(fr.bytes) {
 		return 0, io.ErrUnexpectedEOF
@@ -275,7 +275,7 @@ done:
 // DecodeFixed64 reads a 64-bit integer from the Buffer.
 // This is the format for the
 // fixed64, sfixed64, and double protocol buffer types.
-func (fr *FileReader) DecodeFixed64() (x uint64, err error) {
+func (fr *BinaryReader) DecodeFixed64() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 8
 	if i < 0 || i > len(fr.bytes) {
@@ -298,7 +298,7 @@ func (fr *FileReader) DecodeFixed64() (x uint64, err error) {
 // DecodeFixed32 reads a 32-bit integer from the Buffer.
 // This is the format for the
 // fixed32, sfixed32, and float protocol buffer types.
-func (fr *FileReader) DecodeFixed32() (x uint64, err error) {
+func (fr *BinaryReader) DecodeFixed32() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 4
 	if i < 0 || i > len(fr.bytes) {
@@ -317,7 +317,7 @@ func (fr *FileReader) DecodeFixed32() (x uint64, err error) {
 // DecodeZigzag64 reads a zigzag-encoded 64-bit integer
 // from the Buffer.
 // This is the format used for the sint64 protocol buffer type.
-func (fr *FileReader) DecodeZigzag64() (x uint64, err error) {
+func (fr *BinaryReader) DecodeZigzag64() (x uint64, err error) {
 	x, err = fr.DecodeVarint()
 	if err != nil {
 		return
@@ -329,7 +329,7 @@ func (fr *FileReader) DecodeZigzag64() (x uint64, err error) {
 // DecodeZigzag32 reads a zigzag-encoded 32-bit integer
 // from  the Buffer.
 // This is the format used for the sint32 protocol buffer type.
-func (fr *FileReader) DecodeZigzag32() (x uint64, err error) {
+func (fr *BinaryReader) DecodeZigzag32() (x uint64, err error) {
 	x, err = fr.DecodeVarint()
 	if err != nil {
 		return
@@ -341,7 +341,7 @@ func (fr *FileReader) DecodeZigzag32() (x uint64, err error) {
 // DecodeRawBytes reads a count-delimited byte buffer from the Buffer.
 // This is the format used for the bytes protocol buffer
 // type and for embedded messages.
-func (fr *FileReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
+func (fr *BinaryReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	n, err := fr.DecodeVarint()
 	if err != nil {
 		return nil, err
@@ -371,7 +371,7 @@ func (fr *FileReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 
 // DecodeStringBytes reads an encoded string from the Buffer.
 // This is the format used for the proto2 string type.
-func (fr *FileReader) DecodeStringBytes() (s string, err error) {
+func (fr *BinaryReader) DecodeStringBytes() (s string, err error) {
 	buf, err := fr.DecodeRawBytes(false)
 	if err != nil {
 		return
@@ -380,6 +380,6 @@ func (fr *FileReader) DecodeStringBytes() (s string, err error) {
 }
 
 // Close close and unmap the file.
-func (fr *FileReader) Close() error {
+func (fr *BinaryReader) Close() error {
 	return mmap.UnMap(fr.bytes)
 }

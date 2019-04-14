@@ -21,7 +21,7 @@ func Test_newFileWriterReader(t *testing.T) {
 
 	fw.Close()
 
-	fr, err := newFileReader("/tmp/test1.bin")
+	fr, err := newBinaryReader("/tmp/test1.bin")
 	if err != nil {
 		t.Error(err)
 	}
