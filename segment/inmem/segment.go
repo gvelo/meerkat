@@ -1,12 +1,10 @@
 package inmem
 
 import (
-	"eventdb/list"
-
 	"github.com/RoaringBitmap/roaring"
-	"github.com/derekparker/trie"
 )
-/* 
+
+/*
 // InMemEventStore is a naive implementation of an EventStore
 // for testing pourposes. It holds the events list in an slice.
 type InMemEventStore struct {
@@ -125,7 +123,7 @@ func (dict *InMemDict) addNumberToBkdTree(skipList *list.SkipList, number uint64
 		return
 	}
 
-	
+
 		_, bitmap := dict.postingStore.New()
 		bitmap.Add(eventID)
 		pinfo := &postingList{
@@ -221,7 +219,7 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 type PostingList struct {
 
 	// offset on disk
-	offset int
+	offset int64
 
 	// the bitmap backing the list
 	bitmap *roaring.Bitmap
