@@ -3,6 +3,7 @@ package io
 import (
 	"bufio"
 	"errors"
+	"eventdb/io/mmap"
 	"fmt"
 	"io"
 	"os"
@@ -139,29 +140,20 @@ func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
 }
 
 type FileReader struct {
-	file  *os.File
 	bytes []byte
 	index int
 }
 
 func newFileReader(name string) (*FileReader, error) {
-	f, err := os.Open(name)
+
+	b, err := mmap.Map(name)
+
 	if err != nil {
 		return nil, err
 	}
-	// get the file size
-	stat, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	b1 := make([]byte, stat.Size())
-	_, err = f.Read(b1)
-	if err != nil {
-		return nil, err
-	}
+
 	fr := &FileReader{
-		file:  f,
-		bytes: b1,
+		bytes: b,
 		index: 0,
 	}
 	return fr, nil
@@ -391,4 +383,9 @@ func (fr *FileReader) DecodeStringBytes() (s string, err error) {
 		return
 	}
 	return string(buf), nil
+}
+
+// Close close and unmap the file.
+func (fr *FileReader) Close() error {
+	return mmap.UnMap(fr.bytes)
 }
