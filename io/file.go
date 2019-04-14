@@ -140,8 +140,8 @@ func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
 }
 
 type FileReader struct {
-	bytes []byte
-	index int
+	bytes  []byte
+	Offset int
 }
 
 func newFileReader(name string) (*FileReader, error) {
@@ -153,8 +153,8 @@ func newFileReader(name string) (*FileReader, error) {
 	}
 
 	fr := &FileReader{
-		bytes: b,
-		index: 0,
+		bytes:  b,
+		Offset: 0,
 	}
 	return fr, nil
 }
@@ -164,12 +164,12 @@ var errOverflow = errors.New("proto: integer overflow")
 
 func (fr *FileReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
-		if fr.index >= len(fr.bytes) {
+		if fr.Offset >= len(fr.bytes) {
 			err = io.ErrUnexpectedEOF
 			return
 		}
-		b := fr.bytes[fr.index]
-		fr.index++
+		b := fr.bytes[fr.Offset]
+		fr.Offset++
 		x |= (uint64(b) & 0x7F) << shift
 		if b < 0x80 {
 			return
@@ -186,87 +186,87 @@ func (fr *FileReader) decodeVarintSlow() (x uint64, err error) {
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
 func (fr *FileReader) DecodeVarint() (x uint64, err error) {
-	i := fr.index
-	if fr.index >= len(fr.bytes) {
+	i := fr.Offset
+	if fr.Offset >= len(fr.bytes) {
 		return 0, io.ErrUnexpectedEOF
-	} else if fr.bytes[fr.index] < 0x80 {
-		fr.index++
+	} else if fr.bytes[fr.Offset] < 0x80 {
+		fr.Offset++
 		return uint64(fr.bytes[i]), nil
-	} else if len(fr.bytes)-fr.index < 10 {
+	} else if len(fr.bytes)-fr.Offset < 10 {
 		return fr.decodeVarintSlow()
 	}
 
 	var b uint64
 	// we already checked the first byte
-	x = uint64(fr.bytes[fr.index]) - 0x80
-	fr.index++
+	x = uint64(fr.bytes[fr.Offset]) - 0x80
+	fr.Offset++
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 7
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 7
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 14
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 14
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 21
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 21
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 28
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 28
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 35
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 35
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 42
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 42
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 49
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 49
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 56
 	if b&0x80 == 0 {
 		goto done
 	}
 	x -= 0x80 << 56
 
-	b = uint64(fr.bytes[fr.index])
-	fr.index++
+	b = uint64(fr.bytes[fr.Offset])
+	fr.Offset++
 	x += b << 63
 	if b&0x80 == 0 {
 		goto done
@@ -283,12 +283,12 @@ done:
 // fixed64, sfixed64, and double protocol buffer types.
 func (fr *FileReader) DecodeFixed64() (x uint64, err error) {
 	// x, err already 0
-	i := fr.index + 8
+	i := fr.Offset + 8
 	if i < 0 || i > len(fr.bytes) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
-	fr.index = i
+	fr.Offset = i
 
 	x = uint64(fr.bytes[i-8])
 	x |= uint64(fr.bytes[i-7]) << 8
@@ -306,12 +306,12 @@ func (fr *FileReader) DecodeFixed64() (x uint64, err error) {
 // fixed32, sfixed32, and float protocol buffer types.
 func (fr *FileReader) DecodeFixed32() (x uint64, err error) {
 	// x, err already 0
-	i := fr.index + 4
+	i := fr.Offset + 4
 	if i < 0 || i > len(fr.bytes) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
-	fr.index = i
+	fr.Offset = i
 
 	x = uint64(fr.bytes[i-4])
 	x |= uint64(fr.bytes[i-3]) << 8
@@ -357,21 +357,21 @@ func (fr *FileReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	if nb < 0 {
 		return nil, fmt.Errorf("proto: bad byte length %d", nb)
 	}
-	end := fr.index + nb
-	if end < fr.index || end > len(fr.bytes) {
+	end := fr.Offset + nb
+	if end < fr.Offset || end > len(fr.bytes) {
 		return nil, io.ErrUnexpectedEOF
 	}
 
 	if !alloc {
 		// todo: check if can get more uses of alloc=false
-		buf = fr.bytes[fr.index:end]
-		fr.index += nb
+		buf = fr.bytes[fr.Offset:end]
+		fr.Offset += nb
 		return
 	}
 
 	buf = make([]byte, nb)
-	copy(buf, fr.bytes[fr.index:])
-	fr.index += nb
+	copy(buf, fr.bytes[fr.Offset:])
+	fr.Offset += nb
 	return
 }
 
