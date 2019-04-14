@@ -135,7 +135,7 @@ func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
 
 type BinaryReader struct {
 	bytes  []byte
-	Offset int
+	Offset int64
 }
 
 func newBinaryReader(name string) (*BinaryReader, error) {
@@ -158,7 +158,7 @@ var errOverflow = errors.New("proto: integer overflow")
 
 func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
-		if fr.Offset >= len(fr.bytes) {
+		if fr.Offset >= int64(len(fr.bytes)) {
 			err = io.ErrUnexpectedEOF
 			return
 		}
@@ -181,12 +181,12 @@ func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 // protocol buffer types.
 func (fr *BinaryReader) DecodeVarint() (x uint64, err error) {
 	i := fr.Offset
-	if fr.Offset >= len(fr.bytes) {
+	if fr.Offset >= int64(len(fr.bytes)) {
 		return 0, io.ErrUnexpectedEOF
 	} else if fr.bytes[fr.Offset] < 0x80 {
 		fr.Offset++
 		return uint64(fr.bytes[i]), nil
-	} else if len(fr.bytes)-fr.Offset < 10 {
+	} else if int64(len(fr.bytes))-fr.Offset < 10 {
 		return fr.decodeVarintSlow()
 	}
 
@@ -278,7 +278,7 @@ done:
 func (fr *BinaryReader) DecodeFixed64() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 8
-	if i < 0 || i > len(fr.bytes) {
+	if i < 0 || i > int64(len(fr.bytes)) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
@@ -301,7 +301,7 @@ func (fr *BinaryReader) DecodeFixed64() (x uint64, err error) {
 func (fr *BinaryReader) DecodeFixed32() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 4
-	if i < 0 || i > len(fr.bytes) {
+	if i < 0 || i > int64(len(fr.bytes)) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
@@ -351,21 +351,21 @@ func (fr *BinaryReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	if nb < 0 {
 		return nil, fmt.Errorf("proto: bad byte length %d", nb)
 	}
-	end := fr.Offset + nb
-	if end < fr.Offset || end > len(fr.bytes) {
+	end := fr.Offset + int64(nb)
+	if end < fr.Offset || end > int64(len(fr.bytes)) {
 		return nil, io.ErrUnexpectedEOF
 	}
 
 	if !alloc {
 		// todo: check if can get more uses of alloc=false
 		buf = fr.bytes[fr.Offset:end]
-		fr.Offset += nb
+		fr.Offset += int64(nb)
 		return
 	}
 
 	buf = make([]byte, nb)
 	copy(buf, fr.bytes[fr.Offset:])
-	fr.Offset += nb
+	fr.Offset += int64(nb)
 	return
 }
 
