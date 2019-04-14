@@ -121,10 +121,7 @@ func (fw *FileWriter) WriteEncodedZigzag32(x uint64) error {
 // type and for embedded messages.
 func (fw *FileWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
-	for i := 0; i < len(b); i++ {
-		fw.writer.WriteByte(b[i])
-		fw.size += 1
-	}
+	fw.writer.Write(b)
 	return nil
 }
 
@@ -132,10 +129,7 @@ func (fw *FileWriter) WriteEncodedRawBytes(b []byte) error {
 // This is the format used for the proto2 string type.
 func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
 	fw.WriteEncodedVarint(uint64(len(s)))
-	for i := 0; i < len(s); i++ {
-		fw.writer.WriteByte(s[i])
-		fw.size += 1
-	}
+	fw.writer.WriteString(s)
 	return nil
 }
 
