@@ -20,18 +20,18 @@ const (
 	RowStoreV1    FileType = 2
 )
 
-type FileWriter struct {
+type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
 	size   int
 }
 
-func newFileWriter(name string) (*FileWriter, error) {
+func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	f, err := os.Create(name)
 	if err != nil {
 		return nil, err
 	}
-	fw := &FileWriter{
+	fw := &BinaryWriter{
 		file:   f,
 		writer: bufio.NewWriter(f),
 		size:   0,
@@ -39,7 +39,7 @@ func newFileWriter(name string) (*FileWriter, error) {
 	return fw, nil
 }
 
-func (fw *FileWriter) Close() error {
+func (fw *BinaryWriter) Close() error {
 	err := fw.writer.Flush()
 	if err != nil {
 		return err
@@ -55,11 +55,16 @@ func (fw *FileWriter) Close() error {
 	return nil
 }
 
+func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
+	fw.writer.Write([]byte(MagicNumber))
+	fw.writer.WriteByte(byte(fileType))
+}
+
 // EncodeVarint writes a varint-encoded integer to the Buffer.
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
-func (fw *FileWriter) WriteEncodedVarint(x uint64) error {
+func (fw *BinaryWriter) WriteEncodedVarint(x uint64) error {
 	for x >= 1<<7 {
 		fw.writer.WriteByte(uint8(x&0x7f | 0x80))
 		x >>= 7
@@ -73,7 +78,7 @@ func (fw *FileWriter) WriteEncodedVarint(x uint64) error {
 // EncodeFixed64 writes a 64-bit integer to the Buffer.
 // This is the format for the
 // fixed64, sfixed64, and double protocol buffer types.
-func (fw *FileWriter) WriteEncodedFixed64(x uint64) error {
+func (fw *BinaryWriter) WriteEncodedFixed64(x uint64) error {
 	fw.writer.WriteByte(uint8(x))
 	fw.writer.WriteByte(uint8(x >> 8))
 	fw.writer.WriteByte(uint8(x >> 16))
@@ -89,7 +94,7 @@ func (fw *FileWriter) WriteEncodedFixed64(x uint64) error {
 // EncodeFixed32 writes a 32-bit integer to the Buffer.
 // This is the format for the
 // fixed32, sfixed32, and float protocol buffer types.
-func (fw *FileWriter) WriteEncodedFixed32(x uint64) error {
+func (fw *BinaryWriter) WriteEncodedFixed32(x uint64) error {
 	fw.writer.WriteByte(uint8(x))
 	fw.writer.WriteByte(uint8(x >> 8))
 	fw.writer.WriteByte(uint8(x >> 16))
@@ -101,7 +106,7 @@ func (fw *FileWriter) WriteEncodedFixed32(x uint64) error {
 // EncodeZigzag64 writes a zigzag-encoded 64-bit integer
 // to the Buffer.
 // This is the format used for the sint64 protocol buffer type.
-func (fw *FileWriter) WriteEncodedZigzag64(x uint64) error {
+func (fw *BinaryWriter) WriteEncodedZigzag64(x uint64) error {
 	// use signed number to get arithmetic right shift.
 	fw.size += 8
 	return fw.WriteEncodedVarint(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -110,7 +115,7 @@ func (fw *FileWriter) WriteEncodedZigzag64(x uint64) error {
 // EncodeZigzag32 writes a zigzag-encoded 32-bit integer
 // to the Buffer.
 // This is the format used for the sint32 protocol buffer type.
-func (fw *FileWriter) WriteEncodedZigzag32(x uint64) error {
+func (fw *BinaryWriter) WriteEncodedZigzag32(x uint64) error {
 	// use signed number to get arithmetic right shift.
 	fw.size += 4
 	return fw.WriteEncodedVarint(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
@@ -119,7 +124,7 @@ func (fw *FileWriter) WriteEncodedZigzag32(x uint64) error {
 // EncodeRawBytes writes a count-delimited byte buffer to the Buffer.
 // This is the format used for the bytes protocol buffer
 // type and for embedded messages.
-func (fw *FileWriter) WriteEncodedRawBytes(b []byte) error {
+func (fw *BinaryWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
 	fw.writer.Write(b)
 	return nil
@@ -127,7 +132,7 @@ func (fw *FileWriter) WriteEncodedRawBytes(b []byte) error {
 
 // EncodeStringBytes writes an encoded string to the Buffer.
 // This is the format used for the proto2 string type.
-func (fw *FileWriter) WriteEncodedStringBytes(s string) error {
+func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
 	fw.WriteEncodedVarint(uint64(len(s)))
 	fw.writer.WriteString(s)
 	return nil
@@ -138,7 +143,7 @@ type BinaryReader struct {
 	Offset int64
 }
 
-func newBinaryReader(name string) (*BinaryReader, error) {
+func NewBinaryReader(name string) (*BinaryReader, error) {
 
 	b, err := mmap.Map(name)
 

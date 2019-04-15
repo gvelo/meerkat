@@ -219,20 +219,20 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 type PostingList struct {
 
 	// offset on disk
-	offset int64
+	Offset int64
 
 	// the bitmap backing the list
-	bitmap *roaring.Bitmap
+	Bitmap *roaring.Bitmap
 }
 
 func (posting *PostingList) add(eventID uint32) {
-	posting.bitmap.Add(eventID)
+	posting.Bitmap.Add(eventID)
 }
 
 func newPostingList(eventID uint32) *PostingList {
 	p := &PostingList{
-		bitmap: roaring.New(),
+		Bitmap: roaring.New(),
 	}
-	p.bitmap.Add(eventID)
+	p.Bitmap.Add(eventID)
 	return p
 }

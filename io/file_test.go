@@ -1,13 +1,14 @@
 package io
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_newFileWriterReader(t *testing.T) {
 
-	fw, err := newFileWriter("/tmp/test1.bin")
+	fw, err := newBinaryWriter("/tmp/test1.bin")
 	if err != nil {
 		t.Error(err)
 	}

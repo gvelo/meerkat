@@ -11,6 +11,7 @@ type node struct {
 	children map[byte]*node
 	bucket   []*record
 	posting  *postingList
+	offset   int64
 }
 
 type record struct {
