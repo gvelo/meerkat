@@ -13,10 +13,26 @@ func WritePosting(name string, posting []*inmem.PostingList) error {
 		return err
 	}
 
-	bw.WriteHeader(io.PostingListV1)
+	defer bw.Close()
+
+	err = bw.WriteHeader(io.PostingListV1)
+
+	if err != nil {
+		return err
+	}
 
 	for _, p := range posting {
-		n, err := p.Bitmap.WriteTo(bw)
+		p.Offset = bw.Offset
+		_, err := p.Bitmap.WriteTo(bw)
+		if err != nil {
+			return err
+		}
 	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }

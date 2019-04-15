@@ -10,13 +10,13 @@ import (
 type node struct {
 	children map[byte]*node
 	bucket   []*record
-	posting  *postingList
+	posting  *PostingList
 	offset   int64
 }
 
 type record struct {
 	value   string
-	posting *postingList
+	posting *PostingList
 }
 
 type btrie struct {
@@ -62,7 +62,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 				if c.value[0] == str[i] {
 					suffix := c.value[1:]
 					if len(suffix) == 0 {
-						n.posting = newPostingList(eventID)
+						n.posting = NewPostingList(eventID)
 						bt.cardinality++
 						continue
 					}
@@ -82,7 +82,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 		}
 		newRecord := &record{
 			value:   str[i:],
-			posting: newPostingList(eventID),
+			posting: NewPostingList(eventID),
 		}
 		current.bucket = append(current.bucket, newRecord)
 		bt.cardinality++
@@ -90,12 +90,12 @@ func (bt *btrie) add(str string, eventID uint32) {
 	}
 
 	if current.posting == nil {
-		current.posting = newPostingList(eventID)
+		current.posting = NewPostingList(eventID)
 		bt.cardinality++
 		return
 	}
 
-	current.posting.bitmap.Add(eventID)
+	current.posting.Bitmap.Add(eventID)
 }
 
 func (bt *btrie) dumpTrie() {
@@ -134,7 +134,7 @@ func (bt *btrie) lookup(term string) *roaring.Bitmap {
 
 		for _, record := range current.bucket {
 			if record.value == term[i:] {
-				return record.posting.bitmap
+				return record.posting.Bitmap
 			}
 		}
 
@@ -142,7 +142,7 @@ func (bt *btrie) lookup(term string) *roaring.Bitmap {
 	}
 
 	if current.posting != nil {
-		return current.posting.bitmap
+		return current.posting.Bitmap
 	}
 
 	return nil

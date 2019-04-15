@@ -229,7 +229,7 @@ func (posting *PostingList) add(eventID uint32) {
 	posting.Bitmap.Add(eventID)
 }
 
-func newPostingList(eventID uint32) *PostingList {
+func NewPostingList(eventID uint32) *PostingList {
 	p := &PostingList{
 		Bitmap: roaring.New(),
 	}

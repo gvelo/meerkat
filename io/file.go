@@ -23,7 +23,7 @@ const (
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
-	size   int
+	Offset int64
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
@@ -34,7 +34,7 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	fw := &BinaryWriter{
 		file:   f,
 		writer: bufio.NewWriter(f),
-		size:   0,
+		Offset: 0,
 	}
 	return fw, nil
 }
@@ -56,8 +56,11 @@ func (fw *BinaryWriter) Close() error {
 }
 
 func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
-	fw.writer.Write([]byte(MagicNumber))
+	b := []byte(MagicNumber)
+	fw.writer.Write(b)
 	fw.writer.WriteByte(byte(fileType))
+	fw.Offset = fw.Offset + int64(len(b)) + 1
+	return nil
 }
 
 // EncodeVarint writes a varint-encoded integer to the Buffer.
@@ -68,10 +71,10 @@ func (fw *BinaryWriter) WriteEncodedVarint(x uint64) error {
 	for x >= 1<<7 {
 		fw.writer.WriteByte(uint8(x&0x7f | 0x80))
 		x >>= 7
-		fw.size += 1
+		fw.Offset += 1
 	}
 	fw.writer.WriteByte(uint8(x))
-	fw.size += 1
+	fw.Offset += 1
 	return nil
 }
 
@@ -87,7 +90,7 @@ func (fw *BinaryWriter) WriteEncodedFixed64(x uint64) error {
 	fw.writer.WriteByte(uint8(x >> 40))
 	fw.writer.WriteByte(uint8(x >> 48))
 	fw.writer.WriteByte(uint8(x >> 56))
-	fw.size += 8
+	fw.Offset += 8
 	return nil
 }
 
@@ -99,7 +102,7 @@ func (fw *BinaryWriter) WriteEncodedFixed32(x uint64) error {
 	fw.writer.WriteByte(uint8(x >> 8))
 	fw.writer.WriteByte(uint8(x >> 16))
 	fw.writer.WriteByte(uint8(x >> 24))
-	fw.size += 4
+	fw.Offset += 4
 	return nil
 }
 
@@ -108,7 +111,7 @@ func (fw *BinaryWriter) WriteEncodedFixed32(x uint64) error {
 // This is the format used for the sint64 protocol buffer type.
 func (fw *BinaryWriter) WriteEncodedZigzag64(x uint64) error {
 	// use signed number to get arithmetic right shift.
-	fw.size += 8
+	fw.Offset += 8
 	return fw.WriteEncodedVarint(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
 
@@ -117,7 +120,7 @@ func (fw *BinaryWriter) WriteEncodedZigzag64(x uint64) error {
 // This is the format used for the sint32 protocol buffer type.
 func (fw *BinaryWriter) WriteEncodedZigzag32(x uint64) error {
 	// use signed number to get arithmetic right shift.
-	fw.size += 4
+	fw.Offset += 4
 	return fw.WriteEncodedVarint(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
 }
 
@@ -128,6 +131,15 @@ func (fw *BinaryWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
 	fw.writer.Write(b)
 	return nil
+}
+
+func (fw *BinaryWriter) Write(b []byte) (int, error) {
+	nn, err := fw.writer.Write(b)
+	if err != nil {
+		return nn, err
+	}
+	fw.Offset += int64(nn)
+	return nn, err
 }
 
 // EncodeStringBytes writes an encoded string to the Buffer.
@@ -160,6 +172,29 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 
 // errOverflow is returned when an integer is too large to be represented.
 var errOverflow = errors.New("proto: integer overflow")
+var errUnknFileType = errors.New("unknown file type")
+
+
+// ReadHeader read the file header returning the file type.
+func (fr *BinaryReader) ReadHeader() (FileType,error) {
+
+	l := len(MagicNumber)
+
+	if len(fr.bytes) < (l+1) {
+		return 0 ,io.ErrUnexpectedEOF
+	}
+
+	fMagic := string(fr.bytes[:l])
+
+	if fMagic != MagicNumber {
+		return 0, errUnknFileType
+	}
+
+	fr.Offset += int64(l+1)
+
+	return FileType(fr.bytes[l]),nil
+
+}
 
 func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
@@ -372,6 +407,16 @@ func (fr *BinaryReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	copy(buf, fr.bytes[fr.Offset:])
 	fr.Offset += int64(nb)
 	return
+}
+
+func (fr BinaryReader) SliceAt(offset int64) []byte  {
+
+	// TODO review this int64 to int casting. Given that
+	// we are only using memory mapped files and the max address
+	// space is addressable from an int, does it make any sense to use
+	// int64 as offset type ??
+
+	return fr.bytes[int(offset):]
 }
 
 // DecodeStringBytes reads an encoded string from the Buffer.
