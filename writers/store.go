@@ -41,23 +41,36 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) e
 		}
 
 		for _, info := range infos {
+
 			n := info.FieldName
 			v, ok := e[n]
 			var offset int64 = -1
+
 			if ok { // got it
 				bw.StoreValue(v)
 				offset = bw.Offset
 			}
+
 			fm[n] = offset
+
 		}
 
 		sl.InsertOrUpdate(e[tsField].(uint64), fm, nil)
 
 	}
 
+	err = WriteEventsIndex("store.index.bin", sl)
+	if err != nil {
+		return err
+	}
+
 	bw.WriteEncodedVarint(uint64(min))
 	bw.WriteEncodedVarint(uint64(max))
 	bw.WriteEncodedVarint(uint64(len(evts)))
 
+	return nil
+}
+
+func WriteEventsIndex(name string, list *collection.SkipList) error {
 	return nil
 }

@@ -53,5 +53,5 @@ func getEvents() []segment.Event {
 func TestStoreWriterReaderEvents(t *testing.T) {
 	p := "/tmp/bin.bin"
 	WriteEvents(p, getEvents(), getFieldsInfo())
-
+	// TODO:
 }
