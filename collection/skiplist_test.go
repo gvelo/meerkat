@@ -1,27 +1,23 @@
-package inmem
+package collection
 
 import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
-	"unsafe"
 )
 
 func setUpValuesInsplitList() *SkipList {
-	skipList := New(.5, 16)
+	skipList := NewSL(.5, 16)
 
-	var a CreateNodeValue = func() unsafe.Pointer {
-		return nil
-	}
-	skipList.InsertOrUpdate(13, nil, a)
-	skipList.InsertOrUpdate(1, nil, a)
-	skipList.InsertOrUpdate(123, nil, a)
-	skipList.InsertOrUpdate(555, nil, a)
-	skipList.InsertOrUpdate(553, nil, a)
-	skipList.InsertOrUpdate(554, nil, a)
-	skipList.InsertOrUpdate(124, nil, a)
-	skipList.InsertOrUpdate(125, nil, a)
-	skipList.InsertOrUpdate(1222, nil, a)
+	skipList.InsertOrUpdate(13, nil, nil)
+	skipList.InsertOrUpdate(1, nil, nil)
+	skipList.InsertOrUpdate(123, nil, nil)
+	skipList.InsertOrUpdate(555, nil, nil)
+	skipList.InsertOrUpdate(553, nil, nil)
+	skipList.InsertOrUpdate(554, nil, nil)
+	skipList.InsertOrUpdate(124, nil, nil)
+	skipList.InsertOrUpdate(125, nil, nil)
+	skipList.InsertOrUpdate(1222, nil, nil)
 
 	return skipList
 }
@@ -76,35 +72,29 @@ func TestSkipList_Delete(t *testing.T) {
 
 func TestSkipList_InsertOrUpdate(t *testing.T) {
 	ass := assert.New(t)
-	skipList := New(.5, 16)
+	skipList := NewSL(.5, 16)
 
 	type Holder struct {
 		aInt int
 	}
 
-	skipList.InsertOrUpdate(13, nil, func() unsafe.Pointer {
-		return unsafe.Pointer(&Holder{13})
-	})
-	skipList.InsertOrUpdate(1, nil, func() unsafe.Pointer {
-		return unsafe.Pointer(&Holder{1})
-	})
-	skipList.InsertOrUpdate(123, nil, func() unsafe.Pointer {
-		return unsafe.Pointer(&Holder{123})
-	})
+	skipList.InsertOrUpdate(13, Holder{13}, nil)
+	skipList.InsertOrUpdate(1, Holder{1}, nil)
+	skipList.InsertOrUpdate(123, Holder{123}, nil)
 
-	var a OnUpdate = func(value unsafe.Pointer) unsafe.Pointer {
-		h := (*Holder)(value)
+	var a OnUpdate = func(value interface{}) interface{} {
+		h := value.(Holder)
 		h.aInt = h.aInt + 1
-		return unsafe.Pointer(h)
+		return h
 	}
 
-	skipList.InsertOrUpdate(123, a, nil)
+	skipList.InsertOrUpdate(123, nil, a)
 
 	res, found := skipList.Search(123)
 
 	ass.True(found)
 	ass.NotNil(res)
-	i := (*Holder)(res.UserData).aInt
+	i := res.UserData.(Holder).aInt
 	ass.Equal(i, 124)
 
 }
@@ -150,12 +140,9 @@ func createRandomList(qty int) []uint64 {
 }
 
 func insertItems(list []uint64) *SkipList {
-	splitList := New(.5, 16)
-	var a CreateNodeValue = func() unsafe.Pointer {
-		return nil
-	}
+	splitList := NewSL(.5, 16)
 	for i := 0; i < len(list); i++ {
-		splitList.InsertOrUpdate(list[i], nil, a)
+		splitList.InsertOrUpdate(list[i], nil, nil)
 	}
 	return splitList
 }

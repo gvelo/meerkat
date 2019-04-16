@@ -8,7 +8,7 @@ import (
 
 func Test_newFileWriterReader(t *testing.T) {
 
-	fw, err := newBinaryWriter("/tmp/test1.bin")
+	fw, err := NewBinaryWriter("/tmp/test1.bin")
 	if err != nil {
 		t.Error(err)
 	}
@@ -22,7 +22,7 @@ func Test_newFileWriterReader(t *testing.T) {
 
 	fw.Close()
 
-	fr, err := newBinaryReader("/tmp/test1.bin")
+	fr, err := NewBinaryReader("/tmp/test1.bin")
 	if err != nil {
 		t.Error(err)
 	}

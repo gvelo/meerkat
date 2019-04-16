@@ -1,26 +1,25 @@
-package inmem
+package collection
 
 import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"unsafe"
 )
 
 type Node struct {
 	key      uint64
-	UserData unsafe.Pointer
+	UserData interface{}
 	level    int
 	forward  []*Node
 }
 
-func NewNode(key uint64, value unsafe.Pointer, level int) Node {
+func NewSLNode(k uint64, v interface{}, l int) Node {
 
-	forward := make([]*Node, level)
-	for i := 0; i <= level-1; i++ {
+	forward := make([]*Node, l)
+	for i := 0; i <= l-1; i++ {
 		forward[i] = nil
 	}
-	return Node{key: key, UserData: value, level: level, forward: forward}
+	return Node{key: k, UserData: v, level: l, forward: forward}
 }
 
 // Level returns the level of a node in the skiplist
@@ -40,13 +39,13 @@ type SkipList struct {
 	level    int
 }
 
-func New(p float32, maxLevel int) *SkipList {
+func NewSL(p float32, maxLevel int) *SkipList {
 
 	maxUint64 := ^uint64(0)
 	minUint64 := uint64(0)
 
-	var head = NewNode(minUint64, nil, maxLevel)
-	var tail = NewNode(maxUint64, nil, maxLevel)
+	var head = NewSLNode(minUint64, nil, maxLevel)
+	var tail = NewSLNode(maxUint64, nil, maxLevel)
 
 	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0}
 
@@ -82,11 +81,9 @@ func (list *SkipList) Search(key uint64) (node *Node, found bool) {
 	return node, found
 }
 
-type OnUpdate func(value unsafe.Pointer) unsafe.Pointer
+type OnUpdate func(value interface{}) interface{}
 
-type CreateNodeValue func() unsafe.Pointer
-
-func (list *SkipList) InsertOrUpdate(key uint64, updateCallback OnUpdate, insertFactoryMethod CreateNodeValue) *SkipList {
+func (list *SkipList) InsertOrUpdate(key uint64, v interface{}, updateCallback OnUpdate) *SkipList {
 	var update = make([]*Node, list.maxLevel)
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
@@ -100,10 +97,7 @@ func (list *SkipList) InsertOrUpdate(key uint64, updateCallback OnUpdate, insert
 		if updateCallback != nil {
 			x.UserData = updateCallback(x.UserData)
 		} else {
-			if insertFactoryMethod == nil {
-				panic("You should implement insertFactoryMethod function.")
-			}
-			x.UserData = insertFactoryMethod()
+			x.UserData = v
 		}
 	} else {
 		lvl := list.randomLevel()
@@ -113,10 +107,7 @@ func (list *SkipList) InsertOrUpdate(key uint64, updateCallback OnUpdate, insert
 			}
 			list.level = lvl
 		}
-		if insertFactoryMethod == nil {
-			panic("You should implement insertFactoryMethod function.")
-		}
-		var node = NewNode(key, insertFactoryMethod(), lvl)
+		var node = NewSLNode(key, v, lvl)
 		x = &node
 		for i := 0; i < lvl; i++ {
 			x.forward[i] = update[i].forward[i]
@@ -153,22 +144,22 @@ func (list *SkipList) Delete(key uint64) {
 
 func (list SkipList) String() string {
 
-	result := fmt.Sprintf("Head levels %v\n", list.head)
-	result = result + fmt.Sprintf("Tail levels %v\n", list.tail)
+	r := fmt.Sprintf("Head levels %v\n", list.head)
+	r = r + fmt.Sprintf("Tail levels %v\n", list.tail)
 
-	result = result + fmt.Sprint("========  Head  ==========\n")
+	r = r + fmt.Sprint("========  Head  ==========\n")
 
 	for i := 0; i < list.maxLevel; i++ {
-		result = result + fmt.Sprintf("level %d %v\n", i, list.head.forward[i])
+		r = r + fmt.Sprintf("level %d %v\n", i, list.head.forward[i])
 	}
 
-	result = result + fmt.Sprint("======== Tail ========== \n")
+	r = r + fmt.Sprint("======== Tail ========== \n")
 
 	for x := 0; x < list.maxLevel; x++ {
-		result = result + fmt.Sprintf("level %d %v\n", x, list.tail.forward[x])
+		r = r + fmt.Sprintf("level %d %v\n", x, list.tail.forward[x])
 	}
 
-	result = result + fmt.Sprint("========= Totals ========= \n")
+	r = r + fmt.Sprint("========= Totals ========= \n")
 
 	for z := 0; z < list.maxLevel; z++ {
 		ptr := list.head
@@ -178,26 +169,26 @@ func (list SkipList) String() string {
 			ptr = ptr.forward[z]
 			lvl++
 		}
-		result = result + fmt.Sprintf("Total level %d %d\n", z, lvl)
+		r = r + fmt.Sprintf("Total level %d %d\n", z, lvl)
 	}
 
-	return result
+	return r
 }
 
 func (list *SkipList) DebugItems(lvl int) (string, error) {
-	result := ""
+	r := ""
 	if lvl > list.level {
 		return "", errors.New("list > lvl")
 	}
 	for x := 0; x < lvl; x++ {
 		node := list.head.forward[x]
-		result = result + fmt.Sprintf("========= Lvl %d ========= \n", x)
+		r = r + fmt.Sprintf("========= Lvl %d ========= \n", x)
 		for node.forward[x] != nil {
-			result = result + fmt.Sprintf(" { k: %d ,l: %d }", node.key, node.level)
+			r = r + fmt.Sprintf(" { k: %d ,l: %d }", node.key, node.level)
 			node = node.forward[x]
 		}
-		result = result + "\n"
+		r = r + "\n"
 	}
 
-	return result, nil
+	return r, nil
 }

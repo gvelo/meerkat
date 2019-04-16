@@ -2,27 +2,27 @@ package writers
 
 import (
 	"eventdb/readers"
-	"eventdb/segment/inmem"
+	"eventdb/segment"
 	"testing"
 )
 
 func TestReadWritePosting(t *testing.T) {
 
-	posting := make([]*inmem.PostingList,0)
+	posting := make([]*segment.PostingList, 0)
 
-	for i:=0; i<1000;i++{
-		p:=inmem.NewPostingList(uint32(i))
-		posting = append(posting,p)
+	for i := 0; i < 1000; i++ {
+		p := segment.NewPostingList(uint32(i))
+		posting = append(posting, p)
 	}
 
 	file := "/tmp/posting.bin"
-	err := WritePosting(file,posting)
+	err := WritePosting(file, posting)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	pr,err := readers.NewPostingReader(file)
+	pr, err := readers.NewPostingReader(file)
 
 	if err != nil {
 		t.Error(err)
@@ -31,7 +31,7 @@ func TestReadWritePosting(t *testing.T) {
 
 	for i, p := range posting {
 
-		b,err := pr.Read(p.Offset)
+		b, err := pr.Read(p.Offset)
 
 		if err != nil {
 			t.Error(err)

@@ -2,10 +2,10 @@ package writers
 
 import (
 	"eventdb/io"
-	"eventdb/segment/inmem"
+	"eventdb/segment"
 )
 
-func WritePosting(name string, posting []*inmem.PostingList) error {
+func WritePosting(name string, posting []*segment.PostingList) error {
 
 	bw, err := io.NewBinaryWriter(name)
 

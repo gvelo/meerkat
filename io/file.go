@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 )
 
 type FileType byte
@@ -37,6 +38,19 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 		Offset: 0,
 	}
 	return fw, nil
+}
+
+func (fw *BinaryWriter) StoreValue(v interface{}) {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.String:
+		fw.WriteEncodedStringBytes(v.(string))
+	case reflect.Float64:
+		fw.WriteEncodedFixed64(v.(uint64))
+	case reflect.Float32:
+		fw.WriteEncodedFixed32(v.(uint64))
+	case reflect.Int:
+		fw.WriteEncodedVarint(v.(uint64))
+	}
 }
 
 func (fw *BinaryWriter) Close() error {
@@ -174,14 +188,13 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 var errOverflow = errors.New("proto: integer overflow")
 var errUnknFileType = errors.New("unknown file type")
 
-
 // ReadHeader read the file header returning the file type.
-func (fr *BinaryReader) ReadHeader() (FileType,error) {
+func (fr *BinaryReader) ReadHeader() (FileType, error) {
 
 	l := len(MagicNumber)
 
-	if len(fr.bytes) < (l+1) {
-		return 0 ,io.ErrUnexpectedEOF
+	if len(fr.bytes) < (l + 1) {
+		return 0, io.ErrUnexpectedEOF
 	}
 
 	fMagic := string(fr.bytes[:l])
@@ -190,9 +203,9 @@ func (fr *BinaryReader) ReadHeader() (FileType,error) {
 		return 0, errUnknFileType
 	}
 
-	fr.Offset += int64(l+1)
+	fr.Offset += int64(l + 1)
 
-	return FileType(fr.bytes[l]),nil
+	return FileType(fr.bytes[l]), nil
 
 }
 
@@ -409,7 +422,7 @@ func (fr *BinaryReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	return
 }
 
-func (fr BinaryReader) SliceAt(offset int64) []byte  {
+func (fr BinaryReader) SliceAt(offset int64) []byte {
 
 	// TODO review this int64 to int casting. Given that
 	// we are only using memory mapped files and the max address

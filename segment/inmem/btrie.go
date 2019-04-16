@@ -1,22 +1,22 @@
 package inmem
 
 import (
+	"eventdb/segment"
 	"fmt"
-	"strings"
-
 	"github.com/RoaringBitmap/roaring"
+	"strings"
 )
 
 type node struct {
 	children map[byte]*node
 	bucket   []*record
-	posting  *PostingList
+	posting  *segment.PostingList
 	offset   int64
 }
 
 type record struct {
 	value   string
-	posting *PostingList
+	posting *segment.PostingList
 }
 
 type btrie struct {
@@ -48,7 +48,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 		for _, record := range current.bucket {
 			if record.value == str[i:] {
 				// key exist, return
-				record.posting.add(eventID)
+				record.posting.Add(eventID)
 				return
 			}
 		}
@@ -62,7 +62,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 				if c.value[0] == str[i] {
 					suffix := c.value[1:]
 					if len(suffix) == 0 {
-						n.posting = NewPostingList(eventID)
+						n.posting = segment.NewPostingList(eventID)
 						bt.cardinality++
 						continue
 					}
@@ -82,7 +82,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 		}
 		newRecord := &record{
 			value:   str[i:],
-			posting: NewPostingList(eventID),
+			posting: segment.NewPostingList(eventID),
 		}
 		current.bucket = append(current.bucket, newRecord)
 		bt.cardinality++
@@ -90,7 +90,7 @@ func (bt *btrie) add(str string, eventID uint32) {
 	}
 
 	if current.posting == nil {
-		current.posting = NewPostingList(eventID)
+		current.posting = segment.NewPostingList(eventID)
 		bt.cardinality++
 		return
 	}

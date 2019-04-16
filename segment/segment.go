@@ -1,4 +1,4 @@
-package inmem
+package segment
 
 import (
 	"github.com/RoaringBitmap/roaring"
@@ -225,7 +225,7 @@ type PostingList struct {
 	Bitmap *roaring.Bitmap
 }
 
-func (posting *PostingList) add(eventID uint32) {
+func (posting *PostingList) Add(eventID uint32) {
 	posting.Bitmap.Add(eventID)
 }
 
@@ -236,3 +236,26 @@ func NewPostingList(eventID uint32) *PostingList {
 	p.Bitmap.Add(eventID)
 	return p
 }
+
+// FieldType represent the type of a field.
+type FieldType int
+
+const (
+	// FieldTypeInt represent a numeric int64 field
+	FieldTypeInt FieldType = iota
+	// FieldTypeText represent a tokenizable text string.
+	FieldTypeText
+	// FieldTypeKeyword represent a single string field
+	FieldTypeKeyword
+	//
+	FieldTypeTimestamp
+)
+
+// Field Info represents the info about a field.
+type FieldInfo struct {
+	FieldName string
+	FieldType FieldType
+}
+
+// Event Info.
+type Event map[string]interface{}
