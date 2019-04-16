@@ -2,6 +2,7 @@ package writers
 
 import (
 	"eventdb/segment"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -51,7 +52,11 @@ func getEvents() []segment.Event {
 }
 
 func TestStoreWriterReaderEvents(t *testing.T) {
-	p := "/tmp/bin.bin"
-	WriteEvents(p, getEvents(), getFieldsInfo())
-	// TODO:
+	p := "/tmp/store.bin"
+	offsets,err:=WriteEvents(p, getEvents(), getFieldsInfo())
+	if err != nil {
+		t.Fail()
+	}
+	fmt.Printf("%v", offsets)
+
 }
