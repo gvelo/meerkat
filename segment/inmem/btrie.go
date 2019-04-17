@@ -7,152 +7,153 @@ import (
 	"strings"
 )
 
-type node struct {
-	children map[byte]*node
-	bucket   []*record
-	posting  *segment.PostingList
-	offset   int64
+type Node struct {
+	Children map[byte]*Node
+	Bucket   []*Record
+	Posting  *segment.PostingList
+	Offset   int64
 }
 
-type record struct {
-	value   string
-	posting *segment.PostingList
+type Record struct {
+	Value   string
+	Posting *segment.PostingList
 }
 
-type btrie struct {
-	root        *node
-	bucketSize  int
-	size        int
-	cardinality int
+type BTrie struct {
+	Root        *Node
+	BucketSize  int
+	Size        int
+	Cardinality int
 }
 
-func (bt *btrie) newNode() *node {
-	bt.size++
-	return &node{
-		children: make(map[byte]*node),
-		bucket:   make([]*record, bt.bucketSize)[:0],
+func (bt *BTrie) newNode() *Node {
+	bt.Size++
+	return &Node{
+		Children: make(map[byte]*Node),
+		Bucket:   make([]*Record, bt.BucketSize)[:0],
 	}
 }
 
-func (bt *btrie) add(str string, eventID uint32) {
+func (bt *BTrie) Add(str string, eventID uint32) {
 
-	current := bt.root
+	current := bt.Root
 
 	for i := 0; i < len(str); i++ {
 
-		if child, found := current.children[str[i]]; found {
+		if child, found := current.Children[str[i]]; found {
 			current = child
 			continue
 		}
 
-		for _, record := range current.bucket {
-			if record.value == str[i:] {
+		for _, record := range current.Bucket {
+			if record.Value == str[i:] {
 				// key exist, return
-				record.posting.Add(eventID)
+				record.Posting.Add(eventID)
 				return
 			}
 		}
 
-		if len(current.bucket) == bt.bucketSize {
+		if len(current.Bucket) == bt.BucketSize {
 			// burst
 			n := bt.newNode()
-			newBucket := current.bucket[:0]
-			for _, c := range current.bucket {
+			//TODO Clear the garbage at the end of the slice.
+			newBucket := current.Bucket[:0]
+			for _, c := range current.Bucket {
 
-				if c.value[0] == str[i] {
-					suffix := c.value[1:]
+				if c.Value[0] == str[i] {
+					suffix := c.Value[1:]
 					if len(suffix) == 0 {
-						n.posting = segment.NewPostingList(eventID)
-						bt.cardinality++
+						n.Posting = segment.NewPostingList(eventID)
+						bt.Cardinality++
 						continue
 					}
-					newRecord := &record{
-						value:   c.value[1:],
-						posting: c.posting,
+					newRecord := &Record{
+						Value:   c.Value[1:],
+						Posting: c.Posting,
 					}
-					n.bucket = append(n.bucket, newRecord)
+					n.Bucket = append(n.Bucket, newRecord)
 				} else {
 					newBucket = append(newBucket, c)
 				}
 			}
-			current.bucket = newBucket
-			current.children[str[i]] = n
+			current.Bucket = newBucket
+			current.Children[str[i]] = n
 			current = n
 			continue
 		}
-		newRecord := &record{
-			value:   str[i:],
-			posting: segment.NewPostingList(eventID),
+		newRecord := &Record{
+			Value:   str[i:],
+			Posting: segment.NewPostingList(eventID),
 		}
-		current.bucket = append(current.bucket, newRecord)
-		bt.cardinality++
+		current.Bucket = append(current.Bucket, newRecord)
+		bt.Cardinality++
 		return
 	}
 
-	if current.posting == nil {
-		current.posting = segment.NewPostingList(eventID)
-		bt.cardinality++
+	if current.Posting == nil {
+		current.Posting = segment.NewPostingList(eventID)
+		bt.Cardinality++
 		return
 	}
 
-	current.posting.Bitmap.Add(eventID)
+	current.Posting.Bitmap.Add(eventID)
 }
 
-func (bt *btrie) dumpTrie() {
-	bt.dumpNode("ROOT", bt.root, 0)
+func (bt *BTrie) DumpTrie() {
+	bt.dumpNode("ROOT", bt.Root, 0)
 }
 
-func (bt *btrie) dumpNode(value string, node *node, level int) {
+func (bt *BTrie) dumpNode(value string, node *Node, level int) {
 
 	lPad := strings.Repeat(" ", level)
-	fmt.Printf("%v[node]\n", lPad)
+	fmt.Printf("%v[Node]\n", lPad)
 	fmt.Printf("%v %v \n", lPad, value)
 
-	if len(node.bucket) > 0 {
-		fmt.Printf("%v [bucket]\n", lPad)
-		for _, r := range node.bucket {
-			fmt.Printf("%v  %v\n", lPad, r.value)
+	if len(node.Bucket) > 0 {
+		fmt.Printf("%v [Bucket]\n", lPad)
+		for _, r := range node.Bucket {
+			fmt.Printf("%v  %v\n", lPad, r.Value)
 		}
 	}
 
-	for c, n := range node.children {
+	for c, n := range node.Children {
 		bt.dumpNode(string(c), n, level+1)
 	}
 
 }
 
-func (bt *btrie) lookup(term string) *roaring.Bitmap {
+func (bt *BTrie) Lookup(term string) *roaring.Bitmap {
 
-	current := bt.root
+	current := bt.Root
 
 	for i := 0; i < len(term); i++ {
 
-		if child, found := current.children[term[i]]; found {
+		if child, found := current.Children[term[i]]; found {
 			current = child
 			continue
 		}
 
-		for _, record := range current.bucket {
-			if record.value == term[i:] {
-				return record.posting.Bitmap
+		for _, record := range current.Bucket {
+			if record.Value == term[i:] {
+				return record.Posting.Bitmap
 			}
 		}
 
 		return nil
 	}
 
-	if current.posting != nil {
-		return current.posting.Bitmap
+	if current.Posting != nil {
+		return current.Posting.Bitmap
 	}
 
 	return nil
 
 }
 
-func newBtrie() *btrie {
-	idx := &btrie{
-		bucketSize: 64,
+func NewBtrie() *BTrie {
+	idx := &BTrie{
+		BucketSize: 64,
 	}
-	idx.root = idx.newNode()
+	idx.Root = idx.newNode()
 	return idx
 }

@@ -77,6 +77,12 @@ func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 	return nil
 }
 
+func (fw *BinaryWriter) WriteByte(x byte) error {
+	fw.writer.WriteByte(x)
+	fw.Offset += 1
+	return nil
+}
+
 // EncodeVarint writes a varint-encoded integer to the Buffer.
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
