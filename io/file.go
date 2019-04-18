@@ -25,7 +25,7 @@ const (
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
-	Offset int64
+	Offset int
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
