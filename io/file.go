@@ -78,6 +78,12 @@ func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 	return nil
 }
 
+func (fw *BinaryWriter) WriteByte(x byte) error {
+	fw.writer.WriteByte(x)
+	fw.Offset += 1
+	return nil
+}
+
 // EncodeVarint writes a varint-encoded integer to the Buffer.
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
@@ -168,6 +174,7 @@ func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
 type BinaryReader struct {
 	bytes  []byte
 	Offset int64
+	Size   int
 }
 
 func NewBinaryReader(name string) (*BinaryReader, error) {
@@ -181,6 +188,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
+		Size: len(b)
 	}
 	return fr, nil
 }
