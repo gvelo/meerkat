@@ -173,6 +173,7 @@ func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
 type BinaryReader struct {
 	bytes  []byte
 	Offset int64
+	Size   int
 }
 
 func NewBinaryReader(name string) (*BinaryReader, error) {
@@ -186,6 +187,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
+		Size: len(b)
 	}
 	return fr, nil
 }
