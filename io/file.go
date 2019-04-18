@@ -19,6 +19,7 @@ const (
 	PostingListV1 FileType = 0
 	StringIndexV1 FileType = 1
 	RowStoreV1    FileType = 2
+	RowStoreIDXV1 FileType = 3
 )
 
 type BinaryWriter struct {

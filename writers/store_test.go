@@ -53,10 +53,18 @@ func getEvents() []segment.Event {
 
 func TestStoreWriterReaderEvents(t *testing.T) {
 	p := "/tmp/store.bin"
-	offsets,err:=WriteEvents(p, getEvents(), getFieldsInfo())
+	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo())
 	if err != nil {
 		t.Fail()
 	}
 	fmt.Printf("%v", offsets)
 
+}
+
+func TestWriteStoreIdx(t *testing.T) {
+	s := make([]uint64, 0)
+	err := WriteStoreIdx(s)
+	if err != nil {
+		t.Fail()
+	}
 }
