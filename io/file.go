@@ -187,7 +187,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
-		Size: len(b)
+		Size: len(b),
 	}
 	return fr, nil
 }
