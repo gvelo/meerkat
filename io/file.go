@@ -26,7 +26,7 @@ const (
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
-	Offset int
+	Offset int64
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
@@ -189,7 +189,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
-		Size:   len(b)
+		Size: len(b),
 	}
 	return fr, nil
 }
