@@ -81,17 +81,21 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 
 	err = bw.WriteHeader(io.RowStoreIDXV1)
 
-	processLevel(bw, offsets, 1, 100)
+	err, l := processLevel(bw, offsets, 1, 100)
+	if err != nil {
+		panic(err)
+	}
 
-	bw.WriteEncodedFixed64(uint64(bw.Offset - 8))
+	bw.WriteEncodedFixed64(uint64(bw.Offset - 16))
+	bw.WriteEncodedFixed64(uint64(l))
 
 	return nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int) error {
+func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int) (error, int) {
 
 	if len(offsets) <= 2 {
-		return nil
+		return nil, lvl
 	}
 
 	nl := make([]uint64, len(offsets)/ixl^lvl)

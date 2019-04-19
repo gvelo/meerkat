@@ -249,6 +249,8 @@ const (
 	FieldTypeKeyword
 	//
 	FieldTypeTimestamp
+	//
+	FieldTypeFloat
 )
 
 // Field Info represents the info about a field.

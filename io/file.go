@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"eventdb/io/mmap"
+	"eventdb/segment"
 	"fmt"
 	"io"
 	"os"
@@ -188,7 +189,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
-		Size: len(b)
+		Size:   len(b)
 	}
 	return fr, nil
 }
@@ -454,4 +455,20 @@ func (fr *BinaryReader) DecodeStringBytes() (s string, err error) {
 // Close close and unmap the file.
 func (fr *BinaryReader) Close() error {
 	return mmap.UnMap(fr.bytes)
+}
+
+func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
+	switch info.FieldType {
+	case segment.FieldTypeInt:
+		return fr.DecodeVarint()
+	case segment.FieldTypeText:
+		return fr.DecodeStringBytes()
+	case segment.FieldTypeKeyword:
+		return fr.DecodeVarint()
+	case segment.FieldTypeTimestamp:
+		return fr.DecodeVarint()
+	case segment.FieldTypeFloat:
+		return fr.DecodeFixed64()
+	}
+	return nil, errors.New(fmt.Sprintf("info.FieldType %d not found ", info.FieldType))
 }
