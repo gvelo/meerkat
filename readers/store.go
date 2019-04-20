@@ -6,6 +6,7 @@ import (
 	"eventdb/segment"
 	"fmt"
 	"log"
+	"math"
 )
 
 func ReadEvent(name string, id uint64, infos []segment.FieldInfo) (segment.Event, error) {
@@ -45,7 +46,7 @@ func findOffset(name string, id uint64) (uint64, uint64, bool, error) {
 }
 
 func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl uint64) (uint64, uint64, bool) {
-
+	log.Println(fmt.Sprintf("Processing lvl %d , offset %d ", lvl, offset))
 	// if it is the 1st lvl & the offsets are less than
 	// the ixl then return the offset 0 to search from
 	if lvl == 1 {
@@ -59,13 +60,16 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 	}
 
 	// search this lvl
-	for i := 1; i <= int(t); i++ {
+	for i := 0; i < int(t); i++ {
 
 		lvlOffset, _ := br.DecodeVarint()
-		calcId := (i + 1) * int(lvl*ixl)
-
+		calcId := (i + 1) * int(math.Pow(float64(ixl), float64(lvl)))
+		log.Println(fmt.Sprintf("Calc Id  %d in lvl %d i %d", calcId, lvl, i))
 		if calcId > int(id) {
+			log.Println(fmt.Sprintf("Process Next lvl Calc Id  %d , id %d ", calcId, id))
 			return processLevel(br, lvlOffset, lvl-1, id, ixl)
+		} else {
+			continue
 		}
 
 		if calcId == int(id) {

@@ -3,6 +3,9 @@ package writers
 import (
 	"eventdb/io"
 	"eventdb/segment"
+	"fmt"
+	"log"
+	"math"
 )
 
 const tsField = "ts"
@@ -59,10 +62,11 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) (
 	if err != nil {
 		return nil, err
 	}
-
+	o := bw.Offset
 	bw.WriteEncodedVarint(uint64(min))
 	bw.WriteEncodedVarint(uint64(max))
 	bw.WriteEncodedVarint(uint64(len(evts)))
+	bw.WriteEncodedFixed64(uint64(o))
 
 	WriteStoreIdx(name, offsets)
 
@@ -98,13 +102,12 @@ func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int, prevO
 		return nil, lvl, prevOffset
 	}
 
-	nl := make([]uint64, len(offsets)/ixl^lvl)
-
+	nl := make([]uint64, 0)
+	log.Println(fmt.Sprintf("lvl %d list size %d", lvl, len(offsets)))
 	bw.WriteEncodedVarint(uint64(len(offsets)))
-
 	for i := 0; i < len(offsets); i++ {
 		bw.WriteEncodedVarint(offsets[i])
-		if i%(ixl^lvl) == 0 {
+		if i%(int(math.Pow(float64(ixl), float64(lvl)))) == 0 {
 			nl = append(nl, offsets[i])
 		}
 	}

@@ -64,7 +64,6 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	fmt.Printf("%v", offsets)
 
 	err = WriteStoreIdx(p, offsets)
 	if err != nil {
@@ -134,7 +133,7 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	e = testFindEvent(t, p, 50000)
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
-	assert.Equal(t, e["msg"], "test message 59999 ")
+	assert.Equal(t, e["msg"], "test message 49999 ")
 	assert.Equal(t, e["num1"], uint64(49999))
 	assert.Equal(t, e["num2"], uint64(49999.0))
 }
@@ -158,7 +157,6 @@ func testFindEvent(t *testing.T, p string, id uint64) segment.Event {
 	if err != nil {
 		t.Fail()
 	}
-	fmt.Printf("%v", offsets)
 
 	err = WriteStoreIdx(p, offsets)
 	if err != nil {
