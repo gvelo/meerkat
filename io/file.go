@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 )
 
 type FileType byte
@@ -42,16 +41,18 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	return fw, nil
 }
 
-func (fw *BinaryWriter) StoreValue(v interface{}) {
-	switch reflect.TypeOf(v).Kind() {
-	case reflect.String:
-		fw.WriteEncodedStringBytes(v.(string))
-	case reflect.Float64:
-		fw.WriteEncodedFixed64(v.(uint64))
-	case reflect.Float32:
-		fw.WriteEncodedFixed32(v.(uint64))
-	case reflect.Int:
+func (fw *BinaryWriter) WriteValue(v interface{}, info segment.FieldInfo) {
+	switch info.FieldType {
+	case segment.FieldTypeInt:
 		fw.WriteEncodedVarint(v.(uint64))
+	case segment.FieldTypeText:
+		fw.WriteEncodedStringBytes(v.(string))
+	case segment.FieldTypeKeyword:
+		fw.WriteEncodedStringBytes(v.(string))
+	case segment.FieldTypeTimestamp:
+		fw.WriteEncodedVarint(v.(uint64))
+	case segment.FieldTypeFloat:
+		fw.WriteEncodedFixed64(v.(uint64))
 	}
 }
 
@@ -189,7 +190,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
-		Size: len(b),
+		Size:   len(b),
 	}
 	return fr, nil
 }
@@ -464,7 +465,7 @@ func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
 	case segment.FieldTypeText:
 		return fr.DecodeStringBytes()
 	case segment.FieldTypeKeyword:
-		return fr.DecodeVarint()
+		return fr.DecodeStringBytes()
 	case segment.FieldTypeTimestamp:
 		return fr.DecodeVarint()
 	case segment.FieldTypeFloat:

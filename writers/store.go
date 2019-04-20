@@ -49,7 +49,7 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) (
 			v, ok := e[n]
 			if ok { // got it
 				bw.WriteEncodedVarint(uint64(fieldId))
-				bw.StoreValue(v)
+				bw.WriteValue(v, info)
 			}
 
 		}
@@ -60,11 +60,11 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) (
 		return nil, err
 	}
 
-	WriteStoreIdx(offsets)
-
 	bw.WriteEncodedVarint(uint64(min))
 	bw.WriteEncodedVarint(uint64(max))
 	bw.WriteEncodedVarint(uint64(len(evts)))
+
+	WriteStoreIdx(name, offsets)
 
 	return offsets, nil
 }
@@ -81,32 +81,32 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 
 	err = bw.WriteHeader(io.RowStoreIDXV1)
 
-	err, l := processLevel(bw, offsets, 1, 100)
+	err, l, lvlOffset := processLevel(bw, offsets, 1, 100, int(bw.Offset))
 	if err != nil {
 		panic(err)
 	}
 
-	bw.WriteEncodedFixed64(uint64(bw.Offset - 16))
+	bw.WriteEncodedFixed64(uint64(lvlOffset))
 	bw.WriteEncodedFixed64(uint64(l))
 
 	return nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int) (error, int) {
+func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int, prevOffset int) (error, int, int) {
 
-	if len(offsets) <= 2 {
-		return nil, lvl
+	if len(offsets) <= ixl {
+		return nil, lvl, prevOffset
 	}
 
 	nl := make([]uint64, len(offsets)/ixl^lvl)
 
 	bw.WriteEncodedVarint(uint64(len(offsets)))
 
-	for i := 1; i < len(offsets); i++ {
+	for i := 0; i < len(offsets); i++ {
 		bw.WriteEncodedVarint(offsets[i])
 		if i%(ixl^lvl) == 0 {
 			nl = append(nl, offsets[i])
 		}
 	}
-	return processLevel(bw, nl, lvl+1, ixl)
+	return processLevel(bw, nl, lvl+1, ixl, prevOffset)
 }
