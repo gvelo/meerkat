@@ -39,18 +39,19 @@ func findOffset(name string, id uint64) (uint64, uint64, bool, error) {
 	offset, _ := br.DecodeFixed64()
 	lvl, _ := br.DecodeFixed64()
 
-	r, start, ok := processLevel(br, offset, lvl, id, 100)
+	r, start, ok := processLevel(br, offset, lvl, id, 5, 0)
 
 	return r, start, ok, nil
 
 }
 
-func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl uint64) (uint64, uint64, bool) {
-	log.Println(fmt.Sprintf("Processing lvl %d , offset %d ", lvl, offset))
+func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl uint64, start uint64) (uint64, uint64, bool) {
+	log.Println(fmt.Sprintf("[processLevel] Processing lvl %d , offset %d ", lvl, offset))
 	// if it is the 1st lvl & the offsets are less than
 	// the ixl then return the offset 0 to search from
-	if lvl == 1 {
-		return offset, 0, false
+	if lvl == 0 {
+		log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", offset, start, lvl))
+		return offset, start, start == id
 	}
 	br.Offset = int64(offset)
 	// total offsets in this lvl
@@ -60,24 +61,27 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 	}
 
 	// search this lvl
+	var lvlPtr uint64 = 0
 	for i := 0; i < int(t); i++ {
 
 		lvlOffset, _ := br.DecodeVarint()
-		calcId := (i + 1) * int(math.Pow(float64(ixl), float64(lvl)))
-		log.Println(fmt.Sprintf("Calc Id  %d in lvl %d i %d", calcId, lvl, i))
+
+		calcId := i * int(math.Pow(float64(ixl), float64(lvl)))
+
+		ptr := (i - 1) * int(math.Pow(float64(ixl), float64(lvl)))
+		log.Println(fmt.Sprintf("[processLevel] Calc Id  %d in lvl %d i %d", calcId, lvl, i))
+
 		if calcId > int(id) {
-			log.Println(fmt.Sprintf("Process Next lvl Calc Id  %d , id %d ", calcId, id))
-			return processLevel(br, lvlOffset, lvl-1, id, ixl)
-		} else {
-			continue
+			log.Println(fmt.Sprintf("[processLevel] Process Next lvl Calc Id  %d , id %d ", calcId, id))
+			return processLevel(br, lvlPtr, lvl-1, id, ixl, uint64(ptr))
 		}
 
 		if calcId == int(id) {
+			log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", lvlOffset, start, lvl))
 			return lvlOffset, uint64(calcId), true
-		} else {
-			return 0, 0, false
 		}
 
+		lvlPtr = lvlOffset
 	}
 	return 0, 0, false
 }
@@ -100,22 +104,25 @@ func findEvent(name string, offset uint64, infos []segment.FieldInfo, found bool
 	br.Offset = int64(offset)
 
 	if found {
-		evt, err := loadEvent(br, infos)
+		evt, err := LoadEvent(br, infos)
 		return evt, err == nil
 	} else {
 		for i := startFrom; i <= uint64(br.Size); i++ {
 
-			calcId := i + 1
+			calcId := i
 			//log.Println(fmt.Sprintf("Loading event", calcId))
 
 			if calcId < id {
-				loadEvent(br, infos)
+				o := br.Offset
+				evt, err := LoadEvent(br, infos)
+				log.Println(fmt.Sprintf("[findEvent] evt %v , err %v , i %d , offset: %d ", evt, err, i, o))
 				continue
 			}
 
 			if calcId == id {
-				evt, err := loadEvent(br, infos)
-				log.Println(fmt.Sprintf("evt %v , err %v", evt, err))
+				o := br.Offset
+				evt, err := LoadEvent(br, infos)
+				log.Println(fmt.Sprintf("[findEvent] evt %v , err %v , i %d , offset: %d ", evt, err, i, o))
 				return evt, err == nil
 			} else {
 				return nil, false
@@ -126,7 +133,7 @@ func findEvent(name string, offset uint64, infos []segment.FieldInfo, found bool
 	return nil, false
 }
 
-func loadEvent(br *io.BinaryReader, infos []segment.FieldInfo) (segment.Event, error) {
+func LoadEvent(br *io.BinaryReader, infos []segment.FieldInfo) (segment.Event, error) {
 
 	m := make(segment.Event)
 	br.DecodeVarint()

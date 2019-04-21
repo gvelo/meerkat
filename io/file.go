@@ -74,9 +74,8 @@ func (fw *BinaryWriter) Close() error {
 
 func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 	b := []byte(MagicNumber)
-	fw.writer.Write(b)
-	fw.writer.WriteByte(byte(fileType))
-	fw.Offset = fw.Offset + int64(len(b)) + 1
+	fw.Write(b)
+	fw.WriteByte(byte(fileType))
 	return nil
 }
 
@@ -152,7 +151,7 @@ func (fw *BinaryWriter) WriteEncodedZigzag32(x uint64) error {
 // type and for embedded messages.
 func (fw *BinaryWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
-	fw.writer.Write(b)
+	fw.Write(b)
 	return nil
 }
 
@@ -170,6 +169,7 @@ func (fw *BinaryWriter) Write(b []byte) (int, error) {
 func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
 	fw.WriteEncodedVarint(uint64(len(s)))
 	fw.writer.WriteString(s)
+	fw.Offset += int64(len(s))
 	return nil
 }
 

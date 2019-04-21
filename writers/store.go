@@ -5,7 +5,6 @@ import (
 	"eventdb/segment"
 	"fmt"
 	"log"
-	"math"
 )
 
 const tsField = "ts"
@@ -82,14 +81,16 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 	}
 
 	defer bw.Close()
-
+	log.Println("Header")
 	err = bw.WriteHeader(io.RowStoreIDXV1)
 
-	err, l, lvlOffset := processLevel(bw, offsets, 1, 100, int(bw.Offset))
+	log.Println(fmt.Sprintf("Offsets: %v", offsets))
+
+	err, l, lvlOffset := processLevel(bw, offsets, 0, 5, int(bw.Offset))
 	if err != nil {
 		panic(err)
 	}
-
+	log.Println("Info")
 	bw.WriteEncodedFixed64(uint64(lvlOffset))
 	bw.WriteEncodedFixed64(uint64(l))
 
@@ -98,18 +99,28 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 
 func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int, prevOffset int) (error, int, int) {
 
-	if len(offsets) <= ixl {
-		return nil, lvl, prevOffset
+	offset := int(bw.Offset)
+	log.Println(fmt.Sprintf("[W processLevel] lvl %d list size %d offset %d", lvl, len(offsets), offset))
+
+	if len(offsets) <= 1 {
+		log.Println(fmt.Sprintf("[W processLevel] returning lvl %d offset %d", lvl-1, prevOffset))
+		return nil, lvl - 1, prevOffset
 	}
 
 	nl := make([]uint64, 0)
-	log.Println(fmt.Sprintf("lvl %d list size %d", lvl, len(offsets)))
-	bw.WriteEncodedVarint(uint64(len(offsets)))
-	for i := 0; i < len(offsets); i++ {
-		bw.WriteEncodedVarint(offsets[i])
-		if i%(int(math.Pow(float64(ixl), float64(lvl)))) == 0 {
+
+	// #items in this lvl
+	if lvl > 0 {
+		bw.WriteEncodedVarint(uint64(len(offsets)))
+	}
+	for i := 0; i < int(uint64(len(offsets))); i++ {
+		if lvl > 0 {
+			bw.WriteEncodedVarint(offsets[i])
+		}
+		if i%ixl == 0 {
 			nl = append(nl, offsets[i])
 		}
 	}
-	return processLevel(bw, nl, lvl+1, ixl, prevOffset)
+	log.Println(fmt.Sprintf("[W processLevel] offsets lvl %d %v", lvl-1, nl))
+	return processLevel(bw, nl, lvl+1, ixl, offset)
 }
