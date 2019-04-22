@@ -1,7 +1,6 @@
 package writers
 
 import (
-	"eventdb/io"
 	"eventdb/readers"
 	"eventdb/segment"
 	"fmt"
@@ -61,17 +60,17 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 	ass := assert.New(t)
 
 	p := "/tmp/store.bin"
-	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo())
+	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo(), 100)
 	if err != nil {
 		t.Fail()
 	}
 
-	err = WriteStoreIdx(p, offsets)
+	err = WriteStoreIdx(p, offsets, 100)
 	if err != nil {
 		t.Fail()
 	}
 
-	e, err := readers.ReadEvent(p, 2, getFieldsInfo())
+	e, err := readers.ReadEvent(p, 2, getFieldsInfo(), 100)
 	if err != nil {
 		t.Fail()
 	}
@@ -102,7 +101,7 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	ass := assert.New(t)
 	p := "/tmp/store2.bin"
 
-	e := testFindEvent(t, p, 2)
+	e := testFindEvent(t, p, 2, 10000, 100)
 
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
@@ -110,40 +109,40 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	assert.Equal(t, uint64(2), e["num1"])
 	assert.Equal(t, uint64(2.0), e["num2"])
 
-	e = testFindEvent(t, p, 100)
-	ass.NotNil(e)
-	ass.True(len(e) == 5)
-	assert.Equal(t, "test message 99 ", e["msg"])
-	assert.Equal(t, uint64(99), e["num1"])
-	assert.Equal(t, uint64(99.0), e["num2"])
-
-	e = testFindEvent(t, p, 101)
+	e = testFindEvent(t, p, 100, 10000, 100)
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
 	assert.Equal(t, "test message 100 ", e["msg"])
 	assert.Equal(t, uint64(100), e["num1"])
 	assert.Equal(t, uint64(100.0), e["num2"])
 
-	e = testFindEvent(t, p, 151)
+	e = testFindEvent(t, p, 101, 10000, 100)
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
-	assert.Equal(t, "test message 150 ", e["msg"])
-	assert.Equal(t, uint64(150), e["num1"])
-	assert.Equal(t, uint64(150.0), e["num2"])
+	assert.Equal(t, "test message 101 ", e["msg"])
+	assert.Equal(t, uint64(101), e["num1"])
+	assert.Equal(t, uint64(101.0), e["num2"])
 
-	e = testFindEvent(t, p, 50000)
+	e = testFindEvent(t, p, 151, 10000, 100)
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
-	assert.Equal(t, "test message 49999 ", e["msg"])
-	assert.Equal(t, uint64(49999), e["num1"])
-	assert.Equal(t, uint64(49999.0), e["num2"])
+	assert.Equal(t, "test message 151 ", e["msg"])
+	assert.Equal(t, uint64(151), e["num1"])
+	assert.Equal(t, uint64(151.0), e["num2"])
+
+	e = testFindEvent(t, p, 50000, 100000, 100)
+	ass.NotNil(e)
+	ass.True(len(e) == 5)
+	assert.Equal(t, "test message 50000 ", e["msg"])
+	assert.Equal(t, uint64(50000), e["num1"])
+	assert.Equal(t, uint64(50000.0), e["num2"])
 }
 
 func TestStoreWriter0(t *testing.T) {
 	ass := assert.New(t)
 	p := "/tmp/store4.bin"
 
-	e := testFindEvent(t, p, 0)
+	e := testFindEvent(t, p, 0, 10, 100)
 
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
@@ -156,7 +155,7 @@ func TestStoreWriter1(t *testing.T) {
 	ass := assert.New(t)
 	p := "/tmp/store4.bin"
 
-	e := testFindEvent(t, p, 1)
+	e := testFindEvent(t, p, 1, 10, 100)
 
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
@@ -169,7 +168,7 @@ func TestStoreWriter50(t *testing.T) {
 	ass := assert.New(t)
 	p := "/tmp/store4.bin"
 
-	e := testFindEvent(t, p, 50)
+	e := testFindEvent(t, p, 50, 100, 100)
 
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
@@ -182,42 +181,23 @@ func TestStoreWriter200(t *testing.T) {
 	ass := assert.New(t)
 	p := "/tmp/store3.bin"
 
-	e := testFindEvent(t, p, 200)
+	e := testFindEvent(t, p, 200, 1000, 100)
 
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
-	assert.Equal(t, "test message 199 ", e["msg"])
-	assert.Equal(t, uint64(199), e["num1"])
-	assert.Equal(t, uint64(199.0), e["num2"])
+	assert.Equal(t, "test message 200 ", e["msg"])
+	assert.Equal(t, uint64(200), e["num1"])
+	assert.Equal(t, uint64(200.0), e["num2"])
 }
 
-func TestStoreReader(t *testing.T) {
-	ass := assert.New(t)
-	p := "/tmp/store3.bin"
+func testFindEvent(t *testing.T, p string, id uint64, create int, ixl uint64) segment.Event {
 
-	br, _ := io.NewBinaryReader(p)
-
-	br.Offset = 153
-	e, err := readers.LoadEvent(br, getFieldsInfo())
+	_, err := WriteEvents(p, createEvents(create), getFieldsInfo(), ixl)
 	if err != nil {
 		t.Fail()
 	}
 
-	ass.NotNil(e)
-	ass.True(len(e) == 5)
-	assert.Equal(t, "test message 199 ", e["msg"])
-	assert.Equal(t, uint64(199), e["num1"])
-	assert.Equal(t, uint64(199.0), e["num2"])
-}
-
-func testFindEvent(t *testing.T, p string, id uint64) segment.Event {
-
-	_, err := WriteEvents(p, createEvents(200), getFieldsInfo())
-	if err != nil {
-		t.Fail()
-	}
-
-	e, err := readers.ReadEvent(p, id, getFieldsInfo())
+	e, err := readers.ReadEvent(p, id, getFieldsInfo(), ixl)
 	if err != nil {
 		t.Fail()
 	}

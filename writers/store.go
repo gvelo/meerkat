@@ -9,7 +9,7 @@ import (
 
 const tsField = "ts"
 
-func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) ([]uint64, error) {
+func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo, ixl uint64) ([]uint64, error) {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -67,12 +67,12 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo) (
 	bw.WriteEncodedVarint(uint64(len(evts)))
 	bw.WriteEncodedFixed64(uint64(o))
 
-	WriteStoreIdx(name, offsets)
+	WriteStoreIdx(name, offsets, ixl)
 
 	return offsets, nil
 }
 
-func WriteStoreIdx(name string, offsets []uint64) error {
+func WriteStoreIdx(name string, offsets []uint64, ixl uint64) error {
 
 	bw, err := io.NewBinaryWriter(name + ".idx")
 
@@ -86,7 +86,7 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 
 	log.Println(fmt.Sprintf("Offsets: %v", offsets))
 
-	err, l, _, lvlOffset := processLevel(bw, offsets, nil, 0, 5, uint64(bw.Offset), 0, 0)
+	err, l, _, lvlOffset := processLevel(bw, offsets, nil, 0, int(ixl), uint64(bw.Offset), 0, 0)
 	if err != nil {
 		panic(err)
 	}

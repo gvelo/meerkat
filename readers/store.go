@@ -9,9 +9,9 @@ import (
 	"math"
 )
 
-func ReadEvent(name string, id uint64, infos []segment.FieldInfo) (segment.Event, error) {
+func ReadEvent(name string, id uint64, infos []segment.FieldInfo, ixl uint64) (segment.Event, error) {
 
-	offset, start, found, _ := findOffset(name, id)
+	offset, start, found, _ := findOffset(name, id, ixl)
 	evt, evtFound := findEvent(name, offset, infos, found, start, id)
 	if !evtFound {
 		return nil, errors.New(fmt.Sprintf(" %d not found ", id))
@@ -19,7 +19,7 @@ func ReadEvent(name string, id uint64, infos []segment.FieldInfo) (segment.Event
 	return evt, nil
 }
 
-func findOffset(name string, id uint64) (uint64, uint64, bool, error) {
+func findOffset(name string, id uint64, ixl uint64) (uint64, uint64, bool, error) {
 
 	br, err := io.NewBinaryReader(name + ".idx")
 
@@ -39,7 +39,7 @@ func findOffset(name string, id uint64) (uint64, uint64, bool, error) {
 	offset, _ := br.DecodeFixed64()
 	lvl, _ := br.DecodeFixed64()
 
-	r, start, ok := processLevel(br, offset, lvl, id, 5, 0)
+	r, start, ok := processLevel(br, offset, lvl, id, ixl, 0)
 
 	return r, start, ok, nil
 
