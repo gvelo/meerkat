@@ -79,7 +79,7 @@ func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 
 func (fw *BinaryWriter) WriteByte(x byte) error {
 	fw.writer.WriteByte(x)
-	fw.Offset += 1
+	fw.Offset++
 	return nil
 }
 
@@ -165,8 +165,10 @@ func (fw *BinaryWriter) Write(b []byte) (int, error) {
 // EncodeStringBytes writes an encoded string to the Buffer.
 // This is the format used for the proto2 string type.
 func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
-	fw.WriteEncodedVarint(uint64(len(s)))
+	l := uint64(len(s))
+	fw.WriteEncodedVarint(l)
 	fw.writer.WriteString(s)
+	fw.Offset += int64(l)
 	return nil
 }
 
@@ -187,7 +189,7 @@ func NewBinaryReader(name string) (*BinaryReader, error) {
 	fr := &BinaryReader{
 		bytes:  b,
 		Offset: 0,
-		Size: len(b),
+		Size:   len(b),
 	}
 	return fr, nil
 }
@@ -234,6 +236,12 @@ func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	// The number is too large to represent in a 64-bit value.
 	err = errOverflow
 	return
+}
+
+func (fr *BinaryReader) DecodeByte() byte {
+	byte := fr.bytes[fr.Offset]
+	fr.Offset++
+	return byte
 }
 
 // DecodeVarint reads a varint-encoded integer from the Buffer.
