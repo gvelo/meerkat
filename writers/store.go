@@ -81,7 +81,7 @@ func WriteStoreIdx(name string, offsets []uint64, ixl uint64) error {
 	defer bw.Close()
 	err = bw.WriteHeader(io.RowStoreIDXV1)
 
-	err, l, _, lvlOffset := processLevel(bw, offsets, nil, 0, int(ixl), uint64(bw.Offset), 0, 0)
+	err, l, lvlOffset := processLevel(bw, offsets, nil, 0, int(ixl), 0, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -92,12 +92,11 @@ func WriteStoreIdx(name string, offsets []uint64, ixl uint64) error {
 	return nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lvl int, ixl int, ts uint64, tb int, lastOffset int) (error, int, int, int) {
+func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lvl int, ixl int, ts uint64, lastOffset int) (error, int, int) {
 
 	offset := int(bw.Offset)
-	tbb := len(offsets)
 	if len(offsets) <= 1 {
-		return nil, lvl - 1, tb, lastOffset
+		return nil, lvl - 1, lastOffset
 	}
 
 	nl := make([]uint64, 0)
@@ -121,5 +120,5 @@ func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lv
 	}
 
 	lastOffset = offset
-	return processLevel(bw, nl, ns, lvl+1, ixl, ts, tbb, offset)
+	return processLevel(bw, nl, ns, lvl+1, ixl, ts, offset)
 }
