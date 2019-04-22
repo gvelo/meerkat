@@ -5,7 +5,6 @@ import (
 	"eventdb/io"
 	"eventdb/segment"
 	"fmt"
-	"log"
 	"math"
 )
 
@@ -46,20 +45,12 @@ func findOffset(name string, id uint64, ixl uint64) (uint64, uint64, bool, error
 }
 
 func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl uint64, start uint64) (uint64, uint64, bool) {
-	log.Println(fmt.Sprintf("[processLevel] Processing lvl %d , offset %d ", lvl, offset))
 	// if it is the 1st lvl & the offsets are less than
 	// the ixl then return the offset 0 to search from
 	if lvl == 0 {
-		log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", offset, start, lvl))
 		return offset, start, start == id
 	}
 	br.Offset = int64(offset)
-	// total offsets in this lvl
-	//t, err := br.DecodeVarint()
-	//log.Println(fmt.Sprintf("[processLevel] t  %d ", t))
-	//if err != nil {
-	//	panic(err)
-	//}
 
 	// search this lvl
 	var lvlPtr uint64 = 0
@@ -71,15 +62,12 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 		calcId := i * int(math.Pow(float64(ixl), float64(lvl)))
 
 		ptr := (i - 1) * int(math.Pow(float64(ixl), float64(lvl)))
-		log.Println(fmt.Sprintf("[processLevel] Calc Id  %d in lvl %d i %d , local offset %d , downoffset %d ", calcId, lvl, i, lvlOffset, dlvlOffset))
 
 		if calcId > int(id) {
-			log.Println(fmt.Sprintf("[processLevel] Process Next lvl Calc Id  %d , id %d ", calcId, id))
 			return processLevel(br, lvlPtr, lvl-1, id, ixl, uint64(ptr))
 		}
 
 		if calcId == int(id) {
-			log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", lvlOffset, calcId, lvl))
 			return lvlOffset, uint64(calcId), true
 		}
 
@@ -112,19 +100,15 @@ func findEvent(name string, offset uint64, infos []segment.FieldInfo, found bool
 		for i := startFrom; i <= uint64(br.Size); i++ {
 
 			calcId := i
-			//log.Println(fmt.Sprintf("Loading event", calcId))
 
 			if calcId < id {
-				o := br.Offset
-				evt, err := LoadEvent(br, infos)
-				log.Println(fmt.Sprintf("[findEvent] evt %v , err %v , i %d , offset: %d ", evt, err, i, o))
+				// TODO: put an offset and skip it by record
+				LoadEvent(br, infos)
 				continue
 			}
 
 			if calcId == id {
-				o := br.Offset
 				evt, err := LoadEvent(br, infos)
-				log.Println(fmt.Sprintf("[findEvent] evt %v , err %v , i %d , offset: %d ", evt, err, i, o))
 				return evt, err == nil
 			} else {
 				return nil, false

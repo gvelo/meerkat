@@ -60,20 +60,27 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 	ass := assert.New(t)
 
 	p := "/tmp/store.bin"
+
+	start := time.Now()
 	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo(), 100)
 	if err != nil {
 		t.Fail()
 	}
+	t.Logf("write events took %v ", time.Since(start))
 
+	start = time.Now()
 	err = WriteStoreIdx(p, offsets, 100)
 	if err != nil {
 		t.Fail()
 	}
+	t.Logf("write events took idx %v ", time.Since(start))
 
+	start = time.Now()
 	e, err := readers.ReadEvent(p, 2, getFieldsInfo(), 100)
 	if err != nil {
 		t.Fail()
 	}
+	t.Logf("find event took idx %v ", time.Since(start))
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
 	assert.Equal(t, "test message three", e["msg"])
@@ -130,7 +137,7 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	assert.Equal(t, uint64(151), e["num1"])
 	assert.Equal(t, uint64(151.0), e["num2"])
 
-	e = testFindEvent(t, p, 50000, 100000, 100)
+	e = testFindEvent(t, p, 50000, 1000000, 1000)
 	ass.NotNil(e)
 	ass.True(len(e) == 5)
 	assert.Equal(t, "test message 50000 ", e["msg"])
@@ -192,14 +199,17 @@ func TestStoreWriter200(t *testing.T) {
 
 func testFindEvent(t *testing.T, p string, id uint64, create int, ixl uint64) segment.Event {
 
+	start := time.Now()
 	_, err := WriteEvents(p, createEvents(create), getFieldsInfo(), ixl)
 	if err != nil {
 		t.Fail()
 	}
-
+	t.Logf("write %d events took %v ", create, time.Since(start))
+	start = time.Now()
 	e, err := readers.ReadEvent(p, id, getFieldsInfo(), ixl)
 	if err != nil {
 		t.Fail()
 	}
+	t.Logf("read event took %v ", time.Since(start))
 	return e
 }
