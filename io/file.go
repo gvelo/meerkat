@@ -23,9 +23,11 @@ const (
 )
 
 type BinaryWriter struct {
-	file   *os.File
-	writer *bufio.Writer
-	Offset int64
+	file    *os.File
+	writer  *bufio.Writer
+	fileD   *os.File
+	writerD *bufio.Writer
+	Offset  int64
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
@@ -33,10 +35,16 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	fd, errd := os.Create(name + ".d")
+	if errd != nil {
+		return nil, err
+	}
 	fw := &BinaryWriter{
-		file:   f,
-		writer: bufio.NewWriter(f),
-		Offset: 0,
+		file:    f,
+		writer:  bufio.NewWriter(f),
+		fileD:   fd,
+		writerD: bufio.NewWriter(fd),
+		Offset:  0,
 	}
 	return fw, nil
 }
@@ -69,11 +77,25 @@ func (fw *BinaryWriter) Close() error {
 	if err != nil {
 		return err
 	}
+
+	err = fw.writerD.Flush()
+	if err != nil {
+		return err
+	}
+	err = fw.fileD.Sync()
+	if err != nil {
+		return err
+	}
+	err = fw.fileD.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 	b := []byte(MagicNumber)
+	fw.writerD.WriteString(MagicNumber)
 	fw.Write(b)
 	fw.WriteByte(byte(fileType))
 	return nil
@@ -81,6 +103,7 @@ func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 
 func (fw *BinaryWriter) WriteByte(x byte) error {
 	fw.writer.WriteByte(x)
+	fw.writerD.WriteString(fmt.Sprint(x))
 	fw.Offset += 1
 	return nil
 }
@@ -90,6 +113,8 @@ func (fw *BinaryWriter) WriteByte(x byte) error {
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
 func (fw *BinaryWriter) WriteEncodedVarint(x uint64) error {
+	fw.writerD.WriteString(fmt.Sprint(x))
+	fw.writerD.WriteString(fmt.Sprintf("[%d]", fw.Offset))
 	for x >= 1<<7 {
 		fw.writer.WriteByte(uint8(x&0x7f | 0x80))
 		x >>= 7
@@ -98,6 +123,20 @@ func (fw *BinaryWriter) WriteEncodedVarint(x uint64) error {
 	fw.writer.WriteByte(uint8(x))
 	fw.Offset += 1
 	return nil
+}
+
+// EncodeVarint writes a varint-encoded integer to the Buffer.
+// This is the format for the
+// int32, int64, uint32, uint64, bool, and enum
+// protocol buffer types.
+func (fw *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
+	var s uint64 = 0
+	for x >= 1<<7 {
+		x >>= 7
+		s += 1
+	}
+	s += 1
+	return s
 }
 
 // EncodeFixed64 writes a 64-bit integer to the Buffer.
@@ -112,6 +151,7 @@ func (fw *BinaryWriter) WriteEncodedFixed64(x uint64) error {
 	fw.writer.WriteByte(uint8(x >> 40))
 	fw.writer.WriteByte(uint8(x >> 48))
 	fw.writer.WriteByte(uint8(x >> 56))
+	fw.writerD.WriteString(fmt.Sprint(x))
 	fw.Offset += 8
 	return nil
 }
@@ -124,6 +164,7 @@ func (fw *BinaryWriter) WriteEncodedFixed32(x uint64) error {
 	fw.writer.WriteByte(uint8(x >> 8))
 	fw.writer.WriteByte(uint8(x >> 16))
 	fw.writer.WriteByte(uint8(x >> 24))
+	fw.writerD.WriteString(fmt.Sprint(x))
 	fw.Offset += 4
 	return nil
 }
@@ -152,6 +193,7 @@ func (fw *BinaryWriter) WriteEncodedZigzag32(x uint64) error {
 func (fw *BinaryWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
 	fw.Write(b)
+	fw.writerD.WriteString(string(b))
 	return nil
 }
 
@@ -169,6 +211,7 @@ func (fw *BinaryWriter) Write(b []byte) (int, error) {
 func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
 	fw.WriteEncodedVarint(uint64(len(s)))
 	fw.writer.WriteString(s)
+	fw.writerD.WriteString(s)
 	fw.Offset += int64(len(s))
 	return nil
 }

@@ -86,41 +86,56 @@ func WriteStoreIdx(name string, offsets []uint64) error {
 
 	log.Println(fmt.Sprintf("Offsets: %v", offsets))
 
-	err, l, lvlOffset := processLevel(bw, offsets, 0, 5, int(bw.Offset))
+	err, l, _, lvlOffset := processLevel(bw, offsets, nil, 0, 5, uint64(bw.Offset), 0, 0)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("Info")
+	// cantidad falta
 	bw.WriteEncodedFixed64(uint64(lvlOffset))
 	bw.WriteEncodedFixed64(uint64(l))
 
 	return nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []uint64, lvl int, ixl int, prevOffset int) (error, int, int) {
+func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lvl int, ixl int, ts uint64, tb int, lastOffset int) (error, int, int, int) {
 
 	offset := int(bw.Offset)
-	log.Println(fmt.Sprintf("[W processLevel] lvl %d list size %d offset %d", lvl, len(offsets), offset))
-
+	log.Println(fmt.Sprintf("[W processLevel] lvl %d list size %d ", lvl, len(offsets)))
+	tbb := len(offsets)
 	if len(offsets) <= 1 {
-		log.Println(fmt.Sprintf("[W processLevel] returning lvl %d offset %d", lvl-1, prevOffset))
-		return nil, lvl - 1, prevOffset
+		log.Println(fmt.Sprintf("[W processLevel] returning lvl %d ", lvl-1))
+		return nil, lvl - 1, tb, lastOffset
 	}
 
 	nl := make([]uint64, 0)
+	ns := make([]uint64, 0)
 
 	// #items in this lvl
+
 	if lvl > 0 {
-		bw.WriteEncodedVarint(uint64(len(offsets)))
+		//bw.WriteEncodedVarint(uint64(len(offsets)))
+		//log.Println(fmt.Sprintf("[W processLevel] len %d ", uint64(len(offsets))))
 	}
 	for i := 0; i < int(uint64(len(offsets))); i++ {
 		if lvl > 0 {
+			coso := bw.Offset
 			bw.WriteEncodedVarint(offsets[i])
+			bw.WriteEncodedVarint(idxOffsets[i])
+			if i%ixl == 0 {
+				ns = append(ns, uint64(coso))
+			}
 		}
 		if i%ixl == 0 {
 			nl = append(nl, offsets[i])
+			if lvl == 0 {
+				ns = append(ns, offsets[i])
+			}
 		}
 	}
-	log.Println(fmt.Sprintf("[W processLevel] offsets lvl %d %v", lvl-1, nl))
-	return processLevel(bw, nl, lvl+1, ixl, offset)
+	log.Println(fmt.Sprintf("[W processLevel] offsets lvl %d %v", lvl+1, nl))
+	log.Println(fmt.Sprintf("[W processLevel] offsets internos lvl %d %v", lvl+1, ns))
+
+	lastOffset = offset
+	return processLevel(bw, nl, ns, lvl+1, ixl, ts, tbb, offset)
 }

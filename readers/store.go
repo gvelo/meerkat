@@ -55,21 +55,23 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 	}
 	br.Offset = int64(offset)
 	// total offsets in this lvl
-	t, err := br.DecodeVarint()
-	if err != nil {
-		panic(err)
-	}
+	//t, err := br.DecodeVarint()
+	//log.Println(fmt.Sprintf("[processLevel] t  %d ", t))
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	// search this lvl
 	var lvlPtr uint64 = 0
-	for i := 0; i < int(t); i++ {
+	for i := 0; i < int(1000); i++ {
 
 		lvlOffset, _ := br.DecodeVarint()
+		dlvlOffset, _ := br.DecodeVarint()
 
 		calcId := i * int(math.Pow(float64(ixl), float64(lvl)))
 
 		ptr := (i - 1) * int(math.Pow(float64(ixl), float64(lvl)))
-		log.Println(fmt.Sprintf("[processLevel] Calc Id  %d in lvl %d i %d", calcId, lvl, i))
+		log.Println(fmt.Sprintf("[processLevel] Calc Id  %d in lvl %d i %d , local offset %d , downoffset %d ", calcId, lvl, i, lvlOffset, dlvlOffset))
 
 		if calcId > int(id) {
 			log.Println(fmt.Sprintf("[processLevel] Process Next lvl Calc Id  %d , id %d ", calcId, id))
@@ -77,11 +79,11 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 		}
 
 		if calcId == int(id) {
-			log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", lvlOffset, start, lvl))
+			log.Println(fmt.Sprintf("[processLevel] returning offset %d start %d in lvl %d", lvlOffset, calcId, lvl))
 			return lvlOffset, uint64(calcId), true
 		}
 
-		lvlPtr = lvlOffset
+		lvlPtr = dlvlOffset
 	}
 	return 0, 0, false
 }
