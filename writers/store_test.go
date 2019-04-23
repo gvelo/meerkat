@@ -143,6 +143,13 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	assert.Equal(t, "test message 50000 ", e["msg"])
 	assert.Equal(t, uint64(50000), e["num1"])
 	assert.Equal(t, uint64(50000.0), e["num2"])
+
+	e = testFindEvent(t, p, 100000, 1000000, 1000)
+	ass.NotNil(e)
+	ass.True(len(e) == 5)
+	assert.Equal(t, "test message 100000 ", e["msg"])
+	assert.Equal(t, uint64(100000), e["num1"])
+	assert.Equal(t, uint64(100000.0), e["num2"])
 }
 
 func TestStoreWriter0(t *testing.T) {
