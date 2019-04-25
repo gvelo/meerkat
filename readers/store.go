@@ -54,7 +54,8 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 
 	// search this lvl
 	var lvlPtr uint64 = 0
-	for i := 0; i < int(1000); i++ {
+	// TODO: FIX IT esto puede traer quilombos cuando el id sea mas grande que el ultimo del nivel.
+	for i := 0; i < int(math.MaxUint32); i++ {
 
 		lvlOffset, _ := br.DecodeVarint()
 		dlvlOffset, _ := br.DecodeVarint()
