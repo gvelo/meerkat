@@ -29,6 +29,7 @@ func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
 	for it.Next() {
 
 		offsets = append(offsets, uint64(bw.Offset))
+		// TODO: FIX copio las claves, puede ocupar mucho 8 bytes x numero.
 		keys = append(keys, uint64(it.Key()))
 		// write the key
 		bw.WriteEncodedVarint(it.Key())
