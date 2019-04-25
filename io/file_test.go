@@ -1,6 +1,7 @@
 package io
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,9 @@ func Test_newFileWriterReader(t *testing.T) {
 	fw.WriteEncodedVarint(2023423423423432434)
 	fw.WriteEncodedFixed64(2023423423423432222)
 	fw.WriteEncodedFixed32(32)
+
+	//var x uint64 =
+	fw.WriteEncodedVarint(math.MaxUint64)
 
 	fw.Close()
 
@@ -56,10 +60,16 @@ func Test_newFileWriterReader(t *testing.T) {
 		t.Error(err)
 	}
 
+	i6, err := fr.DecodeVarint()
+	if err != nil {
+		t.Error(err)
+	}
+
 	assert.Equal(t, "HOLA MANOLA", s)
 	assert.Equal(t, uint64(1), i1)
 	assert.Equal(t, uint64(100), i2)
 	assert.Equal(t, uint64(2023423423423432434), i3)
 	assert.Equal(t, uint64(2023423423423432222), i4)
 	assert.Equal(t, uint64(32), i5)
+	assert.True(t, math.MaxUint64 == i6)
 }

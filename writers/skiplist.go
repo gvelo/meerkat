@@ -3,7 +3,10 @@ package writers
 import (
 	"eventdb/collection"
 	"eventdb/io"
+	"fmt"
 	"github.com/RoaringBitmap/roaring"
+	"log"
+	"math"
 )
 
 func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
@@ -58,7 +61,7 @@ func writeSkipIdx(bw *io.BinaryWriter, keys []uint64, offsets []uint64, ixl int)
 func processSkip(bw *io.BinaryWriter, keys []uint64, offsets []uint64, lvl int, ixl int, lastOffset int) (error, int, int) {
 
 	offset := int(bw.Offset)
-	if len(offsets) <= 1 {
+	if len(offsets) <= 2 {
 		return nil, lvl - 1, lastOffset
 	}
 
@@ -73,5 +76,12 @@ func processSkip(bw *io.BinaryWriter, keys []uint64, offsets []uint64, lvl int, 
 			nl = append(nl, offsets[i])
 		}
 	}
+
+	bw.WriteEncodedVarint(math.MaxUint64 - 1)
+	log.Printf("Writing MAX ")
+	log.Printf(" 0")
+
+	log.Printf(fmt.Sprintf("keys %v, lvl %d ", keys, lvl-1))
+	log.Printf(fmt.Sprintf("offsets %v, lvl %d", offsets, lvl-1))
 	return processSkip(bw, nk, nl, lvl+1, ixl, offset)
 }

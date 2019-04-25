@@ -83,7 +83,7 @@ func TestSkipList_Read200(t *testing.T) {
 	p := "/tmp/skip.bin"
 
 	start := time.Now()
-	sl := setUpValuesInsplitList(200)
+	sl := setUpValuesInsplitList(20)
 	t.Logf("setup sl took %v ", time.Since(start))
 
 	start = time.Now()
@@ -94,7 +94,7 @@ func TestSkipList_Read200(t *testing.T) {
 	t.Logf("write sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, bit, _ := readers.ReadSkip(p, 200, 15)
+	k, bit, _ := readers.ReadSkip(p, 20, 15)
 	a.NotNil(bit)
 	a.Equal(k, 200)
 
