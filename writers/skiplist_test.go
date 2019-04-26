@@ -12,11 +12,9 @@ import (
 func setUpValuesInsplitList(qty int) *collection.SkipList {
 	skipList := collection.NewSL(.5, 16)
 
-	for i := 0; i < qty; i++ {
-
+	for i := 1; i <= qty; i++ {
 		r := createRndRoaring(i)
 		skipList.InsertOrUpdate(uint64(i), r, nil)
-
 	}
 
 	return skipList
@@ -96,7 +94,7 @@ func TestSkipList_Read200(t *testing.T) {
 	start = time.Now()
 	k, bit, _ := readers.ReadSkip(p, 20, 15)
 	a.NotNil(bit)
-	a.Equal(k, 200)
+	a.Equal(20, k)
 
 	t.Logf("find sl took %v ", time.Since(start))
 

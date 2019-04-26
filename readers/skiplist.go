@@ -43,9 +43,9 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min int, max i
 
 		if lvl == 0 {
 			k, _ := br.DecodeVarint()
-			b, _ := br.DecodeRawBytes(false)
+			b, _ := br.DecodeRawBytes(true)
 			if k == uint64(min) {
-				bitmap := roaring.New()
+				bitmap := roaring.NewBitmap()
 				_, err := bitmap.FromBuffer(b)
 				if err != nil {
 					return 0, nil, err
@@ -66,7 +66,7 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min int, max i
 				br.Offset = int64(kOffset)
 				k, _ := br.DecodeVarint()
 				b, _ := br.DecodeRawBytes(false)
-				bitmap := roaring.New()
+				bitmap := roaring.NewBitmap()
 				_, err := bitmap.FromBuffer(b)
 				if err != nil {
 					return int(k), nil, err

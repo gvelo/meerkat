@@ -32,12 +32,12 @@ func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
 	for it.Next() {
 
 		offsets = append(offsets, uint64(bw.Offset))
-		// TODO: FIX copio las claves, puede ocupar mucho 8 bytes x numero.
+		// TODO: FIX copio las claves, puede ocupar mucho...
 		keys = append(keys, uint64(it.Key()))
 		// write the key
 		bw.WriteEncodedVarint(it.Key())
-		bin, _ := it.Get().UserData.(*roaring.Bitmap).MarshalBinary()
-		bw.WriteEncodedRawBytes(bin)
+		b, _ := it.Get().UserData.(*roaring.Bitmap).MarshalBinary()
+		bw.WriteEncodedRawBytes(b)
 	}
 
 	writeSkipIdx(bw, keys, offsets, ixl)
@@ -69,17 +69,16 @@ func processSkip(bw *io.BinaryWriter, keys []uint64, offsets []uint64, lvl int, 
 	nk := make([]uint64, 0)
 
 	for i := 0; i < int(uint64(len(offsets))); i++ {
+		kOffset := bw.Offset
 		bw.WriteEncodedVarint(keys[i])
 		bw.WriteEncodedVarint(offsets[i])
 		if i%ixl == 0 {
 			nk = append(nk, keys[i])
-			nl = append(nl, offsets[i])
+			nl = append(nl, uint64(kOffset))
 		}
 	}
 
-	bw.WriteEncodedVarint(math.MaxUint64 - 1)
-	log.Printf("Writing MAX ")
-	log.Printf(" 0")
+	bw.WriteEncodedVarint(math.MaxUint64)
 
 	log.Printf(fmt.Sprintf("keys %v, lvl %d ", keys, lvl-1))
 	log.Printf(fmt.Sprintf("offsets %v, lvl %d", offsets, lvl-1))
