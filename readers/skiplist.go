@@ -38,19 +38,18 @@ func ReadSkip(name string, min int, max int) (int, *roaring.Bitmap, error) {
 func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min int, max int) (int, *roaring.Bitmap, error) {
 
 	br.Offset = int64(offset)
+	b := roaring.New()
 	// search this lvl
 	for i := 0; i < int(math.MaxUint32); i++ {
 
 		if lvl == 0 {
 			k, _ := br.DecodeVarint()
-			b, _ := br.DecodeRawBytes(true)
+			_, err := b.FromBuffer(br.SliceAt(br.Offset))
+			if err != nil {
+				return 0, b, err
+			}
 			if k == uint64(min) {
-				bitmap := roaring.NewBitmap()
-				_, err := bitmap.FromBuffer(b)
-				if err != nil {
-					return 0, nil, err
-				}
-				return int(k), bitmap, nil
+				return int(k), b, nil
 			}
 
 		} else {

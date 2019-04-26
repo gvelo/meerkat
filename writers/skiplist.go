@@ -36,8 +36,7 @@ func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
 		keys = append(keys, uint64(it.Key()))
 		// write the key
 		bw.WriteEncodedVarint(it.Key())
-		b, _ := it.Get().UserData.(*roaring.Bitmap).MarshalBinary()
-		bw.WriteEncodedRawBytes(b)
+		it.Get().UserData.(*roaring.Bitmap).WriteTo(bw)
 	}
 
 	writeSkipIdx(bw, keys, offsets, ixl)
