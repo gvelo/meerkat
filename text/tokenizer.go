@@ -38,3 +38,7 @@ func (tokenizer *UnicodeTokenizer) tokenize(text string) []string {
 	}
 	return tokens
 }
+
+func NewTokenizer() *UnicodeTokenizer {
+	return &UnicodeTokenizer{}
+}
