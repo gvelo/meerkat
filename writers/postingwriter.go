@@ -2,10 +2,10 @@ package writers
 
 import (
 	"eventdb/io"
-	"eventdb/segment"
+	"eventdb/segment/inmem"
 )
 
-func WritePosting(name string, posting []*segment.PostingList) error {
+func WritePosting(name string, posting []*inmem.PostingList) error {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -22,6 +22,7 @@ func WritePosting(name string, posting []*segment.PostingList) error {
 	}
 
 	for _, p := range posting {
+			p.Bitmap.RunOptimize()
 		p.Offset = bw.Offset
 		_, err := p.Bitmap.WriteTo(bw)
 		if err != nil {

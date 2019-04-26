@@ -11,7 +11,9 @@ func Test_btrie_emptycardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bt := NewBtrie()
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
 
 	assert.Equal(0, bt.Cardinality, "empty index should have cero Cardinality")
 
@@ -21,7 +23,10 @@ func Test_btrie_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bt := NewBtrie()
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
+
 	for i := 0; i < 10; i++ {
 		bt.Add("test", 0)
 	}
@@ -34,7 +39,10 @@ func Test_btrie_multiple_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bt := NewBtrie()
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
+
 	for i := 0; i < 10; i++ {
 		bt.Add(fmt.Sprintf("test%v", i), 0)
 	}
@@ -47,9 +55,13 @@ func Test_btrie_bucketSize(t *testing.T) {
 
 	assert := assert.New(t)
 
+	ps := NewPostingStore()
+
 	bt := &BTrie{
-		BucketSize: 10,
+		BucketSize:   10,
+		PostingStore: ps,
 	}
+
 	bt.Root = bt.newNode()
 
 	for i := 0; i < 10; i++ {
@@ -68,7 +80,9 @@ func Test_btrie_singlelookup(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bt := NewBtrie()
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
 
 	assert.Nil(bt.Lookup("test"), "non empty index")
 
@@ -86,7 +100,9 @@ func Test_btrie_lookup_cardinality(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bt := NewBtrie()
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
 
 	assert.Nil(bt.Lookup("test"), "non empty index")
 
@@ -95,6 +111,30 @@ func Test_btrie_lookup_cardinality(t *testing.T) {
 	}
 
 	bitmap := bt.Lookup("test")
+
+	assert.NotNil(bitmap, "result should not be nil")
+
+	assert.Equal(uint64(100), bitmap.GetCardinality(), "wrong bitmap Cardinality")
+	assert.Equal(1, bt.Cardinality, "wrong cardinallity")
+}
+
+func Test_btrie_lookup_cardinality2(t *testing.T) {
+
+	assert := assert.New(t)
+
+	ps := NewPostingStore()
+
+	bt := NewBtrie(ps)
+
+	assert.Nil(bt.Lookup("t"), "non empty index")
+
+	for i := 0; i < 100; i++ {
+		bt.Add("t", uint32(i))
+	}
+
+	bt.DumpTrie()
+
+	bitmap := bt.Lookup("t")
 
 	assert.NotNil(bitmap, "result should not be nil")
 

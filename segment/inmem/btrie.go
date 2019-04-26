@@ -1,7 +1,6 @@
 package inmem
 
 import (
-	"eventdb/segment"
 	"fmt"
 	"github.com/RoaringBitmap/roaring"
 	"strings"
@@ -10,20 +9,21 @@ import (
 type Node struct {
 	Children map[byte]*Node
 	Bucket   []*Record
-	Posting  *segment.PostingList
+	Posting  *PostingList
 	Offset   int64
 }
 
 type Record struct {
 	Value   string
-	Posting *segment.PostingList
+	Posting *PostingList
 }
 
 type BTrie struct {
-	Root        *Node
-	BucketSize  int
-	Size        int
-	Cardinality int
+	PostingStore *PostingStore
+	Root         *Node
+	BucketSize   int
+	Size         int
+	Cardinality  int
 }
 
 func (bt *BTrie) newNode() *Node {
@@ -54,24 +54,31 @@ func (bt *BTrie) Add(str string, eventID uint32) {
 		}
 
 		if len(current.Bucket) == bt.BucketSize {
+
 			// burst
 			n := bt.newNode()
+
 			//TODO Clear the garbage at the end of the slice.
 			newBucket := current.Bucket[:0]
+
 			for _, c := range current.Bucket {
 
 				if c.Value[0] == str[i] {
+
 					suffix := c.Value[1:]
+
 					if len(suffix) == 0 {
-						n.Posting = segment.NewPostingList(eventID)
-						bt.Cardinality++
+						n.Posting = c.Posting
 						continue
 					}
+
 					newRecord := &Record{
-						Value:   c.Value[1:],
+						Value:   suffix,
 						Posting: c.Posting,
 					}
+
 					n.Bucket = append(n.Bucket, newRecord)
+
 				} else {
 					newBucket = append(newBucket, c)
 				}
@@ -81,22 +88,25 @@ func (bt *BTrie) Add(str string, eventID uint32) {
 			current = n
 			continue
 		}
+
 		newRecord := &Record{
 			Value:   str[i:],
-			Posting: segment.NewPostingList(eventID),
+			Posting: bt.PostingStore.NewPostingList(eventID),
 		}
+
 		current.Bucket = append(current.Bucket, newRecord)
 		bt.Cardinality++
 		return
 	}
 
 	if current.Posting == nil {
-		current.Posting = segment.NewPostingList(eventID)
+		current.Posting = bt.PostingStore.NewPostingList(eventID)
 		bt.Cardinality++
 		return
 	}
 
 	current.Posting.Bitmap.Add(eventID)
+
 }
 
 func (bt *BTrie) DumpTrie() {
@@ -106,13 +116,17 @@ func (bt *BTrie) DumpTrie() {
 func (bt *BTrie) dumpNode(value string, node *Node, level int) {
 
 	lPad := strings.Repeat(" ", level)
-	fmt.Printf("%v[Node]\n", lPad)
-	fmt.Printf("%v %v \n", lPad, value)
+	fmt.Printf("%v[Node] %v ", lPad, value)
+	if node.Posting != nil {
+		fmt.Printf(" (%v) \n", node.Posting.Bitmap.GetCardinality())
+	} else {
+		fmt.Println()
+	}
 
 	if len(node.Bucket) > 0 {
 		fmt.Printf("%v [Bucket]\n", lPad)
 		for _, r := range node.Bucket {
-			fmt.Printf("%v  %v\n", lPad, r.Value)
+			fmt.Printf("%v  %v (%v) \n", lPad, r.Value, r.Posting.Bitmap.GetCardinality())
 		}
 	}
 
@@ -150,9 +164,10 @@ func (bt *BTrie) Lookup(term string) *roaring.Bitmap {
 
 }
 
-func NewBtrie() *BTrie {
+func NewBtrie(postingStore *PostingStore) *BTrie {
 	idx := &BTrie{
-		BucketSize: 64,
+		BucketSize:   64,
+		PostingStore: postingStore,
 	}
 	idx.Root = idx.newNode()
 	return idx

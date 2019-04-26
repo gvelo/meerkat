@@ -2,44 +2,45 @@ package writers
 
 import (
 	"eventdb/readers"
-	"eventdb/segment"
+	"eventdb/segment/inmem"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestReadWritePosting(t *testing.T) {
 
-	posting := make([]*segment.PostingList, 0)
+	assert := assert.New(t)
+
+	postingStore := inmem.NewPostingStore()
 
 	for i := 0; i < 1000; i++ {
-		p := segment.NewPostingList(uint32(i))
-		posting = append(posting, p)
+		postingStore.NewPostingList(uint32(i))
 	}
 
 	file := "/tmp/posting.bin"
-	err := WritePosting(file, posting)
 
-	if err != nil {
-		t.Error(err)
+	err := WritePosting(file, postingStore.Store)
+
+	if !assert.NoErrorf(err, "an error occurred while writing the posting list: %v", err) {
+		return
 	}
 
 	pr, err := readers.NewPostingReader(file)
 
-	if err != nil {
-		t.Error(err)
+	if !assert.NoErrorf(err, "an error occurred while reading the posting list: %v", err) {
 		return
 	}
 
-	for i, p := range posting {
+	for i, p := range postingStore.Store {
 
 		b, err := pr.Read(p.Offset)
 
-		if err != nil {
-			t.Error(err)
+		if !assert.NoErrorf(err, "an error occurred while writing the posting list at offset %v: %v", p.Offset, err) {
+			return
 		}
 
-		if !b.ContainsInt(i) || b.GetCardinality() != 1 {
-			t.Errorf("Bitmap doesn't contain expected values.")
-		}
+		assert.Equal(uint64(1), b.GetCardinality(), "Wrong bitmap cardinality")
+		assert.True(b.ContainsInt(i), "Bitmap doesn't contain expected value")
 
 	}
 

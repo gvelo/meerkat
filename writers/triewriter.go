@@ -23,37 +23,68 @@ func NewTrieWriter(file string) (*TrieWriter, error) {
 
 }
 
-func (tw *TrieWriter) Write(trie *inmem.BTrie) (int64, error) {
-	return tw.writeNode(trie.Root)
+func (tw *TrieWriter) Write(trie *inmem.BTrie) error {
+
+	err := tw.bw.WriteHeader(io.StringIndexV1)
+
+	rootOffset, err := tw.writeNode(trie.Root)
+
+	if err != nil {
+		return err
+	}
+
+	err = tw.bw.WriteEncodedFixed64(uint64(rootOffset))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (tw *TrieWriter) writeNode(node *inmem.Node) (int64, error) {
 
-	for _, node := range node.Children {
-		offset, err := tw.writeNode(node)
+	// Write children first
+	for _, child := range node.Children {
+		offset, err := tw.writeNode(child)
 		if err != nil {
 			return -1, err
 		}
-		node.Offset = offset
+		child.Offset = offset
 	}
 
+	// the node  start offset.
 	offset := tw.bw.Offset
 
-	err := tw.bw.WriteEncodedVarint(uint64(len(node.Children)))
+	// use a zero value to signal a null posting, this is possible since
+	// posting never get a zero offset on disk.
+	postingOffset := uint64(0)
 
+	if node.Posting != nil {
+		postingOffset = uint64(node.Posting.Offset)
+	}
+
+	err := tw.bw.WriteEncodedVarint(postingOffset)
+
+	if err != nil {
+		return 0, err
+	}
+
+	err = tw.bw.WriteEncodedVarint(uint64(len(node.Children)))
 	if err != nil {
 		return -1, err
 	}
 
-	for key, node := range node.Children {
+	for key, child := range node.Children {
 
 		err = tw.bw.WriteByte(key)
 		if err != nil {
 			return -1, err
 		}
 
-		// TODO please, check this cast.
-		err = tw.bw.WriteEncodedVarint(uint64(node.Offset))
+		// TODO check this cast.
+		err = tw.bw.WriteEncodedVarint(uint64(child.Offset))
 
 		if err != nil {
 			return -1, err

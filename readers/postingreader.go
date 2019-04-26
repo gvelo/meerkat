@@ -14,6 +14,7 @@ func (pr PostingReader) Read(offset int64) (*roaring.Bitmap, error) {
 
 	b := pr.SliceAt(offset)
 
+	//TODO reuse Bitmaps.
 	bitmap := roaring.NewBitmap()
 
 	_, err := bitmap.FromBuffer(b)

@@ -1,9 +1,5 @@
 package segment
 
-import (
-	"github.com/RoaringBitmap/roaring"
-)
-
 /*
 // InMemEventStore is a naive implementation of an EventStore
 // for testing pourposes. It holds the events list in an slice.
@@ -215,27 +211,6 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 	return nil
 } */
 
-// postingList holds  the term posting list.
-type PostingList struct {
-
-	// offset on disk
-	Offset int64
-
-	// the bitmap backing the list
-	Bitmap *roaring.Bitmap
-}
-
-func (posting *PostingList) Add(eventID uint32) {
-	posting.Bitmap.Add(eventID)
-}
-
-func NewPostingList(eventID uint32) *PostingList {
-	p := &PostingList{
-		Bitmap: roaring.New(),
-	}
-	p.Bitmap.Add(eventID)
-	return p
-}
 
 // FieldType represent the type of a field.
 type FieldType int
