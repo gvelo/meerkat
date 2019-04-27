@@ -17,9 +17,10 @@ const (
 	Version     = "01"
 
 	PostingListV1 FileType = 0
-	SkipListV1    FileType = 1
-	RowStoreV1    FileType = 2
-	RowStoreIDXV1 FileType = 3
+	StringIndexV1 FileType = 1
+	SkipListV1    FileType = 2
+	RowStoreV1    FileType = 3
+	RowStoreIDXV1 FileType = 4
 )
 
 type BinaryWriter struct {

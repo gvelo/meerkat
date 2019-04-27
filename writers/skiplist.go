@@ -3,8 +3,8 @@ package writers
 import (
 	"eventdb/collection"
 	"eventdb/io"
+	"eventdb/segment/inmem"
 	"fmt"
-	"github.com/RoaringBitmap/roaring"
 	"log"
 	"math"
 )
@@ -30,14 +30,13 @@ func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
 
 	it := sl.NewIterator(0)
 	for it.Next() {
-
-		offsets = append(offsets, uint64(bw.Offset))
 		// TODO: FIX copio las claves, puede ocupar mucho...
 		keys = append(keys, uint64(it.Key()))
-		// write the key
-		bw.WriteEncodedVarint(it.Key())
-		it.Get().UserData.(*roaring.Bitmap).WriteTo(bw)
+		offsets = append(offsets, uint64(it.Get().UserData.(*inmem.PostingList).Offset))
 	}
+
+	//log.Printf(fmt.Sprintf("keys %v, %d ", keys, 0))
+	//log.Printf(fmt.Sprintf("offsets %v, %d", offsets, 0))
 
 	writeSkipIdx(bw, keys, offsets, ixl)
 
@@ -50,7 +49,6 @@ func writeSkipIdx(bw *io.BinaryWriter, keys []uint64, offsets []uint64, ixl int)
 	if err != nil {
 		panic(err)
 	}
-
 	bw.WriteEncodedFixed64(uint64(lvlOffset))
 	bw.WriteEncodedFixed64(uint64(l))
 
@@ -68,13 +66,14 @@ func processSkip(bw *io.BinaryWriter, keys []uint64, offsets []uint64, lvl int, 
 	nk := make([]uint64, 0)
 
 	for i := 0; i < int(uint64(len(offsets))); i++ {
-		kOffset := bw.Offset
+		o := bw.Offset
 		bw.WriteEncodedVarint(keys[i])
 		bw.WriteEncodedVarint(offsets[i])
 		if i%ixl == 0 {
 			nk = append(nk, keys[i])
-			nl = append(nl, uint64(kOffset))
+			nl = append(nl, uint64(o))
 		}
+
 	}
 
 	bw.WriteEncodedVarint(math.MaxUint64)

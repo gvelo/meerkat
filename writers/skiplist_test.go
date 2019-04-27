@@ -3,99 +3,81 @@ package writers
 import (
 	"eventdb/collection"
 	"eventdb/readers"
-	"github.com/RoaringBitmap/roaring"
+	"eventdb/segment/inmem"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
-func setUpValuesInsplitList(qty int) *collection.SkipList {
-	skipList := collection.NewSL(.5, 16)
-
+func setUpPostingListStore(qty int) (*collection.SkipList, *inmem.PostingStore) {
+	sl := collection.NewSL(.5, 16)
+	s := inmem.NewPostingStore()
 	for i := 1; i <= qty; i++ {
-		r := createRndRoaring(i)
-		skipList.InsertOrUpdate(uint64(i), r, nil)
+		p := createRndPostingList(s, i)
+		sl.InsertOrUpdate(uint64(i), p, nil)
 	}
-
-	return skipList
+	WritePosting("/tmp/skiplistposting-test.bin", s.Store)
+	return sl, s
 }
 
-func createRndRoaring(n int) *roaring.Bitmap {
-	bitmap := roaring.New()
-	for i := 0; i < 3; i++ {
-		bitmap.AddInt(n + i)
+func createRndPostingList(s *inmem.PostingStore, e int) *inmem.PostingList {
+	b := s.NewPostingList(uint32(e))
+	for i := e; i < 3; i++ {
+		b.Bitmap.AddInt(i)
 	}
-	return bitmap
+	return b
 }
 
 func TestSkipList_Read10(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/skip.bin"
+	ip := "/tmp/skip.bin"
+	sp := "/tmp/posting-test.bin"
 
 	start := time.Now()
-	sl := setUpValuesInsplitList(200)
-	t.Logf("setup sl took %v ", time.Since(start))
+	sl, st := setUpPostingListStore(200)
+	err := WritePosting(sp, st.Store)
+	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err := WriteSkip(p, sl, 5)
+	err = WriteSkip(ip, sl, 5)
 	if err != nil {
 		t.Fail()
 	}
-	t.Logf("write sl took %v ", time.Since(start))
+	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, bit, _ := readers.ReadSkip(p, 10, 15)
-	a.NotNil(bit)
-	a.Equal(k, 10)
+	k, _, _ := readers.ReadSkip(ip, sp, 10, 15)
+	a.Equal(uint64(10), k)
 
-	t.Logf("find sl took %v ", time.Since(start))
+	t.Logf("find sl in dist took %v ", time.Since(start))
 
 }
 
-func TestSkipList_Read0(t *testing.T) {
+func TestSkipList_Read6(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/skip.bin"
+	ip := "/tmp/skip.bin"
+	sp := "/tmp/posting-test.bin"
 
 	start := time.Now()
-	sl := setUpValuesInsplitList(200)
-	t.Logf("setup sl took %v ", time.Since(start))
+	sl, st := setUpPostingListStore(200)
+	err := WritePosting(sp, st.Store)
+	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err := WriteSkip(p, sl, 5)
+	err = WriteSkip(ip, sl, 5)
 	if err != nil {
 		t.Fail()
 	}
-	t.Logf("write sl took %v ", time.Since(start))
+	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, bit, _ := readers.ReadSkip(p, 0, 15)
-	a.NotNil(bit)
-	a.Equal(k, 0)
+	k, o, _ := readers.ReadSkip(ip, sp, 6, 15)
+	a.Equal(uint64(6), k)
+	t.Logf("find sl in dist took %v ", time.Since(start))
 
-	t.Logf("find sl took %v ", time.Since(start))
+	pr, _ := readers.NewPostingReader(sp)
+	b, _ := pr.Read(int64(o))
 
-}
-
-func TestSkipList_Read200(t *testing.T) {
-	a := assert.New(t)
-	p := "/tmp/skip.bin"
-
-	start := time.Now()
-	sl := setUpValuesInsplitList(20)
-	t.Logf("setup sl took %v ", time.Since(start))
-
-	start = time.Now()
-	err := WriteSkip(p, sl, 5)
-	if err != nil {
-		t.Fail()
-	}
-	t.Logf("write sl took %v ", time.Since(start))
-
-	start = time.Now()
-	k, bit, _ := readers.ReadSkip(p, 20, 15)
-	a.NotNil(bit)
-	a.Equal(20, k)
-
-	t.Logf("find sl took %v ", time.Since(start))
+	print(b.GetCardinality())
 
 }
