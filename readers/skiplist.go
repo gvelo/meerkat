@@ -2,8 +2,6 @@ package readers
 
 import (
 	"eventdb/io"
-	"fmt"
-	"log"
 	"math"
 )
 
@@ -58,12 +56,10 @@ func findOffsetSkipList(name string, id uint64) (uint64, uint64, bool, error) {
 
 func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (int, uint64, error) {
 
-	//br.Offset = int64(offset)
+	br.Offset = int64(offset)
 
 	// search this lvl
 	for i := 0; i < int(math.MaxUint32); i++ {
-
-		br.Offset = int64(offset)
 
 		if lvl == 0 {
 			k, _ := br.DecodeVarint()
@@ -76,7 +72,7 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (i
 				return int(k), kOffset, nil
 			}
 		} else {
-
+			br.Offset = int64(offset)
 			k, _ := br.DecodeVarint()
 			kOffset, _ := br.DecodeVarint()
 			next := br.Offset
@@ -85,12 +81,10 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (i
 
 			// TODO falta que pasa cuando esta en la ultima mitad.
 			if k == uint64(min) {
-				log.Printf(fmt.Sprintf("Loading offset %d, lvl %d , min  %d ", kOffset, lvl-1, min))
 				return readSkipList(br, kOffset, lvl-1, min)
 			}
 
 			if kn > uint64(min) {
-				log.Printf(fmt.Sprintf("bajando offset %d, lvl %d , min  %d ", kOffset, lvl-1, min))
 				// done, not found
 				if lvl == 0 {
 					return 0, 0, nil

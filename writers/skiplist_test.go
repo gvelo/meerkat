@@ -22,8 +22,8 @@ func setUpPostingListStore(qty int) (*collection.SkipList, *inmem.PostingStore) 
 
 func createRndPostingList(s *inmem.PostingStore, e int) *inmem.PostingList {
 	b := s.NewPostingList(uint32(e))
-	for i := e; i < 3; i++ {
-		b.Bitmap.AddInt(i)
+	for i := e; i < e+3; i++ {
+		b.Add(uint32(i))
 	}
 	return b
 }
@@ -78,6 +78,41 @@ func TestSkipList_Read6(t *testing.T) {
 	pr, _ := readers.NewPostingReader(sp)
 	b, _ := pr.Read(int64(o))
 
-	print(b.GetCardinality())
+	a.True(b.Contains(6))
+	a.True(b.Contains(7))
+	a.True(b.Contains(8))
+	a.Equal(b.GetCardinality(), uint64(3))
+
+}
+
+func TestSkipList_Read200(t *testing.T) {
+	a := assert.New(t)
+	ip := "/tmp/skip.bin"
+	sp := "/tmp/posting-test.bin"
+
+	start := time.Now()
+	sl, st := setUpPostingListStore(200)
+	err := WritePosting(sp, st.Store)
+	t.Logf("setup sl & saving store took %v ", time.Since(start))
+
+	start = time.Now()
+	err = WriteSkip(ip, sl, 20)
+	if err != nil {
+		t.Fail()
+	}
+	t.Logf("create sl took %v ", time.Since(start))
+
+	start = time.Now()
+	k, o, _ := readers.ReadSkip(ip, sp, 200, 15)
+	a.Equal(uint64(200), k)
+	t.Logf("find sl in dist took %v ", time.Since(start))
+
+	pr, _ := readers.NewPostingReader(sp)
+	b, _ := pr.Read(int64(o))
+
+	a.True(b.Contains(200))
+	a.True(b.Contains(201))
+	a.True(b.Contains(202))
+	a.Equal(b.GetCardinality(), uint64(3))
 
 }

@@ -4,8 +4,6 @@ import (
 	"eventdb/collection"
 	"eventdb/io"
 	"eventdb/segment/inmem"
-	"fmt"
-	"log"
 	"math"
 )
 
@@ -34,9 +32,6 @@ func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
 		keys = append(keys, uint64(it.Key()))
 		offsets = append(offsets, uint64(it.Get().UserData.(*inmem.PostingList).Offset))
 	}
-
-	//log.Printf(fmt.Sprintf("keys %v, %d ", keys, 0))
-	//log.Printf(fmt.Sprintf("offsets %v, %d", offsets, 0))
 
 	writeSkipIdx(bw, keys, offsets, ixl)
 
@@ -78,7 +73,5 @@ func processSkip(bw *io.BinaryWriter, keys []uint64, offsets []uint64, lvl int, 
 
 	bw.WriteEncodedVarint(math.MaxUint64)
 
-	log.Printf(fmt.Sprintf("keys %v, lvl %d ", keys, lvl-1))
-	log.Printf(fmt.Sprintf("offsets %v, lvl %d", offsets, lvl-1))
 	return processSkip(bw, nk, nl, lvl+1, ixl, offset)
 }
