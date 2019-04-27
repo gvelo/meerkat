@@ -11,7 +11,7 @@ import (
 // TODO: I guess we gonna have to optimize this interface for low
 // allocation.
 type Tokenizer interface {
-	tokenize(text string) []string
+	Tokenize(text string) []string
 }
 
 // NaiveTokenizer tokenize fields spliting their contents around
@@ -19,7 +19,7 @@ type Tokenizer interface {
 // characters, as defined by unicode.IsSpace, .
 type NaiveTokenizer struct{}
 
-func (tokenizer *NaiveTokenizer) tokenize(text string) []string {
+func (tokenizer *NaiveTokenizer) Tokenize(text string) []string {
 	return strings.Fields(text)
 }
 
@@ -28,7 +28,7 @@ func (tokenizer *NaiveTokenizer) tokenize(text string) []string {
 // TODO: provide reuse to avoid allocation on each event.
 type UnicodeTokenizer struct{}
 
-func (tokenizer *UnicodeTokenizer) tokenize(text string) []string {
+func (tokenizer *UnicodeTokenizer) Tokenize(text string) []string {
 
 	tokens := make([]string, 128)
 	scanner := bufio.NewScanner(strings.NewReader(text))

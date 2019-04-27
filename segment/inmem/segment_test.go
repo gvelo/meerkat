@@ -1,156 +1,96 @@
 package inmem
-/*
-import (
-	"testing"
 
-	"github.com/RoaringBitmap/roaring"
+import (
+	"eventdb/segment"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func getFieldsInfo() []FieldInfo {
-	fieldInfo := make([]FieldInfo, 4)
+func getFieldsInfo() []segment.FieldInfo {
+	fieldInfo := make([]segment.FieldInfo, 4)
 
-	fieldInfo[0].fieldType = FieldTypeText
-	fieldInfo[0].fieldName = "msg"
-	fieldInfo[1].fieldType = FieldTypeKeyword
-	fieldInfo[1].fieldName = "source"
-	fieldInfo[2].fieldType = FieldTypeInt
-	fieldInfo[2].fieldName = "num1"
-	fieldInfo[3].fieldType = FieldTypeInt
-	fieldInfo[3].fieldName = "num2"
+	fieldInfo[0].FieldID = 0
+	fieldInfo[0].FieldType = segment.FieldTypeText
+	fieldInfo[0].FieldName = "msg"
+	fieldInfo[1].FieldID = 1
+	fieldInfo[1].FieldType = segment.FieldTypeKeyword
+	fieldInfo[1].FieldName = "source"
 
 	return fieldInfo
 }
 
-func createEvents() []Event {
-	return []Event{{
-		"source": "log",
-		"msg":    "test message one",
-		"num1":   uint64(1),
-		"num2":   uint64(1.0),
-	},
-		{
+func createEvents() []map[string]interface{} {
 
-			"source": "log",
-			"msg":    "test message two",
-			"num1":   uint64(2),
-			"num2":   uint64(2.0),
-		},
-		{
-			"source": "other",
-			"msg":    "test message three",
-			"num1":   uint64(3),
-			"num2":   uint64(3.0),
-		}, {
-			"source": "sother",
-			"msg":    "test message four",
-			"num1":   uint64(1),
-			"num2":   uint64(1.0),
-		}}
+	events := make([]map[string]interface{}, 0)
+
+	for i := 0; i < 1000; i++ {
+		event := make(map[string]interface{})
+		event["msg"] = fmt.Sprintf("event %v", i)
+		event["src"] = "log"
+		events = append(events, event)
+	}
+
+	return events
+
 }
 
-func TestCardinalityKeyword(T *testing.T) {
+func TestAddEvent(t *testing.T) {
 
 	fieldInfo := getFieldsInfo()
-
-	index := newInMemoryIndex(fieldInfo)
-
 	events := createEvents()
+	writeChan := make(chan *Segment, 100)
 
-	for _, e := range events {
-		index.addEvent(e)
+	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+
+	for _, event := range events {
+		segment.Add(event)
 	}
 
-	bitmap := index.lookup(fieldInfo[1], "log")
-	cardinallity := bitmap.GetCardinality()
-
-	if cardinallity != 2 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap = index.lookup(fieldInfo[1], "other")
-	cardinallity = bitmap.GetCardinality()
-
-	if cardinallity != 1 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap = index.lookup(fieldInfo[2], uint64(1))
-	cardinallity = bitmap.GetCardinality()
-
-	if cardinallity != 2 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
+	segment.Write()
 
 }
 
-func TestCardinalityText(T *testing.T) {
+func TestAddEventOnvalidState(t *testing.T) {
 
-	index := newInMemoryIndex(getFieldsInfo())
+	fieldInfo := getFieldsInfo()
 	events := createEvents()
+	writeChan := make(chan *Segment, 100)
 
-	for _, e := range events {
-		index.addEvent(e)
-	}
+	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
 
-	bitmap := index.lookup(getFieldsInfo()[0], "test")
-	cardinallity := bitmap.GetCardinality()
+	segment.Add(events[0])
+	segment.Write()
 
-	if cardinallity != 4 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap = index.lookup(getFieldsInfo()[0], "three")
-	cardinallity = bitmap.GetCardinality()
-
-	if cardinallity != 1 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
+	assert.Panics(t, func() { segment.Add(events[0]) }, "add event in invalid state should panic")
 
 }
 
-func TestBitmapOr(T *testing.T) {
+func TestWriteOnInvalidState(t *testing.T) {
 
-	index := newInMemoryIndex(getFieldsInfo())
+	fieldInfo := getFieldsInfo()
 	events := createEvents()
+	writeChan := make(chan *Segment, 100)
 
-	for _, e := range events {
-		index.addEvent(e)
-	}
+	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
 
-	bitmap1 := index.lookup(getFieldsInfo()[0], "one")
-	cardinallity := bitmap1.GetCardinality()
+	segment.Add(events[0])
+	segment.Write()
 
-	if cardinallity != 1 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap2 := index.lookup(getFieldsInfo()[0], "two")
-	cardinallity = bitmap2.GetCardinality()
-
-	if cardinallity != 1 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap3 := index.lookup(getFieldsInfo()[0], "three")
-	cardinallity = bitmap3.GetCardinality()
-
-	if cardinallity != 1 {
-		T.Errorf("wrong cardinallity expect %v got %v", 1, cardinallity)
-	}
-
-	bitmap4 := index.lookup(getFieldsInfo()[2], uint64(1))
-	cardinallity = bitmap4.GetCardinality()
-
-	if cardinallity != 2 {
-		T.Errorf("wrong cardinallity expect %v got %v", 2, cardinallity)
-	}
-
-	res := roaring.FastOr(bitmap1, bitmap2, bitmap3, bitmap4)
-	cardinallity = res.GetCardinality()
-
-	if cardinallity != 4 {
-		T.Errorf("wrong cardinallity expect %v got %v", 4, cardinallity)
-	}
+	assert.Panics(t, segment.Write, "write segment on invalid state should panic")
 
 }
-*/
+
+func TestCloseOnInvalidState(t *testing.T) {
+
+	fieldInfo := getFieldsInfo()
+	events := createEvents()
+	writeChan := make(chan *Segment, 100)
+
+	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+
+	segment.Add(events[0])
+
+	assert.Panics(t, segment.Close, "close segment on invalid state should panic")
+
+}
