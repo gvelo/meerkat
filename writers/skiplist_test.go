@@ -116,3 +116,35 @@ func TestSkipList_Read200(t *testing.T) {
 	a.Equal(b.GetCardinality(), uint64(3))
 
 }
+
+func TestSkipList_Read1M(t *testing.T) {
+	a := assert.New(t)
+	ip := "/tmp/skip.bin"
+	sp := "/tmp/posting-test.bin"
+
+	start := time.Now()
+	sl, st := setUpPostingListStore(1000000)
+	err := WritePosting(sp, st.Store)
+	t.Logf("setup sl & saving store took %v ", time.Since(start))
+
+	start = time.Now()
+	err = WriteSkip(ip, sl, 200)
+	if err != nil {
+		t.Fail()
+	}
+	t.Logf("create sl took %v ", time.Since(start))
+
+	start = time.Now()
+	k, o, _ := readers.ReadSkip(ip, sp, 1000000, 15)
+	a.Equal(uint64(1000000), k)
+	t.Logf("find sl in dist took %v ", time.Since(start))
+
+	pr, _ := readers.NewPostingReader(sp)
+	b, _ := pr.Read(int64(o))
+
+	a.True(b.Contains(1000000))
+	a.True(b.Contains(1000001))
+	a.True(b.Contains(1000002))
+	a.Equal(b.GetCardinality(), uint64(3))
+
+}
