@@ -45,33 +45,33 @@ func TestSkipList_Insert(t *testing.T) {
 
 func TestSkipList_Search(t *testing.T) {
 
-	ass := assert.New(t)
+	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
 
 	res, found := skipList.Search(553)
-	ass.True(res.key == 553)
-	ass.True(found == true)
+	a.True(res.key == 553)
+	a.True(found == true)
 
 	res, found = skipList.Search(99999)
-	ass.Nil(res)
-	ass.False(found)
+	a.Nil(res)
+	a.False(found)
 
 }
 
 func TestSkipList_Delete(t *testing.T) {
 	// flaky test, deberiamos chequear todos los niveles.
-	ass := assert.New(t)
+	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
 
 	skipList.Delete(553)
 	res, found := skipList.Search(553)
-	ass.Nil(res)
-	ass.False(found)
+	a.Nil(res)
+	a.False(found)
 
 }
 
 func TestSkipList_InsertOrUpdate(t *testing.T) {
-	ass := assert.New(t)
+	a := assert.New(t)
 	skipList := NewSL(.5, 16)
 
 	type Holder struct {
@@ -82,20 +82,20 @@ func TestSkipList_InsertOrUpdate(t *testing.T) {
 	skipList.InsertOrUpdate(1, Holder{1}, nil)
 	skipList.InsertOrUpdate(123, Holder{123}, nil)
 
-	var a OnUpdate = func(value interface{}) interface{} {
+	var u OnUpdate = func(value interface{}) interface{} {
 		h := value.(Holder)
 		h.aInt = h.aInt + 1
 		return h
 	}
 
-	skipList.InsertOrUpdate(123, nil, a)
+	skipList.InsertOrUpdate(123, nil, u)
 
 	res, found := skipList.Search(123)
 
-	ass.True(found)
-	ass.NotNil(res)
+	a.True(found)
+	a.NotNil(res)
 	i := res.UserData.(Holder).aInt
-	ass.Equal(i, 124)
+	a.Equal(i, 124)
 
 }
 

@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"errors"
 	"eventdb/io/mmap"
+	"eventdb/segment"
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 )
 
 type FileType byte
@@ -18,7 +18,9 @@ const (
 
 	PostingListV1 FileType = 0
 	StringIndexV1 FileType = 1
-	RowStoreV1    FileType = 2
+	SkipListV1    FileType = 2
+	RowStoreV1    FileType = 3
+	RowStoreIDXV1 FileType = 4
 )
 
 type BinaryWriter struct {
@@ -40,16 +42,18 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	return fw, nil
 }
 
-func (fw *BinaryWriter) StoreValue(v interface{}) {
-	switch reflect.TypeOf(v).Kind() {
-	case reflect.String:
-		fw.WriteEncodedStringBytes(v.(string))
-	case reflect.Float64:
-		fw.WriteEncodedFixed64(v.(uint64))
-	case reflect.Float32:
-		fw.WriteEncodedFixed32(v.(uint64))
-	case reflect.Int:
+func (fw *BinaryWriter) WriteValue(v interface{}, info segment.FieldInfo) {
+	switch info.FieldType {
+	case segment.FieldTypeInt:
 		fw.WriteEncodedVarint(v.(uint64))
+	case segment.FieldTypeText:
+		fw.WriteEncodedStringBytes(v.(string))
+	case segment.FieldTypeKeyword:
+		fw.WriteEncodedStringBytes(v.(string))
+	case segment.FieldTypeTimestamp:
+		fw.WriteEncodedVarint(v.(uint64))
+	case segment.FieldTypeFloat:
+		fw.WriteEncodedFixed64(v.(uint64))
 	}
 }
 
@@ -66,14 +70,14 @@ func (fw *BinaryWriter) Close() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (fw *BinaryWriter) WriteHeader(fileType FileType) error {
 	b := []byte(MagicNumber)
-	fw.writer.Write(b)
-	fw.writer.WriteByte(byte(fileType))
-	fw.Offset = fw.Offset + int64(len(b)) + 1
+	fw.Write(b)
+	fw.WriteByte(byte(fileType))
 	return nil
 }
 
@@ -96,6 +100,20 @@ func (fw *BinaryWriter) WriteEncodedVarint(x uint64) error {
 	fw.writer.WriteByte(uint8(x))
 	fw.Offset += 1
 	return nil
+}
+
+// EncodeVarint writes a varint-encoded integer to the Buffer.
+// This is the format for the
+// int32, int64, uint32, uint64, bool, and enum
+// protocol buffer types.
+func (fw *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
+	var s uint64 = 0
+	for x >= 1<<7 {
+		x >>= 7
+		s += 1
+	}
+	s += 1
+	return s
 }
 
 // EncodeFixed64 writes a 64-bit integer to the Buffer.
@@ -149,7 +167,7 @@ func (fw *BinaryWriter) WriteEncodedZigzag32(x uint64) error {
 // type and for embedded messages.
 func (fw *BinaryWriter) WriteEncodedRawBytes(b []byte) error {
 	fw.WriteEncodedVarint(uint64(len(b)))
-	fw.writer.Write(b)
+	fw.Write(b)
 	return nil
 }
 
@@ -461,4 +479,20 @@ func (fr *BinaryReader) DecodeStringBytes() (s string, err error) {
 // Close close and unmap the file.
 func (fr *BinaryReader) Close() error {
 	return mmap.UnMap(fr.bytes)
+}
+
+func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
+	switch info.FieldType {
+	case segment.FieldTypeInt:
+		return fr.DecodeVarint()
+	case segment.FieldTypeText:
+		return fr.DecodeStringBytes()
+	case segment.FieldTypeKeyword:
+		return fr.DecodeStringBytes()
+	case segment.FieldTypeTimestamp:
+		return fr.DecodeVarint()
+	case segment.FieldTypeFloat:
+		return fr.DecodeFixed64()
+	}
+	return nil, errors.New(fmt.Sprintf("info.FieldType %d not found ", info.FieldType))
 }

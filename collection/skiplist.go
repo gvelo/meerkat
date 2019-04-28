@@ -39,6 +39,10 @@ type SkipList struct {
 	level    int
 }
 
+func (s *SkipList) Level() int {
+	return s.level
+}
+
 func NewSL(p float32, maxLevel int) *SkipList {
 
 	maxUint64 := ^uint64(0)

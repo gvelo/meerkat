@@ -7,49 +7,47 @@ import (
 )
 
 type PostingReader struct {
-	br *io.BinaryReader
+	*io.BinaryReader
 }
 
-func (pr PostingReader) Read(offset int64) (*roaring.Bitmap,error) {
+func (pr PostingReader) Read(offset int64) (*roaring.Bitmap, error) {
 
-	b:=pr.br.SliceAt(offset)
+	b := pr.SliceAt(offset)
 
 	//TODO reuse Bitmaps.
 	bitmap := roaring.NewBitmap()
 
-	_,err:=bitmap.FromBuffer(b)
+	_, err := bitmap.FromBuffer(b)
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	return bitmap,nil
-	
+	return bitmap, nil
+
 }
 
+func NewPostingReader(name string) (*PostingReader, error) {
 
-func NewPostingReader(name string) (*PostingReader,error) {
-
-	br,err := io.NewBinaryReader(name)
+	br, err := io.NewBinaryReader(name)
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	fileType,err:= br.ReadHeader()
+	fileType, err := br.ReadHeader()
 
 	if fileType != io.PostingListV1 {
 		return nil, errors.New("invalid file type")
 	}
 
 	pr := &PostingReader{
-		br:br,
+		br,
 	}
 
-	return pr,nil
+	return pr, nil
 }
 
-func (pr *PostingReader) Close() error  {
-	return pr.br.Close()
+func (pr *PostingReader) Close() error {
+	return pr.Close()
 }
-
