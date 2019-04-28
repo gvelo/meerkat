@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-func ReadSkip(ip string, sp string, id int) (uint64, uint64, error) {
+func ReadSkip(ip string, id int) (uint64, uint64, error) {
 
 	br, err := io.NewBinaryReader(ip)
 
