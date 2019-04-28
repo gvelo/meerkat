@@ -27,6 +27,7 @@ type Segment struct {
 	PostingStore *PostingStore
 	MinTS        int64
 	MaxTS        int64
+	Monotonic    bool
 	State        State
 	Tokenizer    text.Tokenizer
 	WriterChan   chan *Segment
@@ -46,6 +47,7 @@ func NewSegment(
 		PostingStore: NewPostingStore(),
 		Tokenizer:    text.NewTokenizer(),
 		WriterChan:   writerChan,
+		Monotonic:    false,
 		State:        InMem,
 		Idx:          make([]interface{}, len(fieldInfo)),
 	}
@@ -85,6 +87,9 @@ func (s *Segment) Add(event map[string]interface{}) {
 	}
 
 	s.eventID++
+
+	// TODO compute min and max timestamp
+	// TODO computa monotonic Flag
 
 	for i, info := range s.FieldInfo {
 
