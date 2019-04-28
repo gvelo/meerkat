@@ -79,7 +79,6 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id uint64) (in
 			kn, _ := br.DecodeVarint()
 			br.DecodeVarint()
 
-			// TODO falta que pasa cuando esta en la ultima mitad.
 			if k == uint64(id) {
 				return readSkipList(br, kOffset, lvl-1, id)
 			}
