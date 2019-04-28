@@ -211,7 +211,6 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 	return nil
 } */
 
-
 // FieldType represent the type of a field.
 type FieldType int
 
@@ -230,8 +229,10 @@ const (
 
 // Field Info represents the info about a field.
 type FieldInfo struct {
+	FieldID   int
 	FieldName string
 	FieldType FieldType
+	Index     bool
 }
 
 // Event Info.
