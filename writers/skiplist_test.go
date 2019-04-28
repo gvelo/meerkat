@@ -46,7 +46,7 @@ func TestSkipList_Read10(t *testing.T) {
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, _, _ := readers.ReadSkip(ip, sp, 10, 15)
+	k, _, _ := readers.ReadSkip(ip, sp, 10)
 	a.Equal(uint64(10), k)
 
 	t.Logf("find sl in dist took %v ", time.Since(start))
@@ -71,7 +71,7 @@ func TestSkipList_Read6(t *testing.T) {
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, o, _ := readers.ReadSkip(ip, sp, 6, 15)
+	k, o, _ := readers.ReadSkip(ip, sp, 6)
 	a.Equal(uint64(6), k)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
@@ -103,7 +103,7 @@ func TestSkipList_Read200(t *testing.T) {
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, o, _ := readers.ReadSkip(ip, sp, 200, 15)
+	k, o, _ := readers.ReadSkip(ip, sp, 200)
 	a.Equal(uint64(200), k)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
@@ -135,7 +135,7 @@ func TestSkipList_Read1M(t *testing.T) {
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	k, o, _ := readers.ReadSkip(ip, sp, 1000000, 15)
+	k, o, _ := readers.ReadSkip(ip, sp, 1000000)
 	a.Equal(uint64(1000000), k)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 

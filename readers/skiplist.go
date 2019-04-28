@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-func ReadSkip(ip string, sp string, min int, max int) (uint64, uint64, error) {
+func ReadSkip(ip string, sp string, id int) (uint64, uint64, error) {
 
 	br, err := io.NewBinaryReader(ip)
 
@@ -21,7 +21,7 @@ func ReadSkip(ip string, sp string, min int, max int) (uint64, uint64, error) {
 		panic("invalid file type")
 	}
 
-	key, o, ok, err := findOffsetSkipList(ip, uint64(min))
+	key, o, ok, err := findOffsetSkipList(ip, uint64(id))
 	if ok {
 		return key, o, nil
 	}
@@ -54,7 +54,7 @@ func findOffsetSkipList(name string, id uint64) (uint64, uint64, bool, error) {
 
 }
 
-func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (int, uint64, error) {
+func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id uint64) (int, uint64, error) {
 
 	br.Offset = int64(offset)
 
@@ -64,10 +64,10 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (i
 		if lvl == 0 {
 			k, _ := br.DecodeVarint()
 			kOffset, _ := br.DecodeVarint()
-			if k == uint64(min) {
+			if k == uint64(id) {
 				return int(k), kOffset, nil
 			}
-			if k > uint64(min) {
+			if k > uint64(id) {
 				// not found
 				return int(k), kOffset, nil
 			}
@@ -80,16 +80,16 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, min uint64) (i
 			br.DecodeVarint()
 
 			// TODO falta que pasa cuando esta en la ultima mitad.
-			if k == uint64(min) {
-				return readSkipList(br, kOffset, lvl-1, min)
+			if k == uint64(id) {
+				return readSkipList(br, kOffset, lvl-1, id)
 			}
 
-			if kn > uint64(min) {
+			if kn > uint64(id) {
 				// done, not found
 				if lvl == 0 {
 					return 0, 0, nil
 				}
-				return readSkipList(br, kOffset, lvl-1, min)
+				return readSkipList(br, kOffset, lvl-1, id)
 			}
 			offset = uint64(next)
 		}
