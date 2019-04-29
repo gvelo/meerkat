@@ -10,4 +10,5 @@ require (
 	github.com/rs/zerolog v1.14.3
 	github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac // indirect
 	github.com/stretchr/testify v1.3.0
+	golang.org/x/tools v0.0.0-20190428024724-550556f78a90 // indirect
 )

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 )
 
 // Iterator is used for lookup and range operations on skiplist
@@ -44,7 +43,7 @@ func (i *Iterator) Reset() {
 func (i *Iterator) Next() bool {
 	i.curr = i.curr.forward[i.lvl]
 	i.i += 1
-	return i.curr.key != math.MaxUint64
+	return i.curr.t != Tail
 }
 
 // Get next item Item in Level
@@ -53,7 +52,7 @@ func (i *Iterator) Get() *Node {
 }
 
 // Get next item Item in Level
-func (i *Iterator) Key() uint64 {
+func (i *Iterator) Key() interface{} {
 	return i.curr.key
 }
 

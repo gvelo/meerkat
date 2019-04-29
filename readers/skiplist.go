@@ -2,10 +2,12 @@ package readers
 
 import (
 	"eventdb/io"
+	"fmt"
+	"log"
 	"math"
 )
 
-func ReadSkip(ip string, id int) (uint64, uint64, error) {
+func ReadSkip(ip string, id float64) (float64, uint64, error) {
 
 	br, err := io.NewBinaryReader(ip)
 
@@ -21,14 +23,14 @@ func ReadSkip(ip string, id int) (uint64, uint64, error) {
 		panic("invalid file type")
 	}
 
-	key, o, ok, err := findOffsetSkipList(ip, uint64(id))
+	key, o, ok, err := findOffsetSkipList(ip, id)
 	if ok {
 		return key, o, nil
 	}
 	return 0, 0, err
 }
 
-func findOffsetSkipList(name string, id uint64) (uint64, uint64, bool, error) {
+func findOffsetSkipList(name string, id float64) (float64, uint64, bool, error) {
 
 	br, err := io.NewBinaryReader(name)
 
@@ -50,11 +52,11 @@ func findOffsetSkipList(name string, id uint64) (uint64, uint64, bool, error) {
 
 	r, start, err := readSkipList(br, offset, lvl, id)
 
-	return uint64(r), start, true, err
+	return float64(r), start, true, err
 
 }
 
-func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id uint64) (int, uint64, error) {
+func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id float64) (float64, uint64, error) {
 
 	br.Offset = int64(offset)
 
@@ -62,28 +64,33 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id uint64) (in
 	for i := 0; i < int(math.MaxUint32); i++ {
 
 		if lvl == 0 {
-			k, _ := br.DecodeVarint()
+			bits, _ := br.DecodeFixed64()
+			k := math.Float64frombits(bits)
 			kOffset, _ := br.DecodeVarint()
-			if k == uint64(id) {
-				return int(k), kOffset, nil
+			if k == float64(id) {
+				return k, kOffset, nil
 			}
-			if k > uint64(id) {
+			if k > float64(id) {
 				// not found
-				return int(k), kOffset, nil
+				return k, kOffset, nil
 			}
 		} else {
 			br.Offset = int64(offset)
-			k, _ := br.DecodeVarint()
+			bits, _ := br.DecodeFixed64()
+			k := math.Float64frombits(bits)
+
 			kOffset, _ := br.DecodeVarint()
 			next := br.Offset
-			kn, _ := br.DecodeVarint()
+			kn, _ := br.DecodeFixed64()
 			br.DecodeVarint()
 
-			if k == uint64(id) {
+			if k == float64(id) {
+				log.Printf(fmt.Sprintf("Loading offset %d, lvl %d , id  %v ", kOffset, lvl-1, id))
 				return readSkipList(br, kOffset, lvl-1, id)
 			}
 
 			if kn > uint64(id) {
+				log.Printf(fmt.Sprintf("Loading offset %d, lvl %d , id  %v ", kOffset, lvl-1, id))
 				// done, not found
 				if lvl == 0 {
 					return 0, 0, nil

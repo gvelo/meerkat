@@ -3,23 +3,33 @@ package collection
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 )
 
+type NodeType int
+
+const (
+	Head NodeType = iota
+	Tail
+	Internal
+)
+
 type Node struct {
-	key      uint64
+	key      interface{}
 	UserData interface{}
 	level    int
 	forward  []*Node
+	t        NodeType
 }
 
-func NewSLNode(k uint64, v interface{}, l int) Node {
+func NewSLNode(k interface{}, v interface{}, l int, t NodeType) Node {
 
 	forward := make([]*Node, l)
 	for i := 0; i <= l-1; i++ {
 		forward[i] = nil
 	}
-	return Node{key: k, UserData: v, level: l, forward: forward}
+	return Node{key: k, UserData: v, level: l, forward: forward, t: t}
 }
 
 // Level returns the level of a node in the skiplist
@@ -31,27 +41,75 @@ func (n Node) String() string {
 	return fmt.Sprintf("key: %d , level: %d , me: %p", n.key, n.level, &n)
 }
 
+type Comparator interface {
+	Compare(a interface{}, b interface{}) int
+	tailValue() interface{}
+	headValue() interface{}
+}
+
+type Uint64Comparator struct{}
+
+func (c Uint64Comparator) Compare(a interface{}, b interface{}) int {
+	if a.(uint64) < b.(uint64) {
+		return -1
+	}
+	if a.(uint64) > b.(uint64) {
+		return 1
+	}
+	return 0
+}
+func (c Uint64Comparator) tailValue() interface{} {
+	return ^uint64(0)
+}
+func (c Uint64Comparator) headValue() interface{} {
+	return uint64(0)
+}
+
+type Float64Comparator struct{}
+
+func (c Float64Comparator) Compare(a interface{}, b interface{}) int {
+	if a.(float64) < b.(float64) {
+		return -1
+	}
+	if a.(float64) > b.(float64) {
+		return 1
+	}
+	return 0
+}
+func (c Float64Comparator) tailValue() interface{} {
+	return math.MaxFloat64
+}
+func (c Float64Comparator) headValue() interface{} {
+	return math.MaxFloat64 * -1
+}
+
 type SkipList struct {
-	maxLevel int     // In gral log 1/p ( N )
-	p        float32 // 1/p
-	head     *Node
-	tail     *Node
-	level    int
+	maxLevel       int     // In gral log 1/p ( N )
+	p              float32 // 1/p
+	head           *Node
+	tail           *Node
+	level          int
+	updateCallback OnUpdate
+	comparator     Comparator
 }
 
 func (s *SkipList) Level() int {
 	return s.level
 }
 
-func NewSL(p float32, maxLevel int) *SkipList {
+func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
 
-	maxUint64 := ^uint64(0)
-	minUint64 := uint64(0)
+	if c == nil {
+		panic("you should provide a comparator")
+	}
 
-	var head = NewSLNode(minUint64, nil, maxLevel)
-	var tail = NewSLNode(maxUint64, nil, maxLevel)
+	maxUint64 := c.tailValue()
+	minUint64 := c.headValue()
 
-	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0}
+	var head = NewSLNode(minUint64, nil, maxLevel, Head)
+	var tail = NewSLNode(maxUint64, nil, maxLevel, Tail)
+
+	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0, updateCallback: u, comparator: c}
 
 	for i := maxLevel - 1; i >= 0; i-- {
 		head.forward[i] = &tail
@@ -68,17 +126,17 @@ func (list *SkipList) randomLevel() int {
 	return lvl
 }
 
-func (list *SkipList) Search(key uint64) (node *Node, found bool) {
+func (list *SkipList) Search(key interface{}) (node *Node, found bool) {
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
-		for x.forward[i].key < key {
+		for list.comparator.Compare(x.forward[i].key, key) == -1 {
 			x = x.forward[i]
 		}
 
 	}
 	x = x.forward[0]
 	found = false
-	if x.key == key {
+	if list.comparator.Compare(x.key, key) == 0 {
 		node = x
 		found = true
 	}
@@ -87,19 +145,19 @@ func (list *SkipList) Search(key uint64) (node *Node, found bool) {
 
 type OnUpdate func(value interface{}) interface{}
 
-func (list *SkipList) InsertOrUpdate(key uint64, v interface{}, updateCallback OnUpdate) *SkipList {
+func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 	var update = make([]*Node, list.maxLevel)
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
-		for x.forward[i].key < key {
+		for list.comparator.Compare(x.forward[i].key, key) == -1 {
 			x = x.forward[i]
 		}
 		update[i] = x
 	}
 	x = x.forward[0]
-	if x.key == key {
-		if updateCallback != nil {
-			x.UserData = updateCallback(x.UserData)
+	if list.comparator.Compare(x.key, key) == 0 {
+		if list.updateCallback != nil {
+			x.UserData = list.updateCallback(x.UserData)
 		} else {
 			x.UserData = v
 		}
@@ -111,7 +169,7 @@ func (list *SkipList) InsertOrUpdate(key uint64, v interface{}, updateCallback O
 			}
 			list.level = lvl
 		}
-		var node = NewSLNode(key, v, lvl)
+		var node = NewSLNode(key, v, lvl, Internal)
 		x = &node
 		for i := 0; i < lvl; i++ {
 			x.forward[i] = update[i].forward[i]
@@ -121,17 +179,17 @@ func (list *SkipList) InsertOrUpdate(key uint64, v interface{}, updateCallback O
 	return list
 }
 
-func (list *SkipList) Delete(key uint64) {
+func (list *SkipList) Delete(key interface{}) {
 	var update = make([]*Node, list.maxLevel)
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
-		for x.forward[i].key < key {
+		for list.comparator.Compare(x.forward[i].key, key) == -1 {
 			x = x.forward[i]
 		}
 		update[i] = x
 	}
 	x = x.forward[0]
-	if x.key == key {
+	if list.comparator.Compare(x.key, key) == 0 {
 		for i := 0; i < list.level; i++ {
 			if update[i].forward[i] != x {
 				break
