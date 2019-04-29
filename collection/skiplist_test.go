@@ -6,18 +6,29 @@ import (
 	"testing"
 )
 
-func setUpValuesInsplitList() *SkipList {
-	skipList := NewSL(.5, 16)
+type Holder struct {
+	aInt int
+}
 
-	skipList.InsertOrUpdate(13, nil, nil)
-	skipList.InsertOrUpdate(1, nil, nil)
-	skipList.InsertOrUpdate(123, nil, nil)
-	skipList.InsertOrUpdate(555, nil, nil)
-	skipList.InsertOrUpdate(553, nil, nil)
-	skipList.InsertOrUpdate(554, nil, nil)
-	skipList.InsertOrUpdate(124, nil, nil)
-	skipList.InsertOrUpdate(125, nil, nil)
-	skipList.InsertOrUpdate(1222, nil, nil)
+var u OnUpdate = func(value interface{}) interface{} {
+	h := value.(Holder)
+	h.aInt = h.aInt + 1
+	return h
+}
+
+func setUpValuesInsplitList() *SkipList {
+
+	skipList := NewSL(.5, 16, u, Uint64Comparator{})
+
+	skipList.InsertOrUpdate(uint64(13), nil)
+	skipList.InsertOrUpdate(uint64(1), nil)
+	skipList.InsertOrUpdate(uint64(123), nil)
+	skipList.InsertOrUpdate(uint64(555), nil)
+	skipList.InsertOrUpdate(uint64(553), nil)
+	skipList.InsertOrUpdate(uint64(554), nil)
+	skipList.InsertOrUpdate(uint64(124), nil)
+	skipList.InsertOrUpdate(uint64(125), nil)
+	skipList.InsertOrUpdate(uint64(1222), nil)
 
 	return skipList
 }
@@ -38,7 +49,7 @@ func TestSkipList_Insert(t *testing.T) {
 
 	node := skipList.head.forward[0]
 	for node.forward[0] != nil {
-		ass.True(node.key < node.forward[0].key)
+		ass.True(skipList.comparator.Compare(node.key, node.forward[0].key) == -1)
 		node = node.forward[0]
 	}
 }
@@ -48,11 +59,11 @@ func TestSkipList_Search(t *testing.T) {
 	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
 
-	res, found := skipList.Search(553)
-	a.True(res.key == 553)
-	a.True(found == true)
+	res, found := skipList.Search(uint64(553))
+	a.Equal(uint64(553), res.key)
+	a.True(found)
 
-	res, found = skipList.Search(99999)
+	res, found = skipList.Search(uint64(99999))
 	a.Nil(res)
 	a.False(found)
 
@@ -63,8 +74,8 @@ func TestSkipList_Delete(t *testing.T) {
 	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
 
-	skipList.Delete(553)
-	res, found := skipList.Search(553)
+	skipList.Delete(uint64(553))
+	res, found := skipList.Search(uint64(553))
 	a.Nil(res)
 	a.False(found)
 
@@ -72,23 +83,13 @@ func TestSkipList_Delete(t *testing.T) {
 
 func TestSkipList_InsertOrUpdate(t *testing.T) {
 	a := assert.New(t)
-	skipList := NewSL(.5, 16)
+	skipList := NewSL(.5, 16, u, Uint64Comparator{})
 
-	type Holder struct {
-		aInt int
-	}
+	skipList.InsertOrUpdate(13, Holder{13})
+	skipList.InsertOrUpdate(1, Holder{1})
+	skipList.InsertOrUpdate(123, Holder{123})
 
-	skipList.InsertOrUpdate(13, Holder{13}, nil)
-	skipList.InsertOrUpdate(1, Holder{1}, nil)
-	skipList.InsertOrUpdate(123, Holder{123}, nil)
-
-	var u OnUpdate = func(value interface{}) interface{} {
-		h := value.(Holder)
-		h.aInt = h.aInt + 1
-		return h
-	}
-
-	skipList.InsertOrUpdate(123, nil, u)
+	skipList.InsertOrUpdate(123, nil)
 
 	res, found := skipList.Search(123)
 
@@ -140,9 +141,9 @@ func createRandomList(qty int) []uint64 {
 }
 
 func insertItems(list []uint64) *SkipList {
-	splitList := NewSL(.5, 16)
+	splitList := NewSL(.5, 16, u, Uint64Comparator{})
 	for i := 0; i < len(list); i++ {
-		splitList.InsertOrUpdate(list[i], nil, nil)
+		splitList.InsertOrUpdate(list[i], nil)
 	}
 	return splitList
 }
