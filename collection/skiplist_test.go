@@ -85,13 +85,13 @@ func TestSkipList_InsertOrUpdate(t *testing.T) {
 	a := assert.New(t)
 	skipList := NewSL(.5, 16, u, Uint64Comparator{})
 
-	skipList.InsertOrUpdate(13, Holder{13})
-	skipList.InsertOrUpdate(1, Holder{1})
-	skipList.InsertOrUpdate(123, Holder{123})
+	skipList.InsertOrUpdate(uint64(13), Holder{13})
+	skipList.InsertOrUpdate(uint64(1), Holder{1})
+	skipList.InsertOrUpdate(uint64(123), Holder{123})
 
-	skipList.InsertOrUpdate(123, nil)
+	skipList.InsertOrUpdate(uint64(123), nil)
 
-	res, found := skipList.Search(123)
+	res, found := skipList.Search(uint64(123))
 
 	a.True(found)
 	a.NotNil(res)
