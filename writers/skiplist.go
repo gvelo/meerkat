@@ -4,8 +4,6 @@ import (
 	"eventdb/collection"
 	"eventdb/io"
 	"eventdb/segment/inmem"
-	"fmt"
-	"log"
 	"math"
 )
 
@@ -75,7 +73,5 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 
 	bw.WriteEncodedVarint(math.Float64bits(math.MaxFloat64))
 
-	log.Printf(fmt.Sprintf("keys %v, lvl %d ", keys, lvl-1))
-	log.Printf(fmt.Sprintf("offsets %v, lvl %d", offsets, lvl-1))
 	return processSkip(bw, nk, nl, lvl+1, ixl, offset)
 }

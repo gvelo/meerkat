@@ -2,8 +2,6 @@ package readers
 
 import (
 	"eventdb/io"
-	"fmt"
-	"log"
 	"math"
 )
 
@@ -85,12 +83,10 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id float64) (f
 			br.DecodeVarint()
 
 			if k == float64(id) {
-				log.Printf(fmt.Sprintf("Loading offset %d, lvl %d , id  %v ", kOffset, lvl-1, id))
 				return readSkipList(br, kOffset, lvl-1, id)
 			}
 
 			if kn > uint64(id) {
-				log.Printf(fmt.Sprintf("Loading offset %d, lvl %d , id  %v ", kOffset, lvl-1, id))
 				// done, not found
 				if lvl == 0 {
 					return 0, 0, nil
