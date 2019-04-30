@@ -43,7 +43,7 @@ func (tw *TrieWriter) Write(trie *inmem.BTrie) error {
 
 }
 
-func (tw *TrieWriter) writeNode(node *inmem.Node) (int64, error) {
+func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 
 	// Write children first
 	for _, child := range node.Children {

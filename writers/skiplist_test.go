@@ -55,7 +55,7 @@ func TestSkipList_Read1(t *testing.T) {
 
 	start = time.Now()
 	pr, _ := readers.NewPostingReader(sp)
-	b, _ := pr.Read(int64(o))
+	b, _ := pr.Read(int(o))
 
 	t.Logf("read posting took %v ", time.Since(start))
 
@@ -89,12 +89,46 @@ func TestSkipList_Read6(t *testing.T) {
 
 	start = time.Now()
 	pr, _ := readers.NewPostingReader(sp)
-	b, _ := pr.Read(int64(o))
+	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
 	a.True(b.Contains(7))
 	a.True(b.Contains(8))
 	a.True(b.Contains(9))
+	a.Equal(b.GetCardinality(), uint64(3))
+
+}
+
+func TestSkipList_Read100(t *testing.T) {
+	a := assert.New(t)
+	ip := "/tmp/skip.bin"
+	sp := "/tmp/posting-test.bin"
+
+	start := time.Now()
+	sl, st := setUpPostingListStore(100)
+	err := WritePosting(sp, st.Store)
+	t.Logf("setup sl & saving store took %v ", time.Since(start))
+
+	start = time.Now()
+	err = WriteSkip(ip, sl, 5)
+	if err != nil {
+		t.Fail()
+	}
+	t.Logf("create sl took %v ", time.Since(start))
+
+	start = time.Now()
+	k, o, _ := readers.ReadSkip(ip, 99.1)
+	a.Equal(float64(99.1), k)
+	t.Logf("find sl in dist took %v ", time.Since(start))
+
+	start = time.Now()
+	pr, _ := readers.NewPostingReader(sp)
+	b, _ := pr.Read(int(o))
+	t.Logf("read posting took %v ", time.Since(start))
+
+	a.True(b.Contains(100))
+	a.True(b.Contains(101))
+	a.True(b.Contains(102))
 	a.Equal(b.GetCardinality(), uint64(3))
 
 }
@@ -123,7 +157,7 @@ func TestSkipList_Read200(t *testing.T) {
 
 	start = time.Now()
 	pr, _ := readers.NewPostingReader(sp)
-	b, _ := pr.Read(int64(o))
+	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
 	a.True(b.Contains(200))
@@ -158,7 +192,7 @@ func TestSkipList_Read1M(t *testing.T) {
 
 	start = time.Now()
 	pr, _ := readers.NewPostingReader(sp)
-	b, _ := pr.Read(int64(o))
+	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
 	a.True(b.Contains(1000000))

@@ -44,19 +44,19 @@ func findOffsetSkipList(name string, id float64) (float64, uint64, bool, error) 
 		panic("invalid file type")
 	}
 
-	br.Offset = int64(br.Size - 16)
+	br.Offset = br.Size - 16
 	offset, _ := br.DecodeFixed64()
 	lvl, _ := br.DecodeFixed64()
 
-	r, start, err := readSkipList(br, offset, lvl, id)
+	r, start, err := readSkipList(br, int(offset), lvl, id)
 
 	return float64(r), start, true, err
 
 }
 
-func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id float64) (float64, uint64, error) {
+func readSkipList(br *io.BinaryReader, offset int, lvl uint64, id float64) (float64, uint64, error) {
 
-	br.Offset = int64(offset)
+	br.Offset = offset
 
 	// search this lvl
 	for i := 0; i < int(math.MaxUint32); i++ {
@@ -73,27 +73,29 @@ func readSkipList(br *io.BinaryReader, offset uint64, lvl uint64, id float64) (f
 				return k, kOffset, nil
 			}
 		} else {
-			br.Offset = int64(offset)
+			br.Offset = offset
 			bits, _ := br.DecodeFixed64()
 			k := math.Float64frombits(bits)
 
 			kOffset, _ := br.DecodeVarint()
 			next := br.Offset
-			kn, _ := br.DecodeFixed64()
+			bitsn, _ := br.DecodeFixed64()
+			kn := math.Float64frombits(bitsn)
+			// kn , _:= br.DecodeFixed64()
 			br.DecodeVarint()
 
 			if k == float64(id) {
-				return readSkipList(br, kOffset, lvl-1, id)
+				return readSkipList(br, int(kOffset), lvl-1, id)
 			}
 
-			if kn > uint64(id) {
+			if kn > float64(id) {
 				// done, not found
 				if lvl == 0 {
 					return 0, 0, nil
 				}
-				return readSkipList(br, kOffset, lvl-1, id)
+				return readSkipList(br, int(kOffset), lvl-1, id)
 			}
-			offset = uint64(next)
+			offset = next
 		}
 
 	}

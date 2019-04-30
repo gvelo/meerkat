@@ -10,7 +10,7 @@ type Node struct {
 	Children map[byte]*Node
 	Bucket   []*Record
 	Posting  *PostingList
-	Offset   int64
+	Offset   int
 }
 
 type Record struct {

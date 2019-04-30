@@ -26,7 +26,7 @@ const (
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
-	Offset int64
+	Offset int
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
@@ -150,7 +150,7 @@ func (fw *BinaryWriter) WriteEncodedFixed32(x uint64) error {
 func (fw *BinaryWriter) WriteEncodedZigzag64(x uint64) error {
 	// use signed number to get arithmetic right shift.
 	fw.Offset += 8
-	return fw.WriteEncodedVarint(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+	return fw.WriteEncodedVarint(uint64((x << 1) ^ uint64(int64(x)>>63)))
 }
 
 // EncodeZigzag32 writes a zigzag-encoded 32-bit integer
@@ -176,23 +176,23 @@ func (fw *BinaryWriter) Write(b []byte) (int, error) {
 	if err != nil {
 		return nn, err
 	}
-	fw.Offset += int64(nn)
+	fw.Offset += nn
 	return nn, err
 }
 
 // EncodeStringBytes writes an encoded string to the Buffer.
 // This is the format used for the proto2 string type.
 func (fw *BinaryWriter) WriteEncodedStringBytes(s string) error {
-	l := uint64(len(s))
-	fw.WriteEncodedVarint(l)
+	l := len(s)
+	fw.WriteEncodedVarint(uint64(l))
 	fw.writer.WriteString(s)
-	fw.Offset += int64(l)
+	fw.Offset += l
 	return nil
 }
 
 type BinaryReader struct {
 	bytes  []byte
-	Offset int64
+	Offset int
 	Size   int
 }
 
@@ -231,7 +231,7 @@ func (fr *BinaryReader) ReadHeader() (FileType, error) {
 		return 0, errUnknFileType
 	}
 
-	fr.Offset += int64(l + 1)
+	fr.Offset += l + 1
 
 	return FileType(fr.bytes[l]), nil
 
@@ -239,7 +239,7 @@ func (fr *BinaryReader) ReadHeader() (FileType, error) {
 
 func (fr *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
-		if fr.Offset >= int64(len(fr.bytes)) {
+		if fr.Offset >= len(fr.bytes) {
 			err = io.ErrUnexpectedEOF
 			return
 		}
@@ -268,12 +268,12 @@ func (fr *BinaryReader) DecodeByte() byte {
 // protocol buffer types.
 func (fr *BinaryReader) DecodeVarint() (x uint64, err error) {
 	i := fr.Offset
-	if fr.Offset >= int64(len(fr.bytes)) {
+	if fr.Offset >= len(fr.bytes) {
 		return 0, io.ErrUnexpectedEOF
 	} else if fr.bytes[fr.Offset] < 0x80 {
 		fr.Offset++
 		return uint64(fr.bytes[i]), nil
-	} else if int64(len(fr.bytes))-fr.Offset < 10 {
+	} else if len(fr.bytes)-fr.Offset < 10 {
 		return fr.decodeVarintSlow()
 	}
 
@@ -365,7 +365,7 @@ done:
 func (fr *BinaryReader) DecodeFixed64() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 8
-	if i < 0 || i > int64(len(fr.bytes)) {
+	if i < 0 || i > len(fr.bytes) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
@@ -388,7 +388,7 @@ func (fr *BinaryReader) DecodeFixed64() (x uint64, err error) {
 func (fr *BinaryReader) DecodeFixed32() (x uint64, err error) {
 	// x, err already 0
 	i := fr.Offset + 4
-	if i < 0 || i > int64(len(fr.bytes)) {
+	if i < 0 || i > len(fr.bytes) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
@@ -438,32 +438,27 @@ func (fr *BinaryReader) DecodeRawBytes(alloc bool) (buf []byte, err error) {
 	if nb < 0 {
 		return nil, fmt.Errorf("proto: bad byte length %d", nb)
 	}
-	end := fr.Offset + int64(nb)
-	if end < fr.Offset || end > int64(len(fr.bytes)) {
+	end := fr.Offset + nb
+	if end < fr.Offset || end > len(fr.bytes) {
 		return nil, io.ErrUnexpectedEOF
 	}
 
 	if !alloc {
 		// todo: check if can get more uses of alloc=false
 		buf = fr.bytes[fr.Offset:end]
-		fr.Offset += int64(nb)
+		fr.Offset += nb
 		return
 	}
 
 	buf = make([]byte, nb)
 	copy(buf, fr.bytes[fr.Offset:])
-	fr.Offset += int64(nb)
+	fr.Offset += nb
 	return
 }
 
-func (fr BinaryReader) SliceAt(offset int64) []byte {
+func (fr BinaryReader) SliceAt(offset int) []byte {
 
-	// TODO review this int64 to int casting. Given that
-	// we are only using memory mapped files and the max address
-	// space is addressable from an int, does it make any sense to use
-	// int64 as offset type ??
-
-	return fr.bytes[int(offset):]
+	return fr.bytes[offset:]
 }
 
 // DecodeStringBytes reads an encoded string from the Buffer.

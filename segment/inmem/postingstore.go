@@ -5,7 +5,7 @@ import "github.com/RoaringBitmap/roaring"
 // postingList holds  the term posting list.
 type PostingList struct {
 	// offset on disk
-	Offset int64
+	Offset int
 
 	// the bitmap backing the list
 	Bitmap *roaring.Bitmap

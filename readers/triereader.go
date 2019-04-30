@@ -7,7 +7,7 @@ import (
 
 type OnDiskTrie struct {
 	br         *io.BinaryReader
-	rootOffset uint64
+	rootOffset int
 }
 
 func ReadTrie(file string) (*OnDiskTrie, error) {
@@ -24,7 +24,7 @@ func ReadTrie(file string) (*OnDiskTrie, error) {
 		return nil, errors.New("invalid file type")
 	}
 
-	br.Offset = int64(br.Size) - 8
+	br.Offset = br.Size - 8
 
 	rootOffset, err := br.DecodeFixed64()
 
@@ -34,14 +34,14 @@ func ReadTrie(file string) (*OnDiskTrie, error) {
 
 	return &OnDiskTrie{
 		br:         br,
-		rootOffset: rootOffset,
+		rootOffset: int(rootOffset),
 	}, nil
 
 }
 
-func (t OnDiskTrie) Lookup(term string) (uint64, error) {
+func (t OnDiskTrie) Lookup(term string) (int, error) {
 
-	t.br.Offset = int64(t.rootOffset)
+	t.br.Offset = t.rootOffset
 
 nodesearch:
 	for i := 0; i < len(term); i++ {
@@ -69,7 +69,7 @@ nodesearch:
 			}
 
 			if term[i] == key {
-				t.br.Offset = int64(value)
+				t.br.Offset = int(value)
 				continue nodesearch
 			}
 
@@ -96,7 +96,7 @@ nodesearch:
 			}
 
 			if value == term[i:] {
-				return offset, nil
+				return int(offset), nil
 			}
 
 		}
@@ -117,7 +117,7 @@ nodesearch:
 	if offset != 0 {
 		// final state, return the offset of the posting list
 		// associated to the last node.
-		return offset, nil
+		return int(offset), nil
 	}
 
 	// TODO change for -1

@@ -71,7 +71,7 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 
 	}
 
-	bw.WriteEncodedVarint(math.Float64bits(math.MaxFloat64))
+	bw.WriteEncodedFixed64(math.Float64bits(math.MaxFloat64))
 
 	return processSkip(bw, nk, nl, lvl+1, ixl, offset)
 }

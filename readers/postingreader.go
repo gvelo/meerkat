@@ -10,7 +10,7 @@ type PostingReader struct {
 	*io.BinaryReader
 }
 
-func (pr PostingReader) Read(offset int64) (*roaring.Bitmap, error) {
+func (pr PostingReader) Read(offset int) (*roaring.Bitmap, error) {
 
 	b := pr.SliceAt(offset)
 

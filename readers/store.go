@@ -18,7 +18,7 @@ func ReadEvent(name string, id uint64, infos []segment.FieldInfo, ixl uint64) (s
 	return evt, nil
 }
 
-func findOffset(name string, id uint64, ixl uint64) (uint64, uint64, bool, error) {
+func findOffset(name string, id uint64, ixl uint64) (int, uint64, bool, error) {
 
 	br, err := io.NewBinaryReader(name + ".idx")
 
@@ -34,26 +34,26 @@ func findOffset(name string, id uint64, ixl uint64) (uint64, uint64, bool, error
 		panic("invalid file type")
 	}
 
-	br.Offset = int64(br.Size - 16)
+	br.Offset = br.Size - 16
 	offset, _ := br.DecodeFixed64()
 	lvl, _ := br.DecodeFixed64()
 
-	r, start, ok := processLevel(br, offset, lvl, id, ixl, 0)
+	r, start, ok := processLevel(br, int(offset), lvl, id, ixl, 0)
 
 	return r, start, ok, nil
 
 }
 
-func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl uint64, start uint64) (uint64, uint64, bool) {
+func processLevel(br *io.BinaryReader, offset int, lvl uint64, id uint64, ixl uint64, start uint64) (int, uint64, bool) {
 	// if it is the 1st lvl & the offsets are less than
 	// the ixl then return the offset 0 to search from
 	if lvl == 0 {
 		return offset, start, start == id
 	}
-	br.Offset = int64(offset)
+	br.Offset = offset
 
 	// search this lvl
-	var lvlPtr uint64 = 0
+	var lvlPtr = 0
 	// TODO: FIX IT esto puede traer quilombos cuando el id sea mas grande que el ultimo del nivel.
 	for i := 0; i < int(math.MaxUint32); i++ {
 
@@ -69,15 +69,15 @@ func processLevel(br *io.BinaryReader, offset uint64, lvl uint64, id uint64, ixl
 		}
 
 		if calcId == int(id) {
-			return lvlOffset, uint64(calcId), true
+			return int(lvlOffset), uint64(calcId), true
 		}
 
-		lvlPtr = dlvlOffset
+		lvlPtr = int(dlvlOffset)
 	}
 	return 0, 0, false
 }
 
-func findEvent(name string, offset uint64, infos []segment.FieldInfo, found bool, startFrom uint64, id uint64) (segment.Event, bool) {
+func findEvent(name string, offset int, infos []segment.FieldInfo, found bool, startFrom uint64, id uint64) (segment.Event, bool) {
 
 	br, err := io.NewBinaryReader(name)
 
@@ -92,7 +92,7 @@ func findEvent(name string, offset uint64, infos []segment.FieldInfo, found bool
 		panic("invalid file type")
 	}
 
-	br.Offset = int64(offset)
+	br.Offset = offset
 
 	if found {
 		evt, err := LoadEvent(br, infos)

@@ -132,7 +132,7 @@ func TestBTrieReadWriter(t *testing.T) {
 			return
 		}
 
-		bitmap, err := pReader.Read(int64(offset))
+		bitmap, err := pReader.Read(offset)
 
 		if !assert.NoErrorf(err, "an error occurred while fetching posting posting from disk: %v", err) {
 			return
