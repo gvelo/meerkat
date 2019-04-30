@@ -34,22 +34,24 @@ func setUpValuesInsplitList() *SkipList {
 }
 
 func TestSkipList_Creation(t *testing.T) {
-	ass := assert.New(t)
+	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
+	a.Equal(skipList.length, 9)
 
-	ass.Equal(skipList.p, float32(0.5))
-	ass.Equal(skipList.maxLevel, 16)
+	a.Equal(skipList.p, float32(0.5))
+	a.Equal(skipList.maxLevel, 16)
 
 }
 
 func TestSkipList_Insert(t *testing.T) {
 
-	ass := assert.New(t)
+	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
+	a.Equal(skipList.length, 9)
 
 	node := skipList.head.forward[0]
 	for node.forward[0] != nil {
-		ass.True(skipList.comparator.Compare(node.key, node.forward[0].key) == -1)
+		a.True(skipList.comparator.Compare(node.key, node.forward[0].key) == -1)
 		node = node.forward[0]
 	}
 }
@@ -73,8 +75,10 @@ func TestSkipList_Delete(t *testing.T) {
 	// flaky test, deberiamos chequear todos los niveles.
 	a := assert.New(t)
 	skipList := setUpValuesInsplitList()
+	a.Equal(skipList.length, 9)
 
 	skipList.Delete(uint64(553))
+	a.Equal(skipList.length, 8)
 	res, found := skipList.Search(uint64(553))
 	a.Nil(res)
 	a.False(found)
@@ -88,8 +92,10 @@ func TestSkipList_InsertOrUpdate(t *testing.T) {
 	skipList.InsertOrUpdate(uint64(13), Holder{13})
 	skipList.InsertOrUpdate(uint64(1), Holder{1})
 	skipList.InsertOrUpdate(uint64(123), Holder{123})
+	a.Equal(skipList.length, 3)
 
 	skipList.InsertOrUpdate(uint64(123), nil)
+	a.Equal(skipList.length, 3)
 
 	res, found := skipList.Search(uint64(123))
 

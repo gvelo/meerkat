@@ -91,6 +91,7 @@ type SkipList struct {
 	level          int
 	updateCallback OnUpdate
 	comparator     Comparator
+	length         int
 }
 
 func (s *SkipList) Level() int {
@@ -109,7 +110,7 @@ func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
 	var head = NewSLNode(minUint64, nil, maxLevel, Head)
 	var tail = NewSLNode(maxUint64, nil, maxLevel, Tail)
 
-	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0, updateCallback: u, comparator: c}
+	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0, updateCallback: u, comparator: c, length: 0}
 
 	for i := maxLevel - 1; i >= 0; i-- {
 		head.forward[i] = &tail
@@ -170,6 +171,7 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 			list.level = lvl
 		}
 		var node = NewSLNode(key, v, lvl, Internal)
+		list.length++
 		x = &node
 		for i := 0; i < lvl; i++ {
 			x.forward[i] = update[i].forward[i]
@@ -197,6 +199,7 @@ func (list *SkipList) Delete(key interface{}) {
 			update[i].forward[i] = x.forward[i]
 		}
 		x = nil
+		list.length--
 		for i := list.level; list.level > 0 && list.head.forward[list.level] == nil; i-- {
 			list.level = list.level - 1
 		}
