@@ -7,17 +7,13 @@ import (
 	"testing"
 )
 
-func getFieldsInfo() []segment.FieldInfo {
-	fieldInfo := make([]segment.FieldInfo, 4)
+func getIndexInfo() *segment.IndexInfo {
 
-	fieldInfo[0].FieldID = 0
-	fieldInfo[0].FieldType = segment.FieldTypeText
-	fieldInfo[0].FieldName = "msg"
-	fieldInfo[1].FieldID = 1
-	fieldInfo[1].FieldType = segment.FieldTypeKeyword
-	fieldInfo[1].FieldName = "source"
+	indexInfo := segment.NewIndexInfo("test_index")
+	indexInfo.AddField("msg", segment.FieldTypeText, true)
+	indexInfo.AddField("source", segment.FieldTypeKeyword, true)
 
-	return fieldInfo
+	return indexInfo
 }
 
 func createEvents() []map[string]interface{} {
@@ -37,11 +33,11 @@ func createEvents() []map[string]interface{} {
 
 func TestAddEvent(t *testing.T) {
 
-	fieldInfo := getFieldsInfo()
+	indexInfo := getIndexInfo()
 	events := createEvents()
 	writeChan := make(chan *Segment, 100)
 
-	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+	segment := NewSegment(indexInfo, "testid", writeChan)
 
 	for _, event := range events {
 		segment.Add(event)
@@ -53,11 +49,11 @@ func TestAddEvent(t *testing.T) {
 
 func TestAddEventOnvalidState(t *testing.T) {
 
-	fieldInfo := getFieldsInfo()
+	indexInfo := getIndexInfo()
 	events := createEvents()
 	writeChan := make(chan *Segment, 100)
 
-	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+	segment := NewSegment(indexInfo, "testid", writeChan)
 
 	segment.Add(events[0])
 	segment.Write()
@@ -68,11 +64,11 @@ func TestAddEventOnvalidState(t *testing.T) {
 
 func TestWriteOnInvalidState(t *testing.T) {
 
-	fieldInfo := getFieldsInfo()
+	indexInfo := getIndexInfo()
 	events := createEvents()
 	writeChan := make(chan *Segment, 100)
 
-	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+	segment := NewSegment(indexInfo, "testid", writeChan)
 
 	segment.Add(events[0])
 	segment.Write()
@@ -83,11 +79,11 @@ func TestWriteOnInvalidState(t *testing.T) {
 
 func TestCloseOnInvalidState(t *testing.T) {
 
-	fieldInfo := getFieldsInfo()
+	indexInfo := getIndexInfo()
 	events := createEvents()
 	writeChan := make(chan *Segment, 100)
 
-	segment := NewSegment("testindex", "testid", fieldInfo, writeChan)
+	segment := NewSegment(indexInfo, "testid", writeChan)
 
 	segment.Add(events[0])
 

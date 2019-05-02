@@ -211,7 +211,7 @@ func (index *InMemoryIndex) lookup(fieldInfo FieldInfo, term interface{}) *roari
 	return nil
 } */
 
-// FieldType represent the type of a field.
+// Type represent the type of a field.
 type FieldType int
 
 const (
@@ -229,10 +229,46 @@ const (
 
 // Field Info represents the info about a field.
 type FieldInfo struct {
-	FieldID   int
-	FieldName string
-	FieldType FieldType
-	Index     bool
+	ID    int
+	Name  string
+	Type  FieldType
+	Index bool
+}
+
+type IndexInfo struct {
+	Name       string
+	Fields     []*FieldInfo
+	fieldCount int
+}
+
+// TODO IndexInfo is shared among all the inmem segments so this method
+// should return a copy.
+func (i *IndexInfo) AddField(name string, ftype FieldType, index bool) {
+
+	field := &FieldInfo{
+		Name:  name,
+		Type:  ftype,
+		Index: index,
+		ID:    i.fieldCount,
+	}
+
+	i.fieldCount++
+
+	i.Fields = append(i.Fields, field)
+
+}
+
+func NewIndexInfo(name string) *IndexInfo {
+
+	info := &IndexInfo{
+		Name:       name,
+		Fields:     make([]*FieldInfo, 0),
+		fieldCount: 0,
+	}
+
+	//info.AddField("ts", FieldTypeTimestamp, true)
+
+	return info
 }
 
 // Event Info.

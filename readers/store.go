@@ -134,7 +134,7 @@ func LoadEvent(br *io.BinaryReader, infos []segment.FieldInfo) (segment.Event, e
 		if err != nil {
 			return nil, err
 		}
-		m[info.FieldName] = value
+		m[info.Name] = value
 	}
 	return m, nil
 }
