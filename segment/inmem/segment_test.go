@@ -4,6 +4,7 @@ import (
 	"eventdb/segment"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"testing"
 )
 
@@ -11,7 +12,9 @@ func getIndexInfo() *segment.IndexInfo {
 
 	indexInfo := segment.NewIndexInfo("test_index")
 	indexInfo.AddField("msg", segment.FieldTypeText, true)
-	indexInfo.AddField("source", segment.FieldTypeKeyword, true)
+	indexInfo.AddField("src", segment.FieldTypeKeyword, true)
+	indexInfo.AddField("number", segment.FieldTypeInt, true)
+	indexInfo.AddField("float", segment.FieldTypeInt, true)
 
 	return indexInfo
 }
@@ -24,6 +27,8 @@ func createEvents() []map[string]interface{} {
 		event := make(map[string]interface{})
 		event["msg"] = fmt.Sprintf("event %v", i)
 		event["src"] = "log"
+		event["number"] = uint64(1)
+		event["float"] = math.Float64bits(123.12)
 		events = append(events, event)
 	}
 

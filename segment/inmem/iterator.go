@@ -1,4 +1,4 @@
-package collection
+package inmem
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 // Iterator is used for lookup and range operations on skiplist
 type Iterator struct {
 	s     *SkipList
-	curr  *Node
+	curr  *SLNode
 	valid bool
 	i     int
 	lvl   int
@@ -47,7 +47,7 @@ func (i *Iterator) Next() bool {
 }
 
 // Get next item Item in Level
-func (i *Iterator) Get() *Node {
+func (i *Iterator) Get() *SLNode {
 	return i.curr
 }
 

@@ -1,7 +1,6 @@
 package writers
 
 import (
-	"eventdb/collection"
 	"eventdb/io"
 	"eventdb/segment"
 	"eventdb/segment/inmem"
@@ -64,8 +63,8 @@ func (sw *SegmentWriter) Write() error {
 				if err != nil {
 					return err
 				}
-			case *collection.SkipList:
-				err := sw.writeSL(field, idx.(*collection.SkipList))
+			case *inmem.SkipList:
+				err := sw.writeSL(field, idx.(*inmem.SkipList))
 				if err != nil {
 					return err
 				}
@@ -159,7 +158,7 @@ func (sw *SegmentWriter) writeBtrie(field *segment.FieldInfo, btrie *inmem.BTrie
 	return nil
 }
 
-func (sw *SegmentWriter) writeSL(field *segment.FieldInfo, sl *collection.SkipList) error {
+func (sw *SegmentWriter) writeSL(field *segment.FieldInfo, sl *inmem.SkipList) error {
 
 	fileName := filepath.Join(sw.path, field.Name+idxExt)
 

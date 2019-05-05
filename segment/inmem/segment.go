@@ -59,7 +59,15 @@ func NewSegment(
 		case segment.FieldTypeTimestamp:
 			// TODO add the proper index here
 		case segment.FieldTypeInt:
-			// TODO add the proper index here
+			var u OnUpdate = func(n *SLNode, v interface{}) interface{} {
+				if n.UserData == nil {
+					n.UserData = s.PostingStore.NewPostingList(v.(uint32))
+				} else {
+					n.UserData.(PostingList).Bitmap.Add(v.(uint32))
+				}
+				return n
+			}
+			s.Idx[i] = NewSkipList(s.PostingStore, u, Uint64Comparator{})
 		case segment.FieldTypeKeyword:
 			s.Idx[i] = NewBtrie(s.PostingStore)
 		case segment.FieldTypeText:
@@ -95,7 +103,9 @@ func (s *Segment) Add(event map[string]interface{}) {
 			switch info.Type {
 
 			case segment.FieldTypeInt:
-				//TODO Add to the proper index.
+				idx := s.Idx[i].(*SkipList)
+				eventValue := event[info.Name].(uint64)
+				idx.Add(eventValue, s.EventID)
 			case segment.FieldTypeKeyword:
 				idx := s.Idx[i].(*BTrie)
 				eventValue := event[info.Name].(string)
