@@ -1,7 +1,6 @@
 package writers
 
 import (
-	"eventdb/collection"
 	"eventdb/readers"
 	"eventdb/segment/inmem"
 	"github.com/stretchr/testify/assert"
@@ -9,8 +8,8 @@ import (
 	"time"
 )
 
-func setUpPostingListStore(qty int) (*collection.SkipList, *inmem.PostingStore) {
-	sl := collection.NewSL(.5, 16, nil, collection.Float64Comparator{})
+func setUpPostingListStore(qty int) (*inmem.SkipList, *inmem.PostingStore) {
+	sl := inmem.NewSL(.5, 16, nil, inmem.Float64Comparator{})
 	s := inmem.NewPostingStore()
 	c := 0.1
 	for i := 1; i <= qty; i++ {
