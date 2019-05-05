@@ -20,7 +20,7 @@ func TestNewSegmentWriter(t *testing.T) {
 		s.Add(e)
 	}
 
-	sw := NewSegmentWriter("/tmp/data", s)
+	sw := NewSegmentWriter("/tmp", s)
 
 	err := sw.Write()
 

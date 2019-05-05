@@ -16,10 +16,6 @@ var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
 	"abcdefghijklmnopqrstuvwxyzåäö" +
 	"0123456789")
 
-type Term struct {
-	value string
-	freq  int
-}
 
 func TestBTrieReadWriter(t *testing.T) {
 
