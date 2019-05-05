@@ -246,6 +246,6 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 
 	return nil
 
-	// TODO add field cardinality.
+	// TODO add field cardinality, max/min TS and SegmentID
 
 }

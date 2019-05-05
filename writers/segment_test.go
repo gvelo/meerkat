@@ -1,13 +1,17 @@
 package writers
 
 import (
+	"eventdb/readers"
 	"eventdb/segment"
 	"eventdb/segment/inmem"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestNewSegmentWriter(t *testing.T) {
+func TestSegmentWriterReader(t *testing.T) {
+
+	assert := assert.New(t)
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
@@ -24,8 +28,25 @@ func TestNewSegmentWriter(t *testing.T) {
 
 	err := sw.Write()
 
-	if err != nil {
-		t.Fatal(err)
+	if !assert.NoErrorf(err, "an error occurred while writing the segment: %v", err) {
+		return
+	}
+
+	sr := readers.NewSegmentReader("/tmp")
+
+	odSegment, err := sr.Read()
+
+	if !assert.NoErrorf(err, "an error occurred while reading the segment: %v", err) {
+		return
+	}
+
+	assert.Equal(indexInfo.Name, odSegment.IndexInfo.Name, "wrong index name")
+
+	odFields := odSegment.IndexInfo.Fields
+
+	for i, field := range indexInfo.Fields {
+		assert.Equal(field.Name, odFields[i].Name, "field name doesn't match")
+		assert.Equal(field.Type, odFields[i].Type, "field type doesn't match")
 	}
 
 }
