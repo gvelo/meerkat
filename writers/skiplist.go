@@ -1,13 +1,12 @@
 package writers
 
 import (
-	"eventdb/collection"
 	"eventdb/io"
 	"eventdb/segment/inmem"
 	"math"
 )
 
-func WriteSkip(name string, sl *collection.SkipList, ixl int) error {
+func WriteSkip(name string, sl *inmem.SkipList, ixl int) error {
 
 	bw, err := io.NewBinaryWriter(name)
 

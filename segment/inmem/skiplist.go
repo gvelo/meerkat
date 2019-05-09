@@ -1,4 +1,4 @@
-package collection
+package inmem
 
 import (
 	"errors"
@@ -15,29 +15,29 @@ const (
 	Internal
 )
 
-type Node struct {
+type SLNode struct {
 	key      interface{}
 	UserData interface{}
 	level    int
-	forward  []*Node
+	forward  []*SLNode
 	t        NodeType
 }
 
-func NewSLNode(k interface{}, v interface{}, l int, t NodeType) Node {
+func NewSLNode(k interface{}, v interface{}, l int, t NodeType) *SLNode {
 
-	forward := make([]*Node, l)
+	forward := make([]*SLNode, l)
 	for i := 0; i <= l-1; i++ {
 		forward[i] = nil
 	}
-	return Node{key: k, UserData: v, level: l, forward: forward, t: t}
+	return &SLNode{key: k, UserData: v, level: l, forward: forward, t: t}
 }
 
 // Level returns the level of a node in the skiplist
-func (n Node) Level() int {
+func (n *SLNode) Level() int {
 	return n.level
 }
 
-func (n Node) String() string {
+func (n *SLNode) String() string {
 	return fmt.Sprintf("key: %d , level: %d , me: %p", n.key, n.level, &n)
 }
 
@@ -86,16 +86,23 @@ func (c Float64Comparator) headValue() interface{} {
 type SkipList struct {
 	maxLevel       int     // In gral log 1/p ( N )
 	p              float32 // 1/p
-	head           *Node
-	tail           *Node
+	head           *SLNode
+	tail           *SLNode
 	level          int
 	updateCallback OnUpdate
 	comparator     Comparator
 	length         int
+	postingStore   *PostingStore
 }
 
 func (s *SkipList) Level() int {
 	return s.level
+}
+
+func NewSkipList(p *PostingStore, u OnUpdate, c Comparator) *SkipList {
+	sl := NewSL(.6, 16, u, c)
+	sl.postingStore = p
+	return sl
 }
 
 func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
@@ -110,10 +117,10 @@ func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
 	var head = NewSLNode(minUint64, nil, maxLevel, Head)
 	var tail = NewSLNode(maxUint64, nil, maxLevel, Tail)
 
-	list := SkipList{maxLevel: maxLevel, p: p, head: &head, tail: &tail, level: 0, updateCallback: u, comparator: c, length: 0}
+	list := SkipList{maxLevel: maxLevel, p: p, head: head, tail: tail, level: 0, updateCallback: u, comparator: c, length: 0}
 
 	for i := maxLevel - 1; i >= 0; i-- {
-		head.forward[i] = &tail
+		head.forward[i] = tail
 	}
 
 	return &list
@@ -127,7 +134,7 @@ func (list *SkipList) randomLevel() int {
 	return lvl
 }
 
-func (list *SkipList) Search(key interface{}) (node *Node, found bool) {
+func (list *SkipList) Search(key interface{}) (node *SLNode, found bool) {
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
 		for list.comparator.Compare(x.forward[i].key, key) == -1 {
@@ -144,10 +151,15 @@ func (list *SkipList) Search(key interface{}) (node *Node, found bool) {
 	return node, found
 }
 
-type OnUpdate func(value interface{}) interface{}
+type OnUpdate func(n *SLNode, v interface{}) interface{}
+
+func (list *SkipList) Add(key interface{}, v uint32) *SkipList {
+
+	return nil
+}
 
 func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
-	var update = make([]*Node, list.maxLevel)
+	var update = make([]*SLNode, list.maxLevel)
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
 		for list.comparator.Compare(x.forward[i].key, key) == -1 {
@@ -158,7 +170,7 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 	x = x.forward[0]
 	if list.comparator.Compare(x.key, key) == 0 {
 		if list.updateCallback != nil {
-			x.UserData = list.updateCallback(x.UserData)
+			x.UserData = list.updateCallback(x, v)
 		} else {
 			x.UserData = v
 		}
@@ -170,9 +182,12 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 			}
 			list.level = lvl
 		}
-		var node = NewSLNode(key, v, lvl, Internal)
+		x = NewSLNode(key, v, lvl, Internal)
 		list.length++
-		x = &node
+		if list.updateCallback != nil {
+			list.updateCallback(x, v)
+		}
+
 		for i := 0; i < lvl; i++ {
 			x.forward[i] = update[i].forward[i]
 			update[i].forward[i] = x
@@ -182,7 +197,7 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 }
 
 func (list *SkipList) Delete(key interface{}) {
-	var update = make([]*Node, list.maxLevel)
+	var update = make([]*SLNode, list.maxLevel)
 	x := list.head
 	for i := list.maxLevel - 1; i >= 0; i-- {
 		for list.comparator.Compare(x.forward[i].key, key) == -1 {

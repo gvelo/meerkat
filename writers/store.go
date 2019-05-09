@@ -45,7 +45,7 @@ func WriteEvents(name string, evts []segment.Event, infos []segment.FieldInfo, i
 		// for now, lets take the idx as the FieldId
 		for fieldId, info := range infos {
 
-			n := info.FieldName
+			n := info.Name
 			v, ok := e[n]
 			if ok { // got it
 				bw.WriteEncodedVarint(uint64(fieldId))

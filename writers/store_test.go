@@ -13,16 +13,16 @@ func getFieldsInfo() []segment.FieldInfo {
 
 	fieldInfo := make([]segment.FieldInfo, 5)
 
-	fieldInfo[0].FieldType = segment.FieldTypeTimestamp
-	fieldInfo[0].FieldName = "ts"
-	fieldInfo[1].FieldType = segment.FieldTypeText
-	fieldInfo[1].FieldName = "msg"
-	fieldInfo[2].FieldType = segment.FieldTypeKeyword
-	fieldInfo[2].FieldName = "source"
-	fieldInfo[3].FieldType = segment.FieldTypeInt
-	fieldInfo[3].FieldName = "num1"
-	fieldInfo[4].FieldType = segment.FieldTypeInt
-	fieldInfo[4].FieldName = "num2"
+	fieldInfo[0].Type = segment.FieldTypeTimestamp
+	fieldInfo[0].Name = "ts"
+	fieldInfo[1].Type = segment.FieldTypeText
+	fieldInfo[1].Name = "msg"
+	fieldInfo[2].Type = segment.FieldTypeKeyword
+	fieldInfo[2].Name = "source"
+	fieldInfo[3].Type = segment.FieldTypeInt
+	fieldInfo[3].Name = "num1"
+	fieldInfo[4].Type = segment.FieldTypeInt
+	fieldInfo[4].Name = "num2"
 
 	return fieldInfo
 }

@@ -16,10 +16,6 @@ var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
 	"abcdefghijklmnopqrstuvwxyzåäö" +
 	"0123456789")
 
-type Term struct {
-	value string
-	freq  int
-}
 
 func TestBTrieReadWriter(t *testing.T) {
 
@@ -29,7 +25,7 @@ func TestBTrieReadWriter(t *testing.T) {
 
 	terms := make(map[string]int)
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1000; i++ {
 		term := rndStr()
 		count := rand.Intn(1000) + 1
 		c := terms[term]

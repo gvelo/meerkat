@@ -21,6 +21,7 @@ const (
 	SkipListV1    FileType = 2
 	RowStoreV1    FileType = 3
 	RowStoreIDXV1 FileType = 4
+	SegmentInfo   FileType = 5
 )
 
 type BinaryWriter struct {
@@ -43,7 +44,7 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 }
 
 func (fw *BinaryWriter) WriteValue(v interface{}, info segment.FieldInfo) {
-	switch info.FieldType {
+	switch info.Type {
 	case segment.FieldTypeInt:
 		fw.WriteEncodedVarint(v.(uint64))
 	case segment.FieldTypeText:
@@ -477,7 +478,7 @@ func (fr *BinaryReader) Close() error {
 }
 
 func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
-	switch info.FieldType {
+	switch info.Type {
 	case segment.FieldTypeInt:
 		return fr.DecodeVarint()
 	case segment.FieldTypeText:
@@ -489,5 +490,5 @@ func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
 	case segment.FieldTypeFloat:
 		return fr.DecodeFixed64()
 	}
-	return nil, errors.New(fmt.Sprintf("info.FieldType %d not found ", info.FieldType))
+	return nil, errors.New(fmt.Sprintf("info.Type %d not found ", info.Type))
 }

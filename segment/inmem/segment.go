@@ -18,12 +18,11 @@ const (
 )
 
 type Segment struct {
-	IndexName    string
+	IndexInfo    *segment.IndexInfo
 	ID           string
-	FieldInfo    []segment.FieldInfo
-	eventID      uint32
+	EventID      uint32
 	Idx          []interface{}
-	FieldStorage []segment.Event
+	FieldStorage []*segment.Event
 	PostingStore *PostingStore
 	MinTS        int64
 	MaxTS        int64
@@ -35,40 +34,46 @@ type Segment struct {
 }
 
 func NewSegment(
-	indexName string,
+	indexInfo *segment.IndexInfo,
 	ID string,
-	fieldInfo []segment.FieldInfo,
 	writerChan chan *Segment) *Segment {
 
 	s := &Segment{
-		IndexName:    indexName,
+		IndexInfo:    indexInfo,
 		ID:           ID,
-		FieldInfo:    fieldInfo,
 		PostingStore: NewPostingStore(),
 		Tokenizer:    text.NewTokenizer(),
 		WriterChan:   writerChan,
 		Monotonic:    false,
 		State:        InMem,
-		Idx:          make([]interface{}, len(fieldInfo)),
+		Idx:          make([]interface{}, len(indexInfo.Fields)),
 	}
 
 	s.log = log.With().
 		Str("component", "inmem.Segment").
-		Str("index", indexName).Str("segmentID", ID).
+		Str("index", indexInfo.Name).Str("segmentID", ID).
 		Logger()
 
-	for i, fInfo := range fieldInfo {
-		switch fInfo.FieldType {
+	for i, fInfo := range indexInfo.Fields {
+		switch fInfo.Type {
 		case segment.FieldTypeTimestamp:
 			// TODO add the proper index here
 		case segment.FieldTypeInt:
-			// TODO add the proper index here
+			var u OnUpdate = func(n *SLNode, v interface{}) interface{} {
+				if n.UserData == nil {
+					n.UserData = s.PostingStore.NewPostingList(v.(uint32))
+				} else {
+					n.UserData.(PostingList).Bitmap.Add(v.(uint32))
+				}
+				return n
+			}
+			s.Idx[i] = NewSkipList(s.PostingStore, u, Uint64Comparator{})
 		case segment.FieldTypeKeyword:
 			s.Idx[i] = NewBtrie(s.PostingStore)
 		case segment.FieldTypeText:
 			s.Idx[i] = NewBtrie(s.PostingStore)
 		default:
-			log.Panic().Int("FieldType", int(fInfo.FieldType)).Msg("Invalid FieldType")
+			log.Panic().Int("Type", int(fInfo.Type)).Msg("Invalid Type")
 		}
 	}
 
@@ -86,34 +91,36 @@ func (s *Segment) Add(event map[string]interface{}) {
 			Msg("trying to add event on invalid segment state")
 	}
 
-	s.eventID++
+	s.EventID++
 
 	// TODO compute min and max timestamp
 	// TODO computa monotonic Flag
 
-	for i, info := range s.FieldInfo {
+	for i, info := range s.IndexInfo.Fields {
 
 		if info.Index {
 
-			switch info.FieldType {
+			switch info.Type {
 
 			case segment.FieldTypeInt:
-				//TODO Add to the proper index.
+				idx := s.Idx[i].(*SkipList)
+				eventValue := event[info.Name].(uint64)
+				idx.Add(eventValue, s.EventID)
 			case segment.FieldTypeKeyword:
-				idx := s.Idx[i].(BTrie)
-				eventValue := event[info.FieldName].(string)
-				idx.Add(eventValue, s.eventID)
+				idx := s.Idx[i].(*BTrie)
+				eventValue := event[info.Name].(string)
+				idx.Add(eventValue, s.EventID)
 			case segment.FieldTypeText:
-				idx := s.Idx[i].(BTrie)
-				eventValue := event[info.FieldName].(string)
+				idx := s.Idx[i].(*BTrie)
+				eventValue := event[info.Name].(string)
 				tokens := s.Tokenizer.Tokenize(eventValue)
 				for _, token := range tokens {
-					idx.Add(token, s.eventID)
+					idx.Add(token, s.EventID)
 				}
 			case segment.FieldTypeTimestamp:
 			//TODO Add to the proper index.
 			default:
-				log.Panic().Int("FieldType", int(info.FieldType)).Msg("Invalid FieldType")
+				log.Panic().Int("Type", int(info.Type)).Msg("Invalid Type")
 			}
 
 		}
@@ -134,7 +141,7 @@ func (s *Segment) Write() {
 
 	s.log.Debug().
 		Str("state", s.State.String()).
-		Uint32("eventCount", s.eventID).
+		Uint32("eventCount", s.EventID).
 		Msg("writing segment")
 
 	s.WriterChan <- s
@@ -153,7 +160,7 @@ func (s *Segment) Close() {
 
 	s.log.Debug().
 		Str("status", s.State.String()).
-		Uint32("eventCount", s.eventID).
+		Uint32("eventCount", s.EventID).
 		Msg("segment successfully written to disk")
 
 }

@@ -1,4 +1,4 @@
-package collection
+package inmem
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -10,13 +10,16 @@ type Holder struct {
 	aInt int
 }
 
-var u OnUpdate = func(value interface{}) interface{} {
-	h := value.(Holder)
+var u OnUpdate = func(n *SLNode, v interface{}) interface{} {
+	if n.UserData == nil {
+		n.UserData = Holder{aInt: 0}
+	}
+	h := n.UserData.(Holder)
 	h.aInt = h.aInt + 1
 	return h
 }
 
-func setUpValuesInsplitList() *SkipList {
+func setUpValuesInSplitList() *SkipList {
 
 	skipList := NewSL(.5, 16, u, Uint64Comparator{})
 
@@ -35,7 +38,7 @@ func setUpValuesInsplitList() *SkipList {
 
 func TestSkipList_Creation(t *testing.T) {
 	a := assert.New(t)
-	skipList := setUpValuesInsplitList()
+	skipList := setUpValuesInSplitList()
 	a.Equal(skipList.length, 9)
 
 	a.Equal(skipList.p, float32(0.5))
@@ -46,7 +49,7 @@ func TestSkipList_Creation(t *testing.T) {
 func TestSkipList_Insert(t *testing.T) {
 
 	a := assert.New(t)
-	skipList := setUpValuesInsplitList()
+	skipList := setUpValuesInSplitList()
 	a.Equal(skipList.length, 9)
 
 	node := skipList.head.forward[0]
@@ -59,7 +62,7 @@ func TestSkipList_Insert(t *testing.T) {
 func TestSkipList_Search(t *testing.T) {
 
 	a := assert.New(t)
-	skipList := setUpValuesInsplitList()
+	skipList := setUpValuesInSplitList()
 
 	res, found := skipList.Search(uint64(553))
 	a.Equal(uint64(553), res.key)
@@ -74,7 +77,7 @@ func TestSkipList_Search(t *testing.T) {
 func TestSkipList_Delete(t *testing.T) {
 	// flaky test, deberiamos chequear todos los niveles.
 	a := assert.New(t)
-	skipList := setUpValuesInsplitList()
+	skipList := setUpValuesInSplitList()
 	a.Equal(skipList.length, 9)
 
 	skipList.Delete(uint64(553))
