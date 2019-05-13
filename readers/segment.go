@@ -131,9 +131,9 @@ func (sr *SegmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, er
 			case segment.FieldTypeKeyword:
 				index, err = ReadTrie(fileName)
 			case segment.FieldTypeInt:
-				index, err = ondsk.ReadSkipList(fileName)
+				index, err = ReadSkipList(fileName)
 			case segment.FieldTypeFloat:
-				index, err = ondsk.ReadSkipList(fileName)
+				index, err = ReadSkipList(fileName)
 			case segment.FieldTypeTimestamp:
 				//index, err = ReadTrie(fileName)
 			default:
