@@ -267,7 +267,8 @@ func NewIndexInfo(name string) *IndexInfo {
 	}
 
 	// TODO add a fixed timestamp field.
-	//info.AddField("ts", FieldTypeTimestamp, true)
+	// or we sould mark the TS field in parser.
+	info.AddField("ts", FieldTypeTimestamp, true)
 
 	return info
 }

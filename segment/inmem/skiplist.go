@@ -153,9 +153,9 @@ func (list *SkipList) Search(key interface{}) (node *SLNode, found bool) {
 
 type OnUpdate func(n *SLNode, v interface{}) interface{}
 
-func (list *SkipList) Add(key interface{}, v uint32) *SkipList {
-
-	return nil
+func (list *SkipList) Add(key interface{}, v interface{}) *SkipList {
+	list.InsertOrUpdate(key, v)
+	return list
 }
 
 func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {

@@ -49,39 +49,38 @@ func (sw *SegmentWriter) Write() error {
 		return err
 	}
 
+	idx := sw.createAndLoadFieldIdx()
+
 	// write all idx to disk
 
 	for i, field := range sw.segment.IndexInfo.Fields {
 
 		if field.Index {
 
-			idx := sw.segment.Idx[i]
-
-			switch t := idx.(type) {
+			switch t := idx[i].(type) {
 			case *inmem.BTrie:
-				err := sw.writeBtrie(field, idx.(*inmem.BTrie))
+				err := sw.writeBtrie(field, idx[i].(*inmem.BTrie))
 				if err != nil {
 					return err
 				}
 			case *inmem.SkipList:
-				err := sw.writeSL(field, idx.(*inmem.SkipList))
+				err := sw.writeSL(field, idx[i].(*inmem.SkipList))
 				if err != nil {
 					return err
 				}
 			default:
-				sw.log.Panic().
-					Str("index", sw.segment.IndexInfo.Name).
-					Str("segmentID", sw.segment.ID).
-					Msgf("Unknown index type: %T", t)
+				// TODO:  in the case of ts this is nil, FIX IT
+				if t != nil {
+					sw.log.Panic().
+						Str("index", sw.segment.IndexInfo.Name).
+						Str("segmentID", sw.segment.ID).
+						Msgf("Unknown index type: %T", t)
 
+				}
 			}
 		}
 
 	}
-
-	// write event storage (Seba)
-
-	// write segment info.
 
 	err = sw.writeSegmentInfo()
 
@@ -91,6 +90,75 @@ func (sw *SegmentWriter) Write() error {
 
 	return nil
 
+}
+
+func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
+
+	idx := make([]interface{}, len(sw.segment.IndexInfo.Fields))
+
+	for i, fInfo := range sw.segment.IndexInfo.Fields {
+		switch fInfo.Type {
+		case segment.FieldTypeTimestamp:
+			// TODO add the proper index here , should I?
+		case segment.FieldTypeInt:
+			var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
+				if n.UserData == nil {
+					n.UserData = sw.segment.PostingStore.NewPostingList(v.(uint32))
+				} else {
+					n.UserData.(inmem.PostingList).Bitmap.Add(v.(uint32))
+				}
+				return n
+			}
+			idx[i] = inmem.NewSkipList(sw.segment.PostingStore, u, inmem.Uint64Comparator{})
+		case segment.FieldTypeKeyword:
+			idx[i] = inmem.NewBtrie(sw.segment.PostingStore)
+		case segment.FieldTypeText:
+			idx[i] = inmem.NewBtrie(sw.segment.PostingStore)
+		default:
+			log.Panic().Int("Type", int(fInfo.Type)).Msg("Invalid Type")
+		}
+	}
+
+	it := sw.segment.Idx.NewIterator(0)
+	var evtId uint32 = 0
+
+	for ; it.Next(); evtId++ {
+		n := it.Get().UserData.(map[string]interface{})
+
+		for i, info := range sw.segment.IndexInfo.Fields {
+
+			if info.Index {
+
+				switch info.Type {
+
+				case segment.FieldTypeInt:
+					idx := idx[i].(*inmem.SkipList)
+					eventValue := n[info.Name].(uint64)
+					idx.Add(eventValue, evtId)
+				case segment.FieldTypeKeyword:
+					idx := idx[i].(*inmem.BTrie)
+					eventValue := n[info.Name].(string)
+					idx.Add(eventValue, evtId)
+				case segment.FieldTypeText:
+					idx := idx[i].(*inmem.BTrie)
+					eventValue := n[info.Name].(string)
+					tokens := sw.segment.Tokenizer.Tokenize(eventValue)
+					for _, token := range tokens {
+						idx.Add(token, evtId)
+					}
+				case segment.FieldTypeTimestamp:
+				//TODO Add to the proper index.
+				default:
+					log.Panic().Int("Type", int(info.Type)).Msg("Invalid Type")
+				}
+
+			}
+
+		}
+
+	}
+
+	return idx
 }
 
 func (sw *SegmentWriter) writePosting() error {
