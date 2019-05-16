@@ -5,6 +5,22 @@ import (
 	"math"
 )
 
+type OnDiskSkipList struct {
+	p string
+}
+
+func (t OnDiskSkipList) Lookup(id float64) (uint64, error) {
+	_, o, ok, _ := findOffsetSkipList(t.p, id)
+	if ok {
+		return o, nil
+	}
+	return 0, nil
+}
+
+func ReadSkipList(ip string) (OnDiskSkipList, error) {
+	return OnDiskSkipList{p: ip}, nil
+}
+
 func ReadSkip(ip string, id float64) (float64, uint64, error) {
 
 	br, err := io.NewBinaryReader(ip)

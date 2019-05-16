@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
+	"time"
 )
 
 func getIndexInfo() *segment.IndexInfo {
@@ -29,6 +30,7 @@ func createEvents() []map[string]interface{} {
 		event["src"] = "log"
 		event["number"] = uint64(1)
 		event["float"] = math.Float64bits(123.12)
+		event["ts"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
 		events = append(events, event)
 	}
 

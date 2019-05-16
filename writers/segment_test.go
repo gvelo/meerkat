@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestSegmentWriterReader(t *testing.T) {
@@ -15,12 +16,14 @@ func TestSegmentWriterReader(t *testing.T) {
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
+	indexInfo.AddField("ts", segment.FieldTypeTimestamp, false)
 
 	s := inmem.NewSegment(indexInfo, "3dfa542d", nil)
 
 	for i := 0; i < 100; i++ {
 		e := make(map[string]interface{})
 		e["testfield"] = fmt.Sprintf("test %v", i)
+		e["ts"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
 		s.Add(e)
 	}
 
