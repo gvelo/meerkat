@@ -9,22 +9,17 @@ import (
 	"time"
 )
 
-func getFieldsInfo() []segment.FieldInfo {
+func getFieldsInfo() *segment.IndexInfo {
 
-	fieldInfo := make([]segment.FieldInfo, 5)
+	fieldInfo := make([]*segment.FieldInfo, 5)
 
-	fieldInfo[0].Type = segment.FieldTypeTimestamp
-	fieldInfo[0].Name = "ts"
-	fieldInfo[1].Type = segment.FieldTypeText
-	fieldInfo[1].Name = "msg"
-	fieldInfo[2].Type = segment.FieldTypeKeyword
-	fieldInfo[2].Name = "source"
-	fieldInfo[3].Type = segment.FieldTypeInt
-	fieldInfo[3].Name = "num1"
-	fieldInfo[4].Type = segment.FieldTypeInt
-	fieldInfo[4].Name = "num2"
+	fieldInfo[0] = &segment.FieldInfo{Type: segment.FieldTypeTimestamp, Name: "ts"}
+	fieldInfo[1] = &segment.FieldInfo{Type: segment.FieldTypeText, Name: "msg"}
+	fieldInfo[2] = &segment.FieldInfo{Type: segment.FieldTypeKeyword, Name: "source"}
+	fieldInfo[3] = &segment.FieldInfo{Type: segment.FieldTypeInt, Name: "num1"}
+	fieldInfo[4] = &segment.FieldInfo{Type: segment.FieldTypeInt, Name: "num2"}
 
-	return fieldInfo
+	return &segment.IndexInfo{Fields: fieldInfo}
 }
 
 func getEvents() []segment.Event {
@@ -59,33 +54,28 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 
 	a := assert.New(t)
 
-	p := "/tmp/store.bin"
+	p := "/tmp/store"
 
 	start := time.Now()
 	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo(), 100)
 	if err != nil {
 		t.Fail()
 	}
+
 	t.Logf("write events took %v ", time.Since(start))
+	a.Nil(err)
+	a.NotNil(offsets)
 
 	start = time.Now()
-	err = WriteStoreIdx(p, offsets, 100)
-	if err != nil {
-		t.Fail()
-	}
-	t.Logf("write events took idx %v ", time.Since(start))
 
-	start = time.Now()
-	e, err := readers.ReadEvent(p, 2, getFieldsInfo(), 100)
+	e, err := readers.ReadEvent(p, 2, getFieldsInfo().Fields, 100)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("find event took idx %v ", time.Since(start))
 	a.NotNil(e)
 	a.True(len(e) == 5)
-	a.Equal(e["msg"], "test message three")
-	a.Equal(uint64(3), e["num1"])
-	a.Equal(uint64(3.0), e["num2"])
+	a.Equal("test message three", e["msg"])
 
 }
 
@@ -94,8 +84,8 @@ func createEvents(num int) []segment.Event {
 	for i := 0; i < num; i++ {
 		evt := segment.Event{
 			"ts":     uint64(time.Now().Nanosecond()),
-			"source": "log",
 			"msg":    fmt.Sprintf("test message %d ", i),
+			"source": "log",
 			"num1":   uint64(i),
 			"num2":   uint64(float64(i)),
 		}
@@ -106,7 +96,7 @@ func createEvents(num int) []segment.Event {
 
 func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/store2.bin"
+	p := "/tmp/store"
 
 	e := testFindEvent(t, p, 2, 10000, 100)
 
@@ -154,7 +144,7 @@ func TestStoreWriterReaderMoreEvents(t *testing.T) {
 
 func TestStoreWriter0(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/store4.bin"
+	p := "/tmp/store"
 
 	e := testFindEvent(t, p, 0, 10, 100)
 
@@ -167,7 +157,7 @@ func TestStoreWriter0(t *testing.T) {
 
 func TestStoreWriter1(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/store4.bin"
+	p := "/tmp/store"
 
 	e := testFindEvent(t, p, 1, 10, 100)
 
@@ -180,7 +170,7 @@ func TestStoreWriter1(t *testing.T) {
 
 func TestStoreWriter50(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/store4.bin"
+	p := "/tmp/store"
 
 	e := testFindEvent(t, p, 50, 100, 100)
 
@@ -191,9 +181,9 @@ func TestStoreWriter50(t *testing.T) {
 	a.Equal(uint64(50.0), e["num2"])
 }
 
-func TestStoreWriter200(t *testing.T) {
+func TestStoreWriter1000(t *testing.T) {
 	a := assert.New(t)
-	p := "/tmp/store3.bin"
+	p := "/tmp/store"
 
 	e := testFindEvent(t, p, 200, 1000, 100)
 
@@ -204,7 +194,7 @@ func TestStoreWriter200(t *testing.T) {
 	a.Equal(uint64(200.0), e["num2"])
 }
 
-func testFindEvent(t *testing.T, p string, id uint64, create int, ixl uint64) segment.Event {
+func testFindEvent(t *testing.T, p string, id uint64, create int, ixl int) segment.Event {
 
 	start := time.Now()
 	_, err := WriteEvents(p, createEvents(create), getFieldsInfo(), ixl)
@@ -213,7 +203,7 @@ func testFindEvent(t *testing.T, p string, id uint64, create int, ixl uint64) se
 	}
 	t.Logf("write %d events took %v ", create, time.Since(start))
 	start = time.Now()
-	e, err := readers.ReadEvent(p, id, getFieldsInfo(), ixl)
+	e, err := readers.ReadEvent(p, id, getFieldsInfo().Fields, ixl)
 	if err != nil {
 		t.Fail()
 	}
