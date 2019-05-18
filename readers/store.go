@@ -80,7 +80,7 @@ func processLevel(br *io.BinaryReader, offset int, lvl uint64, id uint64, ixl in
 	return 0, 0
 }
 
-func findEvent(name string, offset int, infos *segment.FieldInfo) (interface{}, bool) {
+func findEvent(name string, offset int, info *segment.FieldInfo) (interface{}, bool) {
 
 	br, err := io.NewBinaryReader(name + ".bin")
 
@@ -99,17 +99,9 @@ func findEvent(name string, offset int, infos *segment.FieldInfo) (interface{}, 
 
 	br.DecodeVarint() // ID
 
-	evt, err := LoadEvent(br, infos)
-	return evt, err == nil
-
-}
-
-func LoadEvent(br *io.BinaryReader, info *segment.FieldInfo) (interface{}, error) {
 	value, err := br.ReadValue(info)
-	if err != nil {
-		return nil, err
-	}
-	return value, err
+	return value, err == nil
+
 }
 
 func findIdxEvents(name string, offset int, infos []*segment.FieldInfo, startFrom uint64, id uint64) ([]int, bool) {
