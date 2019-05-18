@@ -49,12 +49,9 @@ func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl i
 				offsets[i] = 0
 			}
 
-			// write the field count.
-			bw.WriteEncodedVarint(uint64(len(e)))
-
 			v, ok := e[info.Name]
 			if ok { // got it
-				bw.WriteEncodedVarint(uint64(i))
+				bw.WriteEncodedVarint(uint64(i)) // # id
 				bw.WriteValue(v, info)
 			}
 

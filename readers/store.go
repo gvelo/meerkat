@@ -12,7 +12,7 @@ func ReadEvent(name string, id uint64, infos []*segment.FieldInfo, ixl int) (seg
 	offsets, _ := findIdxEvents(name, offset, infos, start, id)
 	for i, info := range infos {
 		idxName := name + "." + info.Name
-		v, ok := findEvent(idxName, offsets[i], info, start, id)
+		v, ok := findEvent(idxName, offsets[i], info)
 		if !ok {
 			e[info.Name] = nil
 		}
@@ -80,7 +80,7 @@ func processLevel(br *io.BinaryReader, offset int, lvl uint64, id uint64, ixl in
 	return 0, 0
 }
 
-func findEvent(name string, offset int, infos *segment.FieldInfo, startFrom uint64, id uint64) (interface{}, bool) {
+func findEvent(name string, offset int, infos *segment.FieldInfo) (interface{}, bool) {
 
 	br, err := io.NewBinaryReader(name + ".bin")
 
@@ -97,33 +97,11 @@ func findEvent(name string, offset int, infos *segment.FieldInfo, startFrom uint
 
 	br.Offset = offset
 
-	/*if found {
-		br.DecodeVarint() // #columns
-		br.DecodeVarint() // id
-		evt, err := LoadEvent(br, infos)
-		return evt, err == nil
-	} else {*/
-	for i := startFrom; i <= uint64(br.Size); i++ {
+	br.DecodeVarint() // ID
 
-		br.DecodeVarint()
-		calcId, _ := br.DecodeVarint()
+	evt, err := LoadEvent(br, infos)
+	return evt, err == nil
 
-		if calcId < id {
-			// TODO: put an offset and skip it by record
-			LoadEvent(br, infos)
-			continue
-		}
-
-		if calcId == id {
-			evt, err := LoadEvent(br, infos)
-			return evt, err == nil
-		} else {
-			return nil, false
-		}
-
-		//}
-	}
-	return nil, false
 }
 
 func LoadEvent(br *io.BinaryReader, info *segment.FieldInfo) (interface{}, error) {
