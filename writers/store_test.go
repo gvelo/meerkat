@@ -5,6 +5,7 @@ import (
 	"eventdb/segment"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 	"time"
 )
@@ -58,6 +59,7 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 
 	start := time.Now()
 	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo(), 100)
+	log.Println(fmt.Sprintf("offsets W %v", offsets))
 	if err != nil {
 		t.Fail()
 	}
@@ -68,7 +70,8 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 
 	start = time.Now()
 
-	e, err := readers.ReadEvent(p, 2, getFieldsInfo().Fields, 100)
+	ds, _ := readers.ReadStore(p+".idx", getFieldsInfo(), 100)
+	e, err := ds.Lookup(2)
 	if err != nil {
 		t.Fail()
 	}
@@ -194,7 +197,7 @@ func TestStoreWriter1000(t *testing.T) {
 	a.Equal(uint64(200.0), e["num2"])
 }
 
-func testFindEvent(t *testing.T, p string, id uint64, create int, ixl int) segment.Event {
+func testFindEvent(t *testing.T, p string, id int, create int, ixl int) segment.Event {
 
 	start := time.Now()
 	_, err := WriteEvents(p, createEvents(create), getFieldsInfo(), ixl)
@@ -203,7 +206,8 @@ func testFindEvent(t *testing.T, p string, id uint64, create int, ixl int) segme
 	}
 	t.Logf("write %d events took %v ", create, time.Since(start))
 	start = time.Now()
-	e, err := readers.ReadEvent(p, id, getFieldsInfo().Fields, ixl)
+	ds, _ := readers.ReadStore(p+".idx", getFieldsInfo(), ixl)
+	e, err := ds.Lookup(id) //readers.ReadEvent(p, id, getFieldsInfo().Fields, ixl)
 	if err != nil {
 		t.Fail()
 	}
