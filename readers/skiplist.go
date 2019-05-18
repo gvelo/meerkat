@@ -1,86 +1,72 @@
 package readers
 
 import (
+	"errors"
 	"eventdb/io"
 	"math"
 )
 
 type OnDiskSkipList struct {
-	p string
+	br         *io.BinaryReader
+	rootOffset int
+	lvl        int
 }
 
-func (t OnDiskSkipList) Lookup(id float64) (uint64, error) {
-	_, o, ok, _ := findOffsetSkipList(t.p, id)
+func (sl *OnDiskSkipList) Lookup(id float64) (uint64, error) {
+	_, o, ok, _ := sl.findOffsetSkipList(id)
 	if ok {
 		return o, nil
 	}
 	return 0, nil
 }
 
-func ReadSkipList(ip string) (OnDiskSkipList, error) {
-	return OnDiskSkipList{p: ip}, nil
-}
+func ReadSkipList(file string) (*OnDiskSkipList, error) {
 
-func ReadSkip(ip string, id float64) (float64, uint64, error) {
-
-	br, err := io.NewBinaryReader(ip)
+	br, err := io.NewBinaryReader(file)
 
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 
-	defer br.Close()
+	fType, err := br.ReadHeader()
 
-	fileType, err := br.ReadHeader()
-
-	if fileType != io.SkipListV1 {
-		panic("invalid file type")
-	}
-
-	key, o, ok, err := findOffsetSkipList(ip, id)
-	if ok {
-		return key, o, nil
-	}
-	return 0, 0, err
-}
-
-func findOffsetSkipList(name string, id float64) (float64, uint64, bool, error) {
-
-	br, err := io.NewBinaryReader(name)
-
-	if err != nil {
-		return 0, 0, false, err
-	}
-
-	defer br.Close()
-
-	fileType, err := br.ReadHeader()
-
-	if fileType != io.SkipListV1 {
-		panic("invalid file type")
+	if fType != io.SkipListV1 {
+		return nil, errors.New("invalid file type")
 	}
 
 	br.Offset = br.Size - 16
-	offset, _ := br.DecodeFixed64()
+	rootOffset, _ := br.DecodeFixed64()
 	lvl, _ := br.DecodeFixed64()
 
-	r, start, err := readSkipList(br, int(offset), lvl, id)
+	if err != nil {
+		return nil, err
+	}
 
+	return &OnDiskSkipList{
+		br:         br,
+		rootOffset: int(rootOffset),
+		lvl:        int(lvl),
+	}, nil
+}
+
+func (sl *OnDiskSkipList) findOffsetSkipList(id float64) (float64, uint64, bool, error) {
+
+	r, start, err := sl.readSkipList(int(sl.rootOffset), sl.lvl, id)
 	return float64(r), start, true, err
 
 }
 
-func readSkipList(br *io.BinaryReader, offset int, lvl uint64, id float64) (float64, uint64, error) {
+func (sl *OnDiskSkipList) readSkipList(offset int, lvl int, id float64) (float64, uint64, error) {
 
-	br.Offset = offset
+	sl.br.Offset = offset
 
 	// search this lvl
 	for i := 0; i < int(math.MaxUint32); i++ {
 
 		if lvl == 0 {
-			bits, _ := br.DecodeFixed64()
+			bits, _ := sl.br.DecodeFixed64()
 			k := math.Float64frombits(bits)
-			kOffset, _ := br.DecodeVarint()
+			kOffset, _ := sl.br.DecodeVarint()
 			if k == float64(id) {
 				return k, kOffset, nil
 			}
@@ -89,19 +75,19 @@ func readSkipList(br *io.BinaryReader, offset int, lvl uint64, id float64) (floa
 				return k, kOffset, nil
 			}
 		} else {
-			br.Offset = offset
-			bits, _ := br.DecodeFixed64()
+			sl.br.Offset = offset
+			bits, _ := sl.br.DecodeFixed64()
 			k := math.Float64frombits(bits)
 
-			kOffset, _ := br.DecodeVarint()
-			next := br.Offset
-			bitsn, _ := br.DecodeFixed64()
+			kOffset, _ := sl.br.DecodeVarint()
+			next := sl.br.Offset
+			bitsn, _ := sl.br.DecodeFixed64()
 			kn := math.Float64frombits(bitsn)
 			// kn , _:= br.DecodeFixed64()
-			br.DecodeVarint()
+			sl.br.DecodeVarint()
 
 			if k == float64(id) {
-				return readSkipList(br, int(kOffset), lvl-1, id)
+				return sl.readSkipList(int(kOffset), lvl-1, id)
 			}
 
 			if kn > float64(id) {
@@ -109,7 +95,7 @@ func readSkipList(br *io.BinaryReader, offset int, lvl uint64, id float64) (floa
 				if lvl == 0 {
 					return 0, 0, nil
 				}
-				return readSkipList(br, int(kOffset), lvl-1, id)
+				return sl.readSkipList(int(kOffset), lvl-1, id)
 			}
 			offset = next
 		}
