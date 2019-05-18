@@ -43,13 +43,13 @@ func (sw *SegmentWriter) Write() error {
 
 	sw.log.Info().Msg("Starting to write segment")
 
+	idx := sw.createAndLoadFieldIdx()
+
 	err := sw.writePosting()
 
 	if err != nil {
 		return err
 	}
-
-	idx := sw.createAndLoadFieldIdx()
 
 	// write all idx to disk
 
