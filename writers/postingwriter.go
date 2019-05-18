@@ -22,16 +22,12 @@ func WritePosting(name string, posting []*inmem.PostingList) error {
 	}
 
 	for _, p := range posting {
-			p.Bitmap.RunOptimize()
+		p.Bitmap.RunOptimize()
 		p.Offset = bw.Offset
 		_, err := p.Bitmap.WriteTo(bw)
 		if err != nil {
 			return err
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	return nil
