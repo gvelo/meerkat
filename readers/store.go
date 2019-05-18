@@ -4,8 +4,6 @@ import (
 	"errors"
 	"eventdb/io"
 	"eventdb/segment"
-	"fmt"
-	"log"
 	"math"
 	"strings"
 )
@@ -129,8 +127,6 @@ func (sl *OnDiskStore) findIdxEvents(offset int, startFrom int, id int) ([]int, 
 
 		calcId, _ := sl.br.DecodeVarint()
 
-		log.Println(fmt.Sprintf(" calc %d", calcId))
-
 		if int(calcId) < id {
 			// TODO: put an offset and skip it by record
 			sl.LoadIdx()
@@ -157,21 +153,17 @@ func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 		offsets[i] = int(value)
 	}
 
-	log.Println(fmt.Sprintf("offsets %v", offsets))
 	return offsets, nil
 }
 
 func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
 	n := strings.Replace(file, ".idx", "."+info.Name+".bin", 1)
-	log.Println(fmt.Sprintf("n %v", n))
 	br, err := io.NewBinaryReader(n)
 
 	if err != nil {
 		return nil, err
 	}
-
-	defer br.Close()
 
 	fileType, _ := br.ReadHeader()
 	if fileType != io.RowStoreV1 {
@@ -184,15 +176,10 @@ func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
 func (c *OnDiskColumn) findEvent(offset int) (interface{}, bool) {
 
-	log.Println(fmt.Sprintf("c %v", c))
-	log.Println(fmt.Sprintf("field %v", c.fi.Name))
-	log.Println(fmt.Sprintf("offset %v", offset))
 	c.br.Offset = offset
 
-	id, e := c.br.DecodeVarint() // ID
-	log.Println(fmt.Sprintf("id %v,err %v", id, e))
+	c.br.DecodeVarint() // ID
 	value, err := c.br.ReadValue(c.fi)
-	log.Println(fmt.Sprintf("v %v", value))
 	return value, err == nil
 
 }
