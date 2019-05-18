@@ -43,7 +43,7 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	return fw, nil
 }
 
-func (fw *BinaryWriter) WriteValue(v interface{}, info segment.FieldInfo) {
+func (fw *BinaryWriter) WriteValue(v interface{}, info *segment.FieldInfo) {
 	switch info.Type {
 	case segment.FieldTypeInt:
 		fw.WriteEncodedVarint(v.(uint64))
@@ -477,7 +477,7 @@ func (fr *BinaryReader) Close() error {
 	return mmap.UnMap(fr.bytes)
 }
 
-func (fr *BinaryReader) ReadValue(info segment.FieldInfo) (interface{}, error) {
+func (fr *BinaryReader) ReadValue(info *segment.FieldInfo) (interface{}, error) {
 	switch info.Type {
 	case segment.FieldTypeInt:
 		return fr.DecodeVarint()
