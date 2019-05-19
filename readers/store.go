@@ -37,8 +37,8 @@ func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error
 	}
 
 	br.Offset = br.Size - 16
-	rootOffset, _ := br.DecodeFixed64()
-	lvl, _ := br.DecodeFixed64()
+	rootOffset, _ := br.ReadFixed64()
+	lvl, _ := br.ReadFixed64()
 
 	if err != nil {
 		return nil, err
@@ -99,8 +99,8 @@ func (sl *OnDiskStore) processLevel(offset int, lvl int, id int, start int) (int
 	// TODO: FIX IT esto puede traer quilombos cuando el id sea mas grande que el ultimo del nivel.
 	for i := 0; i < int(math.MaxUint32); i++ {
 
-		lvlOffset, _ := sl.br.DecodeVarint()
-		dlvlOffset, _ := sl.br.DecodeVarint()
+		lvlOffset, _ := sl.br.ReadVarint64()
+		dlvlOffset, _ := sl.br.ReadVarint64()
 
 		calcId := i * int(math.Pow(float64(sl.ixl), float64(lvl)))
 
@@ -125,7 +125,7 @@ func (sl *OnDiskStore) findIdxEvents(offset int, startFrom int, id int) ([]int, 
 
 	for i := startFrom; i <= sl.br.Size; i++ {
 
-		calcId, _ := sl.br.DecodeVarint()
+		calcId, _ := sl.br.ReadVarint64()
 
 		if int(calcId) < id {
 			// TODO: put an offset and skip it by record
@@ -146,7 +146,7 @@ func (sl *OnDiskStore) findIdxEvents(offset int, startFrom int, id int) ([]int, 
 func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 	offsets := make([]int, len(sl.indexInfo.Fields))
 	for i := range sl.indexInfo.Fields {
-		value, err := sl.br.DecodeVarint()
+		value, err := sl.br.ReadVarint64()
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +178,7 @@ func (c *OnDiskColumn) findEvent(offset int) (interface{}, bool) {
 
 	c.br.Offset = offset
 
-	c.br.DecodeVarint() // ID
+	c.br.ReadVarint64() // ID
 	value, err := c.br.ReadValue(c.fi)
 	return value, err == nil
 

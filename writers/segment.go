@@ -259,14 +259,14 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	}
 
 	// Index name
-	err = bw.WriteEncodedStringBytes(sw.segment.IndexInfo.Name)
+	err = bw.WriteString(sw.segment.IndexInfo.Name)
 
 	if err != nil {
 		return err
 	}
 
 	// Field Count
-	err = bw.WriteEncodedVarint(uint64(len(sw.segment.IndexInfo.Fields)))
+	err = bw.WriteVarInt(len(sw.segment.IndexInfo.Fields))
 
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	// Field info
 	for _, field := range sw.segment.IndexInfo.Fields {
 
-		err = bw.WriteEncodedStringBytes(field.Name)
+		err = bw.WriteString(field.Name)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	// segment stats.
 
 	// Event count
-	err = bw.WriteEncodedVarint(uint64(sw.segment.EventID))
+	err = bw.WriteVarUInt32(sw.segment.EventID)
 
 	if err != nil {
 		return err

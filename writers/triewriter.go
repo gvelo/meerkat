@@ -33,7 +33,7 @@ func (tw *TrieWriter) Write(trie *inmem.BTrie) error {
 		return err
 	}
 
-	err = tw.bw.WriteEncodedFixed64(uint64(rootOffset))
+	err = tw.bw.WriteFixedUint64(uint64(rootOffset))
 
 	if err != nil {
 		return err
@@ -57,21 +57,21 @@ func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 	// the node  start offset.
 	offset := tw.bw.Offset
 
-	// use a zero value to signal a null posting, this is possible since
+	// use a zero value to signal a null posting, this is valid since
 	// posting never get a zero offset on disk.
-	postingOffset := uint64(0)
+	postingOffset := 0
 
 	if node.Posting != nil {
-		postingOffset = uint64(node.Posting.Offset)
+		postingOffset = node.Posting.Offset
 	}
 
-	err := tw.bw.WriteEncodedVarint(postingOffset)
+	err := tw.bw.WriteVarInt(postingOffset)
 
 	if err != nil {
 		return 0, err
 	}
 
-	err = tw.bw.WriteEncodedVarint(uint64(len(node.Children)))
+	err = tw.bw.WriteVarInt(len(node.Children))
 	if err != nil {
 		return -1, err
 	}
@@ -83,8 +83,7 @@ func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 			return -1, err
 		}
 
-		// TODO check this cast.
-		err = tw.bw.WriteEncodedVarint(uint64(child.Offset))
+		err = tw.bw.WriteVarInt(child.Offset)
 
 		if err != nil {
 			return -1, err
@@ -92,7 +91,7 @@ func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 
 	}
 
-	err = tw.bw.WriteEncodedVarint(uint64(len(node.Bucket)))
+	err = tw.bw.WriteVarInt(len(node.Bucket))
 
 	if err != nil {
 		return -1, err
@@ -100,13 +99,13 @@ func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 
 	for _, record := range node.Bucket {
 
-		err = tw.bw.WriteEncodedStringBytes(record.Value)
+		err = tw.bw.WriteString(record.Value)
 
 		if err != nil {
 			return -1, err
 		}
 
-		err = tw.bw.WriteEncodedVarint(uint64(record.Posting.Offset))
+		err = tw.bw.WriteVarInt(record.Posting.Offset)
 
 		if err != nil {
 			return -1, err

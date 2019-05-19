@@ -58,13 +58,13 @@ func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 		return nil, errors.New("invalid file type")
 	}
 
-	indexName, err := br.DecodeStringBytes()
+	indexName, err := br.ReadString()
 
 	if err != nil {
 		return nil, err
 	}
 
-	fieldCount, err := br.DecodeVarint()
+	fieldCount, err := br.ReadVarInt()
 
 	if err != nil {
 		return nil, err
@@ -74,19 +74,19 @@ func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 
 	for i := 0; i < int(fieldCount); i++ {
 
-		name, err := br.DecodeStringBytes()
+		name, err := br.ReadString()
 
 		if err != nil {
 			return nil, err
 		}
 
-		fieldType, err := br.DecodeVarint()
+		fieldType, err := br.ReadVarInt()
 
 		if err != nil {
 			return nil, err
 		}
 
-		indexed, err := br.DecodeVarint()
+		indexed, err := br.ReadVarInt()
 
 		if err != nil {
 			return nil, err

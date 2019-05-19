@@ -43,15 +43,15 @@ func writeSkipIdx(bw *io.BinaryWriter, keys []float64, offsets []uint64, ixl int
 	if err != nil {
 		panic(err)
 	}
-	bw.WriteEncodedFixed64(uint64(lvlOffset))
-	bw.WriteEncodedFixed64(uint64(l))
+	bw.WriteFixedUint64(uint64(lvlOffset))
+	bw.WriteFixedUint64(uint64(l))
 
 	return nil
 }
 
 func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int, ixl int, lastOffset int) (error, int, int) {
 
-	offset := int(bw.Offset)
+	offset := bw.Offset
 	if len(offsets) <= 2 {
 		return nil, lvl - 1, lastOffset
 	}
@@ -61,8 +61,8 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 
 	for i := 0; i < int(uint64(len(offsets))); i++ {
 		o := bw.Offset
-		bw.WriteEncodedFixed64(math.Float64bits(keys[i]))
-		bw.WriteEncodedVarint(offsets[i])
+		bw.WriteFixedUint64(math.Float64bits(keys[i]))
+		bw.WriteVarUint64(offsets[i])
 		if i%ixl == 0 {
 			nk = append(nk, keys[i])
 			nl = append(nl, uint64(o))
@@ -70,7 +70,7 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 
 	}
 
-	bw.WriteEncodedFixed64(math.Float64bits(math.MaxFloat64))
+	bw.WriteFixedUint64(math.Float64bits(math.MaxFloat64))
 
 	return processSkip(bw, nk, nl, lvl+1, ixl, offset)
 }
