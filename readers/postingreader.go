@@ -27,13 +27,15 @@ func (pr PostingReader) Read(offset int) (*roaring.Bitmap, error) {
 
 }
 
-func NewPostingReader(name string) (*PostingReader, error) {
+func NewPostingReader(path string) (*PostingReader, error) {
 
-	br, err := io.NewBinaryReader(name)
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	br := file.NewBinaryReader()
 
 	fileType, err := br.ReadHeader()
 

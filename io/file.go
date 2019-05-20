@@ -3,7 +3,6 @@ package io
 import (
 	"bufio"
 	"errors"
-	"eventdb/io/mmap"
 	"eventdb/segment"
 	"fmt"
 	"io"
@@ -222,31 +221,31 @@ func (br *BinaryWriter) WriteString(s string) error {
 	return nil
 }
 
+// errOverflow is returned when an integer is too large to be represented.
+var errOverflow = errors.New("proto: integer overflow")
+var errUnknFileType = errors.New("unknown file type")
+
 type BinaryReader struct {
 	bytes  []byte
 	Offset int
 	Size   int
 }
 
-func NewBinaryReader(name string) (*BinaryReader, error) {
-
-	b, err := mmap.Map(name)
-
-	if err != nil {
-		return nil, err
-	}
-
-	fr := &BinaryReader{
+func NewBinaryReader(b []byte) *BinaryReader {
+	return &BinaryReader{
 		bytes:  b,
 		Offset: 0,
 		Size:   len(b),
 	}
-	return fr, nil
 }
 
-// errOverflow is returned when an integer is too large to be represented.
-var errOverflow = errors.New("proto: integer overflow")
-var errUnknFileType = errors.New("unknown file type")
+// SetBytes set a new buffer and reset the internal
+// state. Handy method for reuse readers.
+func (br *BinaryReader) SetBytes(b []byte) {
+	br.bytes = b
+	br.Offset = 0
+	br.Size = len(b)
+}
 
 // ReadHeader read the file header returning the file type.
 func (br *BinaryReader) ReadHeader() (FileType, error) {
@@ -289,9 +288,9 @@ func (br *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 }
 
 func (br *BinaryReader) ReadByte() byte {
-	byte := br.bytes[br.Offset]
+	b := br.bytes[br.Offset]
 	br.Offset++
-	return byte
+	return b
 }
 
 // ReadVarint64 reads a varint-encoded integer from the Buffer.
@@ -499,11 +498,6 @@ func (br *BinaryReader) ReadString() (s string, err error) {
 		return
 	}
 	return string(buf), nil
-}
-
-// Close close and unmap the file.
-func (br *BinaryReader) Close() error {
-	return mmap.UnMap(br.bytes)
 }
 
 func (br *BinaryReader) ReadValue(info *segment.FieldInfo) (interface{}, error) {

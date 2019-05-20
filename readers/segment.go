@@ -42,15 +42,17 @@ func (sr *SegmentReader) Read() (*ondsk.Segment, error) {
 
 func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 
-	file := filepath.Join(sr.path, "info")
+	path := filepath.Join(sr.path, "info")
 
-	br, err := io.NewBinaryReader(file)
-
-	defer br.Close()
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	br := file.NewBinaryReader()
+
+	defer file.UnMap()
 
 	fType, err := br.ReadHeader()
 

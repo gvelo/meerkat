@@ -22,13 +22,15 @@ type OnDiskStore struct {
 	columns    []*OnDiskColumn
 }
 
-func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error) {
+func ReadStore(path string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error) {
 
-	br, err := io.NewBinaryReader(file)
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	br := file.NewBinaryReader()
 
 	fType, err := br.ReadHeader()
 
@@ -47,7 +49,7 @@ func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error
 	cols := make([]*OnDiskColumn, 0)
 
 	for _, fi := range ii.Fields {
-		col, _ := ReadColumn(file, fi)
+		col, _ := ReadColumn(path, fi)
 		cols = append(cols, col)
 	}
 
@@ -159,13 +161,17 @@ func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
 	n := strings.Replace(file, ".idx", "."+info.Name+".bin", 1)
-	br, err := io.NewBinaryReader(n)
+
+	f, err := io.MMap(n)
 
 	if err != nil {
 		return nil, err
 	}
 
+	br := f.NewBinaryReader()
+
 	fileType, _ := br.ReadHeader()
+
 	if fileType != io.RowStoreV1 {
 		panic("invalid file type")
 	}

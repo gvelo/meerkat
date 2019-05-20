@@ -20,13 +20,15 @@ func (sl *OnDiskSkipList) Lookup(id float64) (uint64, error) {
 	return 0, nil
 }
 
-func ReadSkipList(file string) (*OnDiskSkipList, error) {
+func ReadSkipList(path string) (*OnDiskSkipList, error) {
 
-	br, err := io.NewBinaryReader(file)
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	br := file.NewBinaryReader()
 
 	fType, err := br.ReadHeader()
 
