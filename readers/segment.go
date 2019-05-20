@@ -14,12 +14,12 @@ const (
 	idxExt = ".idx"
 )
 
-type SegmentReader struct {
+type segmentReader struct {
 	log  zerolog.Logger
 	path string
 }
 
-func (sr *SegmentReader) Read() (*ondsk.Segment, error) {
+func (sr *segmentReader) read() (*ondsk.Segment, error) {
 
 	indexInfo, err := sr.readIndexInfo()
 
@@ -40,7 +40,7 @@ func (sr *SegmentReader) Read() (*ondsk.Segment, error) {
 
 }
 
-func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
+func (sr *segmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 
 	path := filepath.Join(sr.path, "info")
 
@@ -50,9 +50,9 @@ func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 		return nil, err
 	}
 
-	br := file.NewBinaryReader()
-
 	defer file.UnMap()
+
+	br := file.NewBinaryReader()
 
 	fType, err := br.ReadHeader()
 
@@ -114,7 +114,7 @@ func (sr *SegmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 
 }
 
-func (sr *SegmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, error) {
+func (sr *segmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, error) {
 
 	idx := make([]interface{}, len(fields))
 
@@ -156,17 +156,28 @@ func (sr *SegmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, er
 	return idx, nil
 }
 
-func NewSegmentReader(path string) *SegmentReader {
+func newSegmentReader(path string) *segmentReader {
 
-	sr := &SegmentReader{
+	sr := &segmentReader{
 		path: path,
 	}
 
 	sr.log = log.With().
-		Str("component", "SegmentReader").
+		Str("component", "segmentReader").
 		Str("path", path).
 		Logger()
 
 	return sr
+
+}
+
+func ReadSegment(path string) (*ondsk.Segment, error) {
+
+	reader := newSegmentReader(path)
+	s, err := reader.read()
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 
 }
