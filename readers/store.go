@@ -158,7 +158,7 @@ func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 
 func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
-	n := strings.Replace(file, ".idx", "."+info.Name+".bin", 1)
+	n := strings.Replace(file, idxExt, "."+info.Name+binExt, 1)
 	br, err := io.NewBinaryReader(n)
 
 	if err != nil {

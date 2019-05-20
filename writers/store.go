@@ -73,7 +73,7 @@ func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl i
 
 func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
 
-	bw, err := io.NewBinaryWriter(name + ".idx")
+	bw, err := io.NewBinaryWriter(name + idxExt)
 
 	if err != nil {
 		return err

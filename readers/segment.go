@@ -12,6 +12,7 @@ import (
 
 const (
 	idxExt = ".idx"
+	binExt = ".bin"
 )
 
 type SegmentReader struct {
