@@ -25,7 +25,7 @@ func TestReadWritePosting(t *testing.T) {
 		return
 	}
 
-	pr, err := readers.NewPostingReader(file)
+	ps, err := readers.ReadPostingStore(file)
 
 	if !assert.NoErrorf(err, "an error occurred while reading the posting list: %v", err) {
 		return
@@ -33,7 +33,7 @@ func TestReadWritePosting(t *testing.T) {
 
 	for i, p := range postingStore.Store {
 
-		b, err := pr.Read(p.Offset)
+		b, err := ps.Read(p.Offset)
 
 		if !assert.NoErrorf(err, "an error occurred while writing the posting list at offset %v: %v", p.Offset, err) {
 			return

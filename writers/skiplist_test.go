@@ -53,7 +53,7 @@ func TestSkipList_Read1(t *testing.T) {
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
 	start = time.Now()
-	pr, _ := readers.NewPostingReader(sp)
+	pr, _ := readers.ReadPostingStore(sp)
 	b, _ := pr.Read(int(o))
 
 	t.Logf("read posting took %v ", time.Since(start))
@@ -87,7 +87,7 @@ func TestSkipList_Read6(t *testing.T) {
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
 	start = time.Now()
-	pr, _ := readers.NewPostingReader(sp)
+	pr, _ := readers.ReadPostingStore(sp)
 	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
@@ -121,7 +121,7 @@ func TestSkipList_Read100(t *testing.T) {
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
 	start = time.Now()
-	pr, _ := readers.NewPostingReader(sp)
+	pr, _ := readers.ReadPostingStore(sp)
 	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
@@ -155,7 +155,7 @@ func TestSkipList_Read200(t *testing.T) {
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
 	start = time.Now()
-	pr, _ := readers.NewPostingReader(sp)
+	pr, _ := readers.ReadPostingStore(sp)
 	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 
@@ -190,7 +190,7 @@ func TestSkipList_Read1M(t *testing.T) {
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
 	start = time.Now()
-	pr, _ := readers.NewPostingReader(sp)
+	pr, _ := readers.ReadPostingStore(sp)
 	b, _ := pr.Read(int(o))
 	t.Logf("read posting took %v ", time.Since(start))
 

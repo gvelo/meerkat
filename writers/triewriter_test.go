@@ -16,7 +16,6 @@ var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
 	"abcdefghijklmnopqrstuvwxyzåäö" +
 	"0123456789")
 
-
 func TestBTrieReadWriter(t *testing.T) {
 
 	assert := assert.New(t)
@@ -112,7 +111,7 @@ func TestBTrieReadWriter(t *testing.T) {
 		return
 	}
 
-	pReader, err := readers.NewPostingReader("/tmp/posting-test.bin")
+	postingStore, err := readers.ReadPostingStore("/tmp/posting-test.bin")
 
 	if !assert.NoErrorf(err, "an error occurred while creating posting reader: %v", err) {
 		return
@@ -128,7 +127,7 @@ func TestBTrieReadWriter(t *testing.T) {
 			return
 		}
 
-		bitmap, err := pReader.Read(offset)
+		bitmap, err := postingStore.Read(offset)
 
 		if !assert.NoErrorf(err, "an error occurred while fetching posting posting from disk: %v", err) {
 			return
