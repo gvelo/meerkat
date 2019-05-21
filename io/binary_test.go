@@ -14,15 +14,15 @@ func Test_newFileWriterReader(t *testing.T) {
 		t.Error(err)
 	}
 
-	fw.WriteEncodedStringBytes("HOLA MANOLA")
-	fw.WriteEncodedVarint(1)
-	fw.WriteEncodedVarint(100)
-	fw.WriteEncodedVarint(2023423423423432434)
-	fw.WriteEncodedFixed64(2023423423423432222)
-	fw.WriteEncodedFixed32(32)
+	fw.WriteString("HOLA MANOLA")
+	fw.WriteVarUint64(1)
+	fw.WriteVarUint64(100)
+	fw.WriteVarUint64(2023423423423432434)
+	fw.WriteFixedUint64(2023423423423432222)
+	fw.WriteFixedUint32(32)
 
 	//var x uint64 =
-	fw.WriteEncodedVarint(math.MaxUint64)
+	fw.WriteVarUint64(math.MaxUint64)
 
 	fw.Close()
 
@@ -30,37 +30,37 @@ func Test_newFileWriterReader(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	s, err := fr.DecodeStringBytes()
+	s, err := fr.ReadString()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i1, err := fr.DecodeVarint()
+	i1, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i2, err := fr.DecodeVarint()
+	i2, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i3, err := fr.DecodeVarint()
+	i3, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i4, err := fr.DecodeFixed64()
+	i4, err := fr.ReadFixed64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i5, err := fr.DecodeFixed32()
+	i5, err := fr.ReadFixed32()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i6, err := fr.DecodeVarint()
+	i6, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}

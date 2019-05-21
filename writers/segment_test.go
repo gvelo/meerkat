@@ -35,9 +35,7 @@ func TestSegmentWriterReader(t *testing.T) {
 		return
 	}
 
-	sr := readers.NewSegmentReader("/tmp")
-
-	odSegment, err := sr.Read()
+	odSegment, err := readers.ReadSegment("/tmp")
 
 	if !assert.NoErrorf(err, "an error occurred while reading the segment: %v", err) {
 		return

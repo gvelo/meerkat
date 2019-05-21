@@ -22,13 +22,15 @@ type OnDiskStore struct {
 	columns    []*OnDiskColumn
 }
 
-func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error) {
+func ReadStore(path string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error) {
 
-	br, err := io.NewBinaryReader(file)
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	br := file.NewBinaryReader()
 
 	fType, err := br.ReadHeader()
 
@@ -37,8 +39,8 @@ func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error
 	}
 
 	br.Offset = br.Size - 16
-	rootOffset, _ := br.DecodeFixed64()
-	lvl, _ := br.DecodeFixed64()
+	rootOffset, _ := br.ReadFixed64()
+	lvl, _ := br.ReadFixed64()
 
 	if err != nil {
 		return nil, err
@@ -47,7 +49,7 @@ func ReadStore(file string, ii *segment.IndexInfo, ixl int) (*OnDiskStore, error
 	cols := make([]*OnDiskColumn, 0)
 
 	for _, fi := range ii.Fields {
-		col, _ := ReadColumn(file, fi)
+		col, _ := ReadColumn(path, fi)
 		cols = append(cols, col)
 	}
 
@@ -99,8 +101,8 @@ func (sl *OnDiskStore) processLevel(offset int, lvl int, id int, start int) (int
 	// TODO: FIX IT esto puede traer quilombos cuando el id sea mas grande que el ultimo del nivel.
 	for i := 0; i < int(math.MaxUint32); i++ {
 
-		lvlOffset, _ := sl.br.DecodeVarint()
-		dlvlOffset, _ := sl.br.DecodeVarint()
+		lvlOffset, _ := sl.br.ReadVarint64()
+		dlvlOffset, _ := sl.br.ReadVarint64()
 
 		calcId := i * int(math.Pow(float64(sl.ixl), float64(lvl)))
 
@@ -125,7 +127,7 @@ func (sl *OnDiskStore) findIdxEvents(offset int, startFrom int, id int) ([]int, 
 
 	for i := startFrom; i <= sl.br.Size; i++ {
 
-		calcId, _ := sl.br.DecodeVarint()
+		calcId, _ := sl.br.ReadVarint64()
 
 		if int(calcId) < id {
 			// TODO: put an offset and skip it by record
@@ -146,7 +148,7 @@ func (sl *OnDiskStore) findIdxEvents(offset int, startFrom int, id int) ([]int, 
 func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 	offsets := make([]int, len(sl.indexInfo.Fields))
 	for i := range sl.indexInfo.Fields {
-		value, err := sl.br.DecodeVarint()
+		value, err := sl.br.ReadVarint64()
 		if err != nil {
 			return nil, err
 		}
@@ -156,16 +158,20 @@ func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 	return offsets, nil
 }
 
-func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
+func ReadColumn(path string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
-	n := strings.Replace(file, idxExt, "."+info.Name+binExt, 1)
-	br, err := io.NewBinaryReader(n)
+	n := strings.Replace(path, idxExt, "."+info.Name+binExt, 1)
+
+	file, err := io.MMap(n)
 
 	if err != nil {
 		return nil, err
 	}
 
+	br := file.NewBinaryReader()
+
 	fileType, _ := br.ReadHeader()
+
 	if fileType != io.RowStoreV1 {
 		panic("invalid file type")
 	}
@@ -178,7 +184,7 @@ func (c *OnDiskColumn) findEvent(offset int) (interface{}, bool) {
 
 	c.br.Offset = offset
 
-	c.br.DecodeVarint() // ID
+	c.br.ReadVarint64() // ID
 	value, err := c.br.ReadValue(c.fi)
 	return value, err == nil
 

@@ -51,17 +51,17 @@ func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl i
 
 			v, ok := e[info.Name]
 			if ok { // got it
-				bw.WriteEncodedVarint(uint64(i)) // # id
+				bw.WriteVarUint64(uint64(i)) // # id
 				bw.WriteValue(v, info)
 			}
 
 		}
 
 		o := bw.Offset
-		bw.WriteEncodedVarint(uint64(min))
-		bw.WriteEncodedVarint(uint64(max))
-		bw.WriteEncodedVarint(uint64(len(evts)))
-		bw.WriteEncodedFixed64(uint64(o))
+		bw.WriteVarUint64(uint64(min))
+		bw.WriteVarUint64(uint64(max))
+		bw.WriteVarUint64(uint64(len(evts)))
+		bw.WriteFixedUint64(uint64(o))
 
 		iOffsets[idx] = offsets
 	}
@@ -91,8 +91,8 @@ func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
 		}
 	}
 
-	bw.WriteEncodedFixed64(uint64(lvlOffset))
-	bw.WriteEncodedFixed64(uint64(lvl))
+	bw.WriteFixedUint64(uint64(lvlOffset))
+	bw.WriteFixedUint64(uint64(lvl))
 
 	return nil
 }
@@ -109,9 +109,9 @@ func writeLevel0(bw *io.BinaryWriter, offsets [][]uint64) ([]uint64, error) {
 
 	for i := 0; i < max; i++ {
 		o = append(o, uint64(bw.Offset))
-		bw.WriteEncodedVarint(uint64(i)) // # columns
+		bw.WriteVarUint64(uint64(i)) // # columns
 		for _, colOffsets := range offsets {
-			bw.WriteEncodedVarint(colOffsets[i])
+			bw.WriteVarUint64(colOffsets[i])
 		}
 	}
 	return o, nil
@@ -130,8 +130,8 @@ func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lv
 	for i := 0; i < int(uint64(len(offsets))); i++ {
 		if lvl > 0 {
 			o := bw.Offset
-			bw.WriteEncodedVarint(offsets[i])
-			bw.WriteEncodedVarint(idxOffsets[i])
+			bw.WriteVarUint64(offsets[i])
+			bw.WriteVarUint64(idxOffsets[i])
 			if i%ixl == 0 {
 				ns = append(ns, uint64(o))
 			}
