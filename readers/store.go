@@ -158,16 +158,17 @@ func (sl *OnDiskStore) LoadIdx() ([]int, error) {
 	return offsets, nil
 }
 
-func ReadColumn(file string, info *segment.FieldInfo) (*OnDiskColumn, error) {
+func ReadColumn(path string, info *segment.FieldInfo) (*OnDiskColumn, error) {
 
-	n := strings.Replace(file, idxExt, "."+info.Name+binExt, 1)
-	br, err := io.NewBinaryReader(n)
+	n := strings.Replace(path, idxExt, "."+info.Name+binExt, 1)
+
+	file, err := io.MMap(n)
 
 	if err != nil {
 		return nil, err
 	}
 
-	br := f.NewBinaryReader()
+	br := file.NewBinaryReader()
 
 	fileType, _ := br.ReadHeader()
 
