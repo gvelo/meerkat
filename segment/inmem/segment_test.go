@@ -15,7 +15,7 @@ func getIndexInfo() *segment.IndexInfo {
 	indexInfo.AddField("msg", segment.FieldTypeText, true)
 	indexInfo.AddField("src", segment.FieldTypeKeyword, true)
 	indexInfo.AddField("number", segment.FieldTypeInt, true)
-	indexInfo.AddField("float", segment.FieldTypeInt, true)
+	indexInfo.AddField("float", segment.FieldTypeFloat, true)
 
 	return indexInfo
 }

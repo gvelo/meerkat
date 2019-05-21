@@ -14,7 +14,7 @@ func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl i
 	// for now, lets take the idx as the FieldId
 	for idx, info := range ii.Fields {
 
-		bw, err := io.NewBinaryWriter(name + "." + info.Name + ".bin")
+		bw, err := io.NewBinaryWriter(name + "." + info.Name + binExt)
 
 		if err != nil {
 			return nil, err

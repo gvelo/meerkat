@@ -5,6 +5,7 @@ import (
 	"eventdb/segment"
 	"eventdb/segment/inmem"
 	"github.com/pkg/errors"
+	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 const (
 	idxExt = ".idx"
+	binExt = ".bin"
 )
 
 type SegmentWriter struct {
@@ -92,6 +94,10 @@ func (sw *SegmentWriter) Write() error {
 
 }
 
+func byTs(a, b interface{}) bool {
+	return a.(map[string]interface{})[tsField].(uint64) < b.(map[string]interface{})[tsField].(uint64)
+}
+
 func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 
 	idx := make([]interface{}, len(sw.segment.IndexInfo.Fields))
@@ -103,13 +109,23 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 		case segment.FieldTypeInt:
 			var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
 				if n.UserData == nil {
-					n.UserData = sw.segment.PostingStore.NewPostingList(v.(uint32))
+					n.UserData = sw.segment.PostingStore.NewPostingList(uint32(v.(int)))
 				} else {
-					n.UserData.(inmem.PostingList).Bitmap.Add(v.(uint32))
+					n.UserData.(inmem.PostingList).Bitmap.Add(uint32(v.(int)))
 				}
 				return n
 			}
 			idx[i] = inmem.NewSkipList(sw.segment.PostingStore, u, inmem.Uint64Comparator{})
+		case segment.FieldTypeFloat:
+			var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
+				if n.UserData == nil {
+					n.UserData = sw.segment.PostingStore.NewPostingList(uint32(v.(int)))
+				} else {
+					n.UserData.(inmem.PostingList).Bitmap.Add(uint32(v.(int)))
+				}
+				return n
+			}
+			idx[i] = inmem.NewSkipList(sw.segment.PostingStore, u, inmem.Float64Comparator{})
 		case segment.FieldTypeKeyword:
 			idx[i] = inmem.NewBtrie(sw.segment.PostingStore)
 		case segment.FieldTypeText:
@@ -119,11 +135,9 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 		}
 	}
 
-	it := sw.segment.Idx.NewIterator(0)
-	var evtId uint32 = 0
+	timsort.Sort(sw.segment.FieldStorage, byTs)
 
-	for ; it.Next(); evtId++ {
-		n := it.Get().UserData.(map[string]interface{})
+	for x, n := range sw.segment.FieldStorage {
 
 		for i, info := range sw.segment.IndexInfo.Fields {
 
@@ -133,18 +147,22 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 
 				case segment.FieldTypeInt:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n[info.Name].(uint64)
-					idx.Add(eventValue, evtId)
+					eventValue := n.(map[string]interface{})[info.Name].(uint64)
+					idx.Add(eventValue, x)
+				case segment.FieldTypeFloat:
+					idx := idx[i].(*inmem.SkipList)
+					eventValue := n.(map[string]interface{})[info.Name].(float64)
+					idx.Add(eventValue, x)
 				case segment.FieldTypeKeyword:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n[info.Name].(string)
-					idx.Add(eventValue, evtId)
+					eventValue := n.(map[string]interface{})[info.Name].(string)
+					idx.Add(eventValue, uint32(x))
 				case segment.FieldTypeText:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n[info.Name].(string)
+					eventValue := n.(map[string]interface{})[info.Name].(string)
 					tokens := sw.segment.Tokenizer.Tokenize(eventValue)
 					for _, token := range tokens {
-						idx.Add(token, evtId)
+						idx.Add(token, uint32(x))
 					}
 				case segment.FieldTypeTimestamp:
 				//TODO Add to the proper index.

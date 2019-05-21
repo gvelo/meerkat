@@ -21,8 +21,8 @@ type Segment struct {
 	IndexInfo    *segment.IndexInfo
 	ID           string
 	EventID      uint32
-	Idx          *SkipList
-	FieldStorage []*segment.Event
+	Idx          []interface{}
+	FieldStorage []interface{}
 	PostingStore *PostingStore
 	MinTS        int64
 	MaxTS        int64
@@ -43,11 +43,13 @@ func NewSegment(
 		IndexInfo:    indexInfo,
 		ID:           ID,
 		PostingStore: ps,
+		// TODO revisar si no es muy poco performante...
+		FieldStorage: make([]interface{}, 0),
 		Tokenizer:    text.NewTokenizer(),
 		WriterChan:   writerChan,
 		Monotonic:    false,
 		State:        InMem,
-		Idx:          NewSkipList(ps, nil, Uint64Comparator{}),
+		Idx:          make([]interface{}, len(indexInfo.Fields)),
 	}
 
 	s.log = log.With().
@@ -74,7 +76,7 @@ func (s *Segment) Add(event map[string]interface{}) {
 	// TODO compute min and max timestamp
 	// TODO computa monotonic Flag
 
-	s.Idx.Add(event["ts"], event)
+	s.FieldStorage = append(s.FieldStorage, event)
 
 }
 

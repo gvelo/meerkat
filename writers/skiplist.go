@@ -28,7 +28,16 @@ func WriteSkip(name string, sl *inmem.SkipList, ixl int) error {
 	it := sl.NewIterator(0)
 	for it.Next() {
 		// TODO: FIX copio las claves, puede ocupar mucho...
-		keys = append(keys, it.Key().(float64))
+		// horrible como hago?
+		var key = it.Key()
+		switch it.Key().(type) {
+		case uint64:
+			key = float64(key.(uint64))
+		case float64:
+			key = key.(float64)
+		}
+
+		keys = append(keys, key.(float64))
 		offsets = append(offsets, uint64(it.Get().UserData.(*inmem.PostingList).Offset))
 	}
 

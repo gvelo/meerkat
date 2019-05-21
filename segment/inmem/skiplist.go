@@ -182,10 +182,12 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 			}
 			list.level = lvl
 		}
-		x = NewSLNode(key, v, lvl, Internal)
+		x = NewSLNode(key, nil, lvl, Internal)
 		list.length++
 		if list.updateCallback != nil {
 			list.updateCallback(x, v)
+		} else {
+			x.UserData = v
 		}
 
 		for i := 0; i < lvl; i++ {

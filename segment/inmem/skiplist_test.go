@@ -105,7 +105,7 @@ func TestSkipList_InsertOrUpdate(t *testing.T) {
 	a.True(found)
 	a.NotNil(res)
 	i := res.UserData.(Holder).aInt
-	a.Equal(i, 124)
+	a.Equal(i, 1)
 
 }
 
