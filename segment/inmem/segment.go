@@ -63,7 +63,7 @@ func NewSegment(
 
 }
 
-func (s *Segment) Add(event map[string]interface{}) {
+func (s *Segment) Add(event segment.Event) {
 
 	if s.State != InMem {
 		log.Panic().

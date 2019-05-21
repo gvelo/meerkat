@@ -20,12 +20,12 @@ func getIndexInfo() *segment.IndexInfo {
 	return indexInfo
 }
 
-func createEvents() []map[string]interface{} {
+func createEvents() []segment.Event {
 
-	events := make([]map[string]interface{}, 0)
+	events := make([]segment.Event, 0)
 
 	for i := 0; i < 1000; i++ {
-		event := make(map[string]interface{})
+		event := make(segment.Event)
 		event["msg"] = fmt.Sprintf("event %v", i)
 		event["src"] = "log"
 		event["number"] = uint64(1)

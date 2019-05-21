@@ -15,7 +15,7 @@ func (s InMemEventStore) retrieve(eventID uint32) Event {
 	return s.eventStore[eventID]
 }
 
-func (s InMemEventStore) retrieveFields(fieldNames []string, eventID uint32) map[string]interface{} {
+func (s InMemEventStore) retrieveFields(fieldNames []string, eventID uint32) segment.Event {
 	//TODO
 	return nil
 }
@@ -55,13 +55,13 @@ func newInMemPostingStore() PostingStore {
 // InMemDict implements a naive in memory non persistent Dictionary
 // using an in-memory prefix trie.
 type InMemDict struct {
-	trees        map[string]interface{}
+	trees        segment.Event
 	postingStore PostingStore
 }
 
 func newDict() *InMemDict {
 	return &InMemDict{
-		trees:        make(map[string]interface{}),
+		trees:        make(segment.Event),
 		postingStore: newInMemPostingStore(),
 	}
 }

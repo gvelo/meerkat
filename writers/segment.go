@@ -95,7 +95,7 @@ func (sw *SegmentWriter) Write() error {
 }
 
 func byTs(a, b interface{}) bool {
-	return a.(map[string]interface{})[tsField].(uint64) < b.(map[string]interface{})[tsField].(uint64)
+	return a.(segment.Event)[tsField].(uint64) < b.(segment.Event)[tsField].(uint64)
 }
 
 func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
@@ -147,19 +147,19 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 
 				case segment.FieldTypeInt:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(map[string]interface{})[info.Name].(uint64)
+					eventValue := n.(segment.Event)[info.Name].(uint64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeFloat:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(map[string]interface{})[info.Name].(float64)
+					eventValue := n.(segment.Event)[info.Name].(float64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeKeyword:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n.(map[string]interface{})[info.Name].(string)
+					eventValue := n.(segment.Event)[info.Name].(string)
 					idx.Add(eventValue, uint32(x))
 				case segment.FieldTypeText:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n.(map[string]interface{})[info.Name].(string)
+					eventValue := n.(segment.Event)[info.Name].(string)
 					tokens := sw.segment.Tokenizer.Tokenize(eventValue)
 					for _, token := range tokens {
 						idx.Add(token, uint32(x))

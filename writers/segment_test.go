@@ -24,7 +24,7 @@ func TestSegmentWriterReader(t *testing.T) {
 	s := inmem.NewSegment(indexInfo, "3dfa542d", nil)
 
 	for i := 0; i < 100; i++ {
-		e := make(map[string]interface{})
+		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
 		e["ts"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
 		e["mun1"] = uint64(i)
@@ -70,7 +70,7 @@ func TestSegmentSorted(t *testing.T) {
 	s := inmem.NewSegment(indexInfo, "3dfa542d", nil)
 
 	for i := 0; i < 100; i++ {
-		e := make(map[string]interface{})
+		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
 		e["ts"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
 		e["mun1"] = uint64(i)
@@ -94,10 +94,10 @@ func TestSegmentSorted(t *testing.T) {
 func isSortedByTs(events []interface{}) bool {
 	var ant uint64 = 0
 	for _, x := range events {
-		if x.(map[string]interface{})["ts"].(uint64) < ant {
+		if x.(segment.Event)["ts"].(uint64) < ant {
 			return false
 		} else {
-			ant = x.(map[string]interface{})["ts"].(uint64)
+			ant = x.(segment.Event)["ts"].(uint64)
 		}
 	}
 	return true
