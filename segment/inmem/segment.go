@@ -22,7 +22,7 @@ type Segment struct {
 	ID           string
 	EventID      uint32
 	Idx          []interface{}
-	FieldStorage []interface{}
+	FieldStorage []segment.Event
 	PostingStore *PostingStore
 	MinTS        int64
 	MaxTS        int64
@@ -44,7 +44,7 @@ func NewSegment(
 		ID:           ID,
 		PostingStore: ps,
 		// TODO revisar si no es muy poco performante...
-		FieldStorage: make([]interface{}, 0),
+		FieldStorage: make([]segment.Event, 0),
 		Tokenizer:    text.NewTokenizer(),
 		WriterChan:   writerChan,
 		Monotonic:    false,
