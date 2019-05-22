@@ -46,7 +46,12 @@ func (sw *SegmentWriter) Write() error {
 
 	idx := sw.createAndLoadFieldIdx()
 
-	err := sw.writePosting()
+	err := sw.writeStore()
+	if err != nil {
+		return err
+	}
+
+	err = sw.writePosting()
 
 	if err != nil {
 		return err
@@ -176,6 +181,23 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 	}
 
 	return idx
+}
+
+func (sw *SegmentWriter) writeStore() error {
+
+	fileName := filepath.Join(sw.path, "store")
+
+	_, err := WriteStore(fileName, sw.segment.FieldStorage, sw.segment.IndexInfo, 100)
+
+	if err != nil {
+		sw.log.Error().
+			Err(err).
+			Msg("error writing posting list")
+		return errors.Wrapf(err, "error writing posting list segment=%v", sw.segment.ID)
+	}
+
+	return nil
+
 }
 
 func (sw *SegmentWriter) writePosting() error {

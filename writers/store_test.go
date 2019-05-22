@@ -58,7 +58,7 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 	p := "/tmp/store"
 
 	start := time.Now()
-	offsets, err := WriteEvents(p, getEvents(), getFieldsInfo(), 100)
+	offsets, err := WriteStore(p, getEvents(), getFieldsInfo(), 100)
 	log.Println(fmt.Sprintf("offsets W %v", offsets))
 	if err != nil {
 		t.Fail()
@@ -200,7 +200,7 @@ func TestStoreWriter1000(t *testing.T) {
 func testFindEvent(t *testing.T, p string, id int, create int, ixl int) segment.Event {
 
 	start := time.Now()
-	_, err := WriteEvents(p, createEvents(create), getFieldsInfo(), ixl)
+	_, err := WriteStore(p, createEvents(create), getFieldsInfo(), ixl)
 	if err != nil {
 		t.Fail()
 	}

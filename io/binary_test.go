@@ -1,6 +1,7 @@
 package io
 
 import (
+	"io/ioutil"
 	"math"
 	"testing"
 
@@ -26,7 +27,8 @@ func Test_newFileWriterReader(t *testing.T) {
 
 	fw.Close()
 
-	fr, err := NewBinaryReader("/tmp/test1.bin")
+	dat, err := ioutil.ReadFile("/tmp/test1.bin")
+	fr := NewBinaryReader(dat)
 	if err != nil {
 		t.Error(err)
 	}
