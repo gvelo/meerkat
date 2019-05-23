@@ -4,7 +4,7 @@ package inmem
 
 import (
 	"eventdb/segment"
-	"eventdb/text"
+	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -18,19 +18,13 @@ const (
 )
 
 type Segment struct {
-	IndexInfo    *segment.IndexInfo
-	ID           string
-	EventID      uint32
-	Idx          []interface{}
-	FieldStorage []interface{}
-	PostingStore *PostingStore
-	MinTS        int64
-	MaxTS        int64
-	Monotonic    bool
-	State        State
-	Tokenizer    text.Tokenizer
-	WriterChan   chan *Segment
-	log          zerolog.Logger
+	IndexInfo  *segment.IndexInfo
+	ID         string
+	EventCount uint32
+	State      State
+	WriterChan chan *Segment
+	Columns    []Column
+	log        zerolog.Logger
 }
 
 func NewSegment(
@@ -38,18 +32,12 @@ func NewSegment(
 	ID string,
 	writerChan chan *Segment) *Segment {
 
-	ps := NewPostingStore()
 	s := &Segment{
-		IndexInfo:    indexInfo,
-		ID:           ID,
-		PostingStore: ps,
-		// TODO revisar si no es muy poco performante...
-		FieldStorage: make([]interface{}, 0),
-		Tokenizer:    text.NewTokenizer(),
-		WriterChan:   writerChan,
-		Monotonic:    false,
-		State:        InMem,
-		Idx:          make([]interface{}, len(indexInfo.Fields)),
+		IndexInfo:  indexInfo,
+		ID:         ID,
+		WriterChan: writerChan,
+		State:      InMem,
+		Columns:    make([]Column, len(indexInfo.Fields)),
 	}
 
 	s.log = log.With().
@@ -57,13 +45,18 @@ func NewSegment(
 		Str("index", indexInfo.Name).Str("segmentID", ID).
 		Logger()
 
+	for i, fInfo := range indexInfo.Fields {
+		c := NewColumnt(fInfo)
+		s.Columns[i] = c
+	}
+
 	s.log.Debug().Msg("New Segment Created")
 
 	return s
 
 }
 
-func (s *Segment) Add(event segment.Event) {
+func (s *Segment) Add(event segment.Event) error {
 
 	if s.State != InMem {
 		log.Panic().
@@ -71,13 +64,20 @@ func (s *Segment) Add(event segment.Event) {
 			Msg("trying to add event on invalid segment state")
 	}
 
-	s.EventID++
+	for _, col := range s.Columns {
 
-	// TODO compute min and max timestamp
-	// TODO computa monotonic Flag
+		if value, found := event[col.FieldInfo().Name]; found {
+			col.Add(value)
+		} else {
+			// TODO: null values are not supported yet.
+			return fmt.Errorf("missing value for field [%s]", col.FieldInfo().Name)
+		}
 
-	s.FieldStorage = append(s.FieldStorage, event)
+	}
 
+	s.EventCount++
+
+	return nil
 }
 
 func (s *Segment) Write() {
@@ -92,7 +92,7 @@ func (s *Segment) Write() {
 
 	s.log.Debug().
 		Str("state", s.State.String()).
-		Uint32("eventCount", s.EventID).
+		Uint32("eventCount", s.EventCount).
 		Msg("writing segment")
 
 	s.WriterChan <- s
@@ -111,7 +111,7 @@ func (s *Segment) Close() {
 
 	s.log.Debug().
 		Str("status", s.State.String()).
-		Uint32("eventCount", s.EventID).
+		Uint32("eventCount", s.EventCount).
 		Msg("segment successfully written to disk")
 
 }

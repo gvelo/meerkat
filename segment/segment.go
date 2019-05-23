@@ -1,5 +1,7 @@
 package segment
 
+import "fmt"
+
 /*
 // InMemEventStore is a naive implementation of an EventStore
 // for testing pourposes. It holds the events list in an slice.
@@ -236,14 +238,17 @@ type FieldInfo struct {
 }
 
 type IndexInfo struct {
-	Name       string
-	Fields     []*FieldInfo
-	fieldCount int
+	Name        string
+	Fields      []*FieldInfo
+	FieldByName map[string]FieldInfo
+	fieldCount  int
 }
 
-// TODO IndexInfo is shared among all the inmem segments so this method
-// should return a copy.
-func (i *IndexInfo) AddField(name string, ftype FieldType, index bool) {
+func (i *IndexInfo) AddField(name string, ftype FieldType, index bool) error {
+
+	if _, ok := i.FieldByName[name]; ok {
+		return fmt.Errorf("a field whith name [%s] already exist", name)
+	}
 
 	field := &FieldInfo{
 		Name:  name,
@@ -256,19 +261,20 @@ func (i *IndexInfo) AddField(name string, ftype FieldType, index bool) {
 
 	i.Fields = append(i.Fields, field)
 
+	return nil
+
 }
 
 func NewIndexInfo(name string) *IndexInfo {
 
 	info := &IndexInfo{
-		Name:       name,
-		Fields:     make([]*FieldInfo, 0),
-		fieldCount: 0,
+		Name:        name,
+		Fields:      make([]*FieldInfo, 0),
+		FieldByName: make(map[string]FieldInfo),
+		fieldCount:  0,
 	}
 
-	// TODO add a fixed timestamp field.
-	// or we sould mark the TS field in parser.
-	info.AddField("ts", FieldTypeTimestamp, true)
+	_ = info.AddField("_time", FieldTypeTimestamp, true)
 
 	return info
 }
