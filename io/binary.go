@@ -6,6 +6,7 @@ import (
 	"eventdb/segment"
 	"fmt"
 	"io"
+	"math"
 	"os"
 )
 
@@ -54,7 +55,7 @@ func (br *BinaryWriter) WriteValue(v interface{}, info *segment.FieldInfo) error
 	case segment.FieldTypeTimestamp:
 		err = br.WriteVarUint64(v.(uint64))
 	case segment.FieldTypeFloat:
-		err = br.WriteFixedUint64(v.(uint64))
+		err = br.WriteFixedUint64(math.Float64bits(v.(float64)))
 	}
 	return err
 }

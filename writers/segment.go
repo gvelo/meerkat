@@ -5,7 +5,6 @@ import (
 	"eventdb/segment"
 	"eventdb/segment/inmem"
 	"github.com/pkg/errors"
-	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"path/filepath"
@@ -47,7 +46,12 @@ func (sw *SegmentWriter) Write() error {
 
 	idx := sw.createAndLoadFieldIdx()
 
-	err := sw.writePosting()
+	err := sw.writeStore()
+	if err != nil {
+		return err
+	}
+
+	err = sw.writePosting()
 
 	if err != nil {
 		return err
@@ -94,8 +98,8 @@ func (sw *SegmentWriter) Write() error {
 
 }
 
-func byTs(a, b interface{}) bool {
-	return a.(segment.Event)[tsField].(uint64) < b.(segment.Event)[tsField].(uint64)
+func byTs(a, b segment.Event) bool {
+	return a[tsField].(uint64) < b[tsField].(uint64)
 }
 
 func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
@@ -135,7 +139,7 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 		}
 	}
 
-	timsort.Sort(sw.segment.FieldStorage, byTs)
+	inmem.Sort(sw.segment.FieldStorage, byTs)
 
 	for x, n := range sw.segment.FieldStorage {
 
@@ -147,19 +151,19 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 
 				case segment.FieldTypeInt:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(segment.Event)[info.Name].(uint64)
+					eventValue := n[info.Name].(uint64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeFloat:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(segment.Event)[info.Name].(float64)
+					eventValue := n[info.Name].(float64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeKeyword:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n.(segment.Event)[info.Name].(string)
+					eventValue := n[info.Name].(string)
 					idx.Add(eventValue, uint32(x))
 				case segment.FieldTypeText:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n.(segment.Event)[info.Name].(string)
+					eventValue := n[info.Name].(string)
 					tokens := sw.segment.Tokenizer.Tokenize(eventValue)
 					for _, token := range tokens {
 						idx.Add(token, uint32(x))
@@ -177,6 +181,23 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 	}
 
 	return idx
+}
+
+func (sw *SegmentWriter) writeStore() error {
+
+	fileName := filepath.Join(sw.path, "store")
+
+	_, err := WriteStore(fileName, sw.segment.FieldStorage, sw.segment.IndexInfo, 100)
+
+	if err != nil {
+		sw.log.Error().
+			Err(err).
+			Msg("error writing posting list")
+		return errors.Wrapf(err, "error writing posting list segment=%v", sw.segment.ID)
+	}
+
+	return nil
+
 }
 
 func (sw *SegmentWriter) writePosting() error {
