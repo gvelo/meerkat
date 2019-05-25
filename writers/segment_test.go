@@ -91,13 +91,13 @@ func TestSegmentSorted(t *testing.T) {
 	}
 }
 
-func isSortedByTs(events []interface{}) bool {
+func isSortedByTs(events []segment.Event) bool {
 	var ant uint64 = 0
 	for _, x := range events {
-		if x.(segment.Event)["ts"].(uint64) < ant {
+		if x["ts"].(uint64) < ant {
 			return false
 		} else {
-			ant = x.(segment.Event)["ts"].(uint64)
+			ant = x["ts"].(uint64)
 		}
 	}
 	return true

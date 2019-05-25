@@ -7,7 +7,7 @@ import (
 
 const tsField = "ts"
 
-func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]uint64, error) {
+func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]uint64, error) {
 
 	iOffsets := make([][]uint64, len(ii.Fields))
 
