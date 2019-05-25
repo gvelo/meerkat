@@ -104,6 +104,27 @@ func (c *ColumnStr) FieldInfo() *segment.FieldInfo {
 	return c.fInfo
 }
 
+type ColumnFloat struct {
+	data  []float64 // TODO: use a buffer pool.
+	fInfo *segment.FieldInfo
+}
+
+func (c *ColumnFloat) Add(value interface{}) {
+	c.data = append(c.data, value.(float64))
+}
+
+func (c *ColumnFloat) Get(idx int) float64 {
+	return c.data[idx]
+}
+
+func (c *ColumnFloat) Size() int {
+	return len(c.data)
+}
+
+func (c *ColumnFloat) FieldInfo() *segment.FieldInfo {
+	return c.fInfo
+}
+
 func NewColumnt(fInfo *segment.FieldInfo) Column {
 	switch fInfo.Type {
 	case segment.FieldTypeTimestamp:
@@ -126,6 +147,11 @@ func NewColumnt(fInfo *segment.FieldInfo) Column {
 	case segment.FieldTypeText:
 		return &ColumnStr{
 			data:  make([]string, 0),
+			fInfo: fInfo,
+		}
+	case segment.FieldTypeFloat:
+		return &ColumnFloat{
+			data:  make([]float64, 0),
 			fInfo: fInfo,
 		}
 	default:
