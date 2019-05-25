@@ -85,19 +85,11 @@ func TestBTrieReadWriter(t *testing.T) {
 
 	start = time.Now()
 
-	writer, err := NewTrieWriter("/tmp/trie.bin")
-
-	if !assert.NoErrorf(err, "an error occurred while creating trie writer: %v", err) {
-		return
-	}
-
-	err = writer.Write(trie)
+	err = WriteTrie("/tmp/trie.bin",trie)
 
 	if !assert.NoErrorf(err, "an error occurred while writing trie to disk: %v", err) {
 		return
 	}
-
-	writer.Close()
 
 	t.Logf("writing trie to disk took %v", time.Since(start))
 

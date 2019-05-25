@@ -4,8 +4,7 @@ import (
 	"eventdb/io"
 	"eventdb/segment"
 	"eventdb/segment/inmem"
-	"github.com/pkg/errors"
-	"github.com/psilva261/timsort"
+	"eventdb/text"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"path/filepath"
@@ -14,6 +13,8 @@ import (
 const (
 	idxExt = ".idx"
 	binExt = ".bin"
+	colExt = ".col"
+	posExt = ".pos"
 )
 
 type SegmentWriter struct {
@@ -24,18 +25,21 @@ type SegmentWriter struct {
 
 func NewSegmentWriter(path string, segment *inmem.Segment) *SegmentWriter {
 
-	//TODO check for segment state
-
-	sw := &SegmentWriter{
-		segment: segment,
-		path:    path,
-	}
-
-	sw.log = log.With().
+	log := log.With().
 		Str("component", "SegmentWriter").
 		Str("segmentID", segment.ID).
 		Str("indexName", segment.IndexInfo.Name).
 		Logger()
+
+	if segment.State != inmem.InMem {
+		log.Panic().Msgf("invalid segment state [%s]", segment.State)
+	}
+
+	sw := &SegmentWriter{
+		segment: segment,
+		path:    path,
+		log:     log,
+	}
 
 	return sw
 
@@ -45,43 +49,36 @@ func (sw *SegmentWriter) Write() error {
 
 	sw.log.Info().Msg("Starting to write segment")
 
-	idx := sw.createAndLoadFieldIdx()
+	// Columns offsets.
+	colOffset := make([][]int, len(sw.segment.Columns))
 
-	err := sw.writePosting()
+	// TS column must be be processed first because it could
+	// be sorted and and in this case it will determine the order
+	// of the rest of segment columns.
+
+	tsColumn := sw.segment.Columns[0].(*inmem.ColumnTimeStamp)
+
+	var err error
+
+	colOffset[0], err = sw.writeTSColumn(tsColumn)
 
 	if err != nil {
 		return err
 	}
 
-	// write all idx to disk
-
-	for i, field := range sw.segment.IndexInfo.Fields {
-
-		if field.Index {
-
-			switch t := idx[i].(type) {
-			case *inmem.BTrie:
-				err := sw.writeBtrie(field, idx[i].(*inmem.BTrie))
-				if err != nil {
-					return err
-				}
-			case *inmem.SkipList:
-				err := sw.writeSL(field, idx[i].(*inmem.SkipList))
-				if err != nil {
-					return err
-				}
-			default:
-				// TODO:  in the case of ts this is nil, FIX IT
-				if t != nil {
-					sw.log.Panic().
-						Str("index", sw.segment.IndexInfo.Name).
-						Str("segmentID", sw.segment.ID).
-						Msgf("Unknown index type: %T", t)
-
-				}
-			}
+	for i, col := range sw.segment.Columns[1:] {
+		col.SetSortMap(tsColumn.SortMap())
+		colOffset[i], err = sw.writeColumn(col)
+		if err != nil {
+			return err
 		}
+	}
 
+	// Write EventID --> offset idx
+	err = sw.writeRowIndex(colOffset)
+
+	if err != nil {
+		return err
 	}
 
 	err = sw.writeSegmentInfo()
@@ -92,7 +89,264 @@ func (sw *SegmentWriter) Write() error {
 
 	return nil
 
+	/*
+
+		idx := sw.createAndLoadFieldIdx()
+
+		err := sw.writePosting()
+
+		if err != nil {
+			return err
+		}
+
+		// write all idx to disk
+
+		for i, field := range sw.segment.IndexInfo.Fields {
+
+			if field.Index {
+
+				switch t := idx[i].(type) {
+				case *inmem.BTrie:
+					err := sw.writeBtrie(field, idx[i].(*inmem.BTrie))
+					if err != nil {
+						return err
+					}
+				case *inmem.SkipList:
+					err := sw.writeSL(field, idx[i].(*inmem.SkipList))
+					if err != nil {
+						return err
+					}
+				default:
+					// TODO:  in the case of ts this is nil, FIX IT
+					if t != nil {
+						sw.log.Panic().
+							Str("index", sw.segment.IndexInfo.Name).
+							Str("segmentID", sw.segment.ID).
+							Msgf("Unknown index type: %T", t)
+
+					}
+				}
+			}
+
+		}
+
+		err = sw.writeSegmentInfo()
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	*/
 }
+
+func (sw *SegmentWriter) writeColumn(col inmem.Column) ([]int, error) {
+	switch col.FieldInfo().Type {
+	case segment.FieldTypeInt:
+		return sw.writeColInt(col.(*inmem.ColumnInt))
+	case segment.FieldTypeKeyword:
+		return sw.writeColKeyword(col.(*inmem.ColumnStr))
+	case segment.FieldTypeText:
+		return sw.writeColText(col.(*inmem.ColumnStr))
+	case segment.FieldTypeFloat:
+	// TODO
+	default:
+		sw.log.Panic().Msgf("invalid column type [%v]", col.FieldInfo().Type)
+	}
+	return nil, nil
+}
+
+func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) ([]int, error) {
+
+	log := sw.log.With().Str("column", tsCol.FieldInfo().Name).Logger()
+
+	if !tsCol.Sorted() {
+		log.Debug().Msg("Sorting column")
+		tsCol.Sort()
+	}
+
+	// TODO Replace by a compressed representation.
+
+	f := filepath.Join(sw.path, tsCol.FieldInfo().Name+colExt)
+
+	bw, err := io.NewBinaryWriter(f)
+
+	if err != nil {
+		return nil, err
+	}
+
+	offset := make([]int, tsCol.Size())
+
+	for i := 0; i < tsCol.Size(); i++ {
+		offset[i] = bw.Offset
+		err := bw.WriteVarInt(tsCol.Get(i))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return offset, nil
+
+}
+
+func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) ([]int, error) {
+
+	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
+
+	// TODO add indexing.
+
+	// TODO Replace by a compressed representation.
+
+	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+
+	bw, err := io.NewBinaryWriter(f)
+
+	if err != nil {
+		return nil, err
+	}
+
+	offset := make([]int, col.Size())
+
+	for i := 0; i < col.Size(); i++ {
+		offset[i] = bw.Offset
+		err := bw.WriteVarInt(col.Get(i))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return offset, nil
+
+}
+
+func (sw *SegmentWriter) writeColKeyword(col *inmem.ColumnStr) ([]int, error) {
+
+	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
+
+	// TODO: optimization: if the column is not indexed we don't need a
+	//       posting list.
+	posting := inmem.NewPostingStore()
+
+	trie := sw.buildTrie(col, posting)
+
+	// now that we have the column cardinality ( from the btrie)  and the
+	// column size we can chosee to write the column dictionary encoded or raw.
+
+	// TODO Replace by a compressed representation.
+
+	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+
+	bw, err := io.NewBinaryWriter(f)
+
+	if err != nil {
+		return nil, err
+	}
+
+	offset := make([]int, col.Size())
+
+	for i := 0; i < col.Size(); i++ {
+		offset[i] = bw.Offset
+		err := bw.WriteString(col.Get(i))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if col.FieldInfo().Index {
+
+		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WritePosting(f, posting)
+		if err != nil {
+			return nil, err
+		}
+
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WriteTrie(f, trie)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return offset, nil
+
+}
+
+func (sw *SegmentWriter) buildTrie(col *inmem.ColumnStr, posting *inmem.PostingStore) *inmem.BTrie {
+	trie := inmem.NewBtrie(posting)
+	for i := 0; i < col.Size(); i++ {
+		trie.Add(col.Get(i), uint32(i))
+	}
+	return trie
+}
+
+func (sw *SegmentWriter) writeColText(col *inmem.ColumnStr) ([]int, error) {
+
+	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
+
+	posting := inmem.NewPostingStore()
+
+	trie := inmem.NewBtrie(posting)
+
+	// TODO Replace by a compressed representation.
+
+	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+
+	bw, err := io.NewBinaryWriter(f)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tokenizer := text.NewTokenizer()
+
+	offset := make([]int, col.Size())
+
+	for i := 0; i < col.Size(); i++ {
+		offset[i] = bw.Offset
+		s := col.Get(i)
+		err := bw.WriteString(s)
+		if err != nil {
+			return nil, err
+		}
+		if col.FieldInfo().Index {
+			tokens := tokenizer.Tokenize(s)
+			for _, token := range tokens {
+				trie.Add(token, uint32(i))
+			}
+		}
+	}
+
+	if col.FieldInfo().Index {
+
+		f = filepath.Join(sw.path, col.FieldInfo().Name+posExt)
+
+		err = WritePosting(f, posting)
+		if err != nil {
+			return nil, err
+		}
+
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WriteTrie(f, trie)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return offset, nil
+
+}
+
+func (sw *SegmentWriter) writeRowIndex([][]int) error {
+	//TODO: implement
+	return nil
+}
+
+/*
 
 func byTs(a, b interface{}) bool {
 	return a.(segment.Event)[tsField].(uint64) < b.(segment.Event)[tsField].(uint64)
@@ -208,7 +462,7 @@ func (sw *SegmentWriter) writeBtrie(field *segment.FieldInfo, btrie *inmem.BTrie
 
 	log.Debug().Msg("writing btrie index")
 
-	writer, err := NewTrieWriter(fileName)
+	writer, err := newTrieWriter(fileName)
 
 	if err != nil {
 		sw.log.Error().
@@ -258,6 +512,8 @@ func (sw *SegmentWriter) writeSL(field *segment.FieldInfo, sl *inmem.SkipList) e
 	return nil
 
 }
+
+*/
 
 func (sw *SegmentWriter) writeSegmentInfo() error {
 
@@ -318,7 +574,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	// segment stats.
 
 	// Event count
-	err = bw.WriteVarUInt32(sw.segment.EventID)
+	err = bw.WriteVarUInt32(sw.segment.EventCount)
 
 	if err != nil {
 		return err
@@ -333,5 +589,12 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	return nil
 
 	// TODO add field cardinality, max/min TS and SegmentID
+
+}
+
+func WriteSegment(path string, segment *inmem.Segment) error {
+
+	sw := NewSegmentWriter(path, segment)
+	return sw.Write()
 
 }

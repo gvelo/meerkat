@@ -9,19 +9,17 @@ type Column interface {
 	Size() int
 	FieldInfo() *segment.FieldInfo
 	Add(value interface{})
+	SetSortMap(sMap []int)
 }
 
 type ColumnInt struct {
 	data  []int // TODO: use a buffer pool.
 	fInfo *segment.FieldInfo
+	sMap  []int
 }
 
 func (c *ColumnInt) Add(value interface{}) {
 	c.data = append(c.data, value.(int))
-}
-
-func (c *ColumnInt) Get(idx int) int {
-	return c.data[idx]
 }
 
 func (c *ColumnInt) Size() int {
@@ -32,11 +30,24 @@ func (c *ColumnInt) FieldInfo() *segment.FieldInfo {
 	return c.fInfo
 }
 
+func (c *ColumnInt) SetSortMap(sMap []int) {
+	c.sMap = sMap
+}
+
+func (c *ColumnInt) Get(idx int) int {
+	if c.sMap != nil {
+		return c.data[c.sMap[idx]]
+	} else {
+		return c.data[idx]
+	}
+}
+
 type ColumnTimeStamp struct {
-	data   []int // TODO: use a buffer pool.
-	prev   int
-	sorted bool
-	fInfo  *segment.FieldInfo
+	data    []int // TODO: use a buffer pool.
+	prev    int
+	sorted  bool
+	fInfo   *segment.FieldInfo
+	sortMap []int
 }
 
 func (c *ColumnTimeStamp) Add(value interface{}) {
@@ -65,10 +76,14 @@ func (c *ColumnTimeStamp) Sorted() bool {
 
 func (c *ColumnTimeStamp) Sort() {
 	// TODO Timsort the columnt.
+	c.sorted = true
 }
 
-func (c *ColumnTimeStamp) Pos(i int) int {
-	return 0
+func (c *ColumnTimeStamp) SortMap() []int {
+	return c.sortMap
+}
+func (c *ColumnTimeStamp) SetSortMap(sMap []int) {
+	// do nothing, ts columns are already sorted
 }
 
 func (c *ColumnTimeStamp) First() int {
@@ -86,6 +101,7 @@ func (c *ColumnTimeStamp) FieldInfo() *segment.FieldInfo {
 type ColumnStr struct {
 	data  []string // TODO: use a buffer pool.
 	fInfo *segment.FieldInfo
+	sMap  []int
 }
 
 func (c *ColumnStr) Add(value interface{}) {
@@ -93,7 +109,11 @@ func (c *ColumnStr) Add(value interface{}) {
 }
 
 func (c *ColumnStr) Get(idx int) string {
-	return c.data[idx]
+	if c.sMap != nil {
+		return c.data[c.sMap[idx]]
+	} else {
+		return c.data[idx]
+	}
 }
 
 func (c *ColumnStr) Size() int {
@@ -102,6 +122,10 @@ func (c *ColumnStr) Size() int {
 
 func (c *ColumnStr) FieldInfo() *segment.FieldInfo {
 	return c.fInfo
+}
+
+func (c *ColumnStr) SetSortMap(sMap []int) {
+	c.sMap = sMap
 }
 
 func NewColumnt(fInfo *segment.FieldInfo) Column {

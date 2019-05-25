@@ -19,6 +19,7 @@ func ReadPostingStore(path string) (*ondsk.PostingStore, error) {
 	fileType, err := br.ReadHeader()
 
 	if fileType != io.PostingListV1 {
+		file.UnMap()
 		return nil, errors.New("invalid file type")
 	}
 
