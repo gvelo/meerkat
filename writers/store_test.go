@@ -1,44 +1,49 @@
 package writers
 
-/*
+import (
+	"eventdb/segment"
+	"eventdb/segment/inmem"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
+)
+
 func getFieldsInfo() *segment.IndexInfo {
 
-	fieldInfo := make([]*segment.FieldInfo, 5)
-
-	fieldInfo[0] = &segment.FieldInfo{Type: segment.FieldTypeTimestamp, Name: "ts"}
-	fieldInfo[1] = &segment.FieldInfo{Type: segment.FieldTypeText, Name: "msg"}
-	fieldInfo[2] = &segment.FieldInfo{Type: segment.FieldTypeKeyword, Name: "source"}
-	fieldInfo[3] = &segment.FieldInfo{Type: segment.FieldTypeInt, Name: "num1"}
-	fieldInfo[4] = &segment.FieldInfo{Type: segment.FieldTypeInt, Name: "num2"}
-
-	return &segment.IndexInfo{Fields: fieldInfo}
+	ii := segment.NewIndexInfo("index")
+	ii.AddField("msg", segment.FieldTypeText, true)
+	ii.AddField("source", segment.FieldTypeKeyword, true)
+	ii.AddField("num1", segment.FieldTypeInt, true)
+	ii.AddField("num2", segment.FieldTypeFloat, true)
+	return ii
 }
 
 func getEvents() []segment.Event {
 	return []segment.Event{{
-		"ts":     uint64(time.Now().Nanosecond()),
+		"_time":  int(time.Now().Nanosecond()),
 		"source": "log",
 		"msg":    "test message one",
-		"num1":   uint64(1),
-		"num2":   uint64(1.0),
+		"num1":   int(1),
+		"num2":   float64(1.0),
 	}, {
-		"ts":     uint64(time.Now().Nanosecond() + 1),
+		"_time":  int(time.Now().Nanosecond() + 1),
 		"source": "log",
 		"msg":    "test message two",
-		"num1":   uint64(2),
-		"num2":   uint64(2.0),
+		"num1":   int(2),
+		"num2":   float64(2.0),
 	}, {
-		"ts":     uint64(time.Now().Nanosecond() + 2),
+		"_time":  int(time.Now().Nanosecond() + 2),
 		"source": "other",
 		"msg":    "test message three",
-		"num1":   uint64(3),
-		"num2":   uint64(3.0),
+		"num1":   int(3),
+		"num2":   float64(3.0),
 	}, {
-		"ts":     uint64(time.Now().Nanosecond() + 3),
+		"_time":  int(time.Now().Nanosecond() + 3),
 		"source": "sother",
 		"msg":    "test message four",
-		"num1":   uint64(1),
-		"num2":   uint64(1.0),
+		"num1":   int(1),
+		"num2":   float64(1.0),
 	}}
 }
 
@@ -46,30 +51,30 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 
 	a := assert.New(t)
 
-	p := "/tmp/store"
+	p := "/tmp/"
+
+	indexInfo := getFieldsInfo()
+	writeChan := make(chan *inmem.Segment, 100)
+	segment := inmem.NewSegment(indexInfo, "123456", writeChan)
 
 	start := time.Now()
-	offsets, err := WriteStore(p, getEvents(), getFieldsInfo(), 100)
-	log.Println(fmt.Sprintf("offsets W %v", offsets))
-	if err != nil {
-		t.Fail()
+	for _, e := range getEvents() {
+		segment.Add(e)
 	}
-
-	t.Logf("write events took %v ", time.Since(start))
-	a.Nil(err)
-	a.NotNil(offsets)
+	t.Logf("Index events took %v ", time.Since(start))
 
 	start = time.Now()
-
-	ds, _ := readers.ReadStore(p+".idx", getFieldsInfo(), 100)
-	e, err := ds.Lookup(2)
+	err := WriteSegment(p, segment)
 	if err != nil {
-		t.Fail()
+		a.Fail("Failed")
 	}
-	t.Logf("find event took idx %v ", time.Since(start))
-	a.NotNil(e)
-	a.True(len(e) == 5)
-	a.Equal("test message three", e["msg"])
+	t.Logf("Write events took %v ", time.Since(start))
+
+	start = time.Now()
+	if err != nil {
+		a.Fail("Failed")
+	}
+	t.Logf("Write events took %v ", time.Since(start))
 
 }
 
@@ -88,6 +93,7 @@ func createEvents(num int) []segment.Event {
 	return evts
 }
 
+/*
 func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	a := assert.New(t)
 	p := "/tmp/store"
@@ -205,4 +211,5 @@ func testFindEvent(t *testing.T, p string, id int, create int, ixl int) segment.
 	t.Logf("read event took %v ", time.Since(start))
 	return e
 }
+
 */

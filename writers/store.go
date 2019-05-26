@@ -4,75 +4,9 @@ import (
 	"eventdb/io"
 )
 
-/*
-func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]int, error) {
-
-	iOffsets := make([][]int, len(ii.Fields))
-
-	// for now, lets take the idx as the FieldId
-	for idx, info := range ii.Fields {
-
-		bw, err := io.NewBinaryWriter(name + "." + info.Name + binExt)
-
-		if err != nil {
-			return nil, err
-		}
-
-		defer bw.Close()
-
-		err = bw.WriteHeader(io.RowStoreV1)
-
-		if err != nil {
-			return nil, err
-		}
-
-		var max, min = evts[0][tsField].(uint64), evts[0][tsField].(uint64)
-
-		offsets := make([]int, len(evts))
-
-		for i, e := range evts {
-
-			if e[tsField].(uint64) > max {
-				max = e[tsField].(uint64)
-			}
-
-			if e[tsField].(uint64) < min {
-				min = e[tsField].(uint64)
-			}
-
-			offsets[i] = uint64(bw.Offset)
-			// it doesn't have any value
-			if i > 1 && offsets[i-1] == offsets[i] {
-				// sets 0 offset
-				offsets[i] = 0
-			}
-
-			v, ok := e[info.Name]
-			if ok { // got it
-				bw.WriteVarUint64(uint64(i)) // # id
-				bw.WriteValue(v, info)
-			}
-
-		}
-
-		o := bw.Offset
-		bw.WriteVarUint64(uint64(min))
-		bw.WriteVarUint64(uint64(max))
-		bw.WriteVarUint64(uint64(len(evts)))
-		bw.WriteFixedUint64(uint64(o))
-
-		iOffsets[idx] = offsets
-	}
-
-	WriteStoreIdx(name, iOffsets, ixl)
-
-	return iOffsets, nil
-}
-*/
-
 func WriteStoreIdx(name string, offsets [][]int, ixl int) error {
 
-	bw, err := io.NewBinaryWriter(name + idxExt)
+	bw, err := io.NewBinaryWriter(name)
 
 	if err != nil {
 		return err

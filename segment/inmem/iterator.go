@@ -2,8 +2,6 @@ package inmem
 
 import (
 	"errors"
-	"fmt"
-	"log"
 )
 
 // Iterator is used for lookup and range operations on skiplist
@@ -23,7 +21,6 @@ func (s *SkipList) NewIterator(lvl int) *Iterator {
 		lvl:   lvl,
 		valid: true,
 	}
-	log.Printf(fmt.Sprintf("Creating It { %v }", it))
 	return it
 }
 

@@ -69,7 +69,7 @@ func (sw *SegmentWriter) Write() error {
 
 	for i, col := range sw.segment.Columns[1:] {
 		col.SetSortMap(tsColumn.SortMap())
-		colOffset[i], err = sw.writeColumn(col)
+		colOffset[i+1], err = sw.writeColumn(col)
 		if err != nil {
 			return err
 		}
@@ -206,11 +206,11 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) ([]int, error) {
 		if n.UserData == nil {
 			n.UserData = posting.NewPostingList(uint32(v.(int)))
 		} else {
-			n.UserData.(inmem.PostingList).Bitmap.Add(uint32(v.(int)))
+			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
 		}
-		return n
+		return n.UserData
 	}
-	sl := inmem.NewSkipList(posting, u, inmem.Uint64Comparator{})
+	sl := inmem.NewSkipList(posting, u, inmem.IntComparator{})
 
 	// TODO Replace by a compressed representation.
 
@@ -266,9 +266,9 @@ func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) ([]int, error) {
 		if n.UserData == nil {
 			n.UserData = posting.NewPostingList(uint32(v.(int)))
 		} else {
-			n.UserData.(inmem.PostingList).Bitmap.Add(uint32(v.(int)))
+			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
 		}
-		return n
+		return n.UserData
 	}
 	sl := inmem.NewSkipList(posting, u, inmem.Float64Comparator{})
 
