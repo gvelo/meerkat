@@ -17,7 +17,7 @@ func setUpPostingListStore(qty int) (*inmem.SkipList, *inmem.PostingStore) {
 		sl.InsertOrUpdate(c, p)
 		c += 1.0
 	}
-	WritePosting("/tmp/skiplistposting-test.bin", s.Store)
+	WritePosting("/tmp/skiplistposting-test.bin", s)
 	return sl, s
 }
 
@@ -36,7 +36,7 @@ func TestSkipList_Read1(t *testing.T) {
 
 	start := time.Now()
 	sl, st := setUpPostingListStore(200)
-	err := WritePosting(sp, st.Store)
+	err := WritePosting(sp, st)
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
@@ -71,7 +71,7 @@ func TestSkipList_Read6(t *testing.T) {
 
 	start := time.Now()
 	sl, st := setUpPostingListStore(200)
-	err := WritePosting(sp, st.Store)
+	err := WritePosting(sp, st)
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
@@ -105,7 +105,7 @@ func TestSkipList_Read100(t *testing.T) {
 
 	start := time.Now()
 	sl, st := setUpPostingListStore(100)
-	err := WritePosting(sp, st.Store)
+	err := WritePosting(sp, st)
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
@@ -139,7 +139,7 @@ func TestSkipList_Read200(t *testing.T) {
 
 	start := time.Now()
 	sl, st := setUpPostingListStore(200)
-	err := WritePosting(sp, st.Store)
+	err := WritePosting(sp, st)
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
@@ -174,7 +174,7 @@ func TestSkipList_Read1M(t *testing.T) {
 
 	start := time.Now()
 	sl, st := setUpPostingListStore(1000000)
-	err := WritePosting(sp, st.Store)
+	err := WritePosting(sp, st)
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()

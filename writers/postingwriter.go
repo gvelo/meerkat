@@ -5,7 +5,7 @@ import (
 	"eventdb/segment/inmem"
 )
 
-func WritePosting(name string, posting []*inmem.PostingList) error {
+func WritePosting(name string, posting *inmem.PostingStore) error {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -21,7 +21,7 @@ func WritePosting(name string, posting []*inmem.PostingList) error {
 		return err
 	}
 
-	for _, p := range posting {
+	for _, p := range posting.Store {
 		p.Bitmap.RunOptimize()
 		p.Offset = bw.Offset
 		_, err := p.Bitmap.WriteTo(bw)

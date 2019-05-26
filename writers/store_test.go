@@ -1,15 +1,6 @@
 package writers
 
-import (
-	"eventdb/readers"
-	"eventdb/segment"
-	"fmt"
-	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
-	"time"
-)
-
+/*
 func getFieldsInfo() *segment.IndexInfo {
 
 	fieldInfo := make([]*segment.FieldInfo, 5)
@@ -214,3 +205,4 @@ func testFindEvent(t *testing.T, p string, id int, create int, ixl int) segment.
 	t.Logf("read event took %v ", time.Since(start))
 	return e
 }
+*/

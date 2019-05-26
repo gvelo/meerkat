@@ -17,7 +17,6 @@ func TestSegmentWriterReader(t *testing.T) {
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
-	indexInfo.AddField("ts", segment.FieldTypeTimestamp, false)
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
 	indexInfo.AddField("float", segment.FieldTypeFloat, true)
 
@@ -57,13 +56,21 @@ func TestSegmentWriterReader(t *testing.T) {
 
 }
 
+func findColumnByName(columns []inmem.Column, name string) inmem.Column {
+	for _, c := range columns {
+		if c.FieldInfo().Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
 func TestSegmentSorted(t *testing.T) {
 
 	assert := assert.New(t)
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
-	indexInfo.AddField("ts", segment.FieldTypeTimestamp, false)
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
 	indexInfo.AddField("float", segment.FieldTypeFloat, true)
 
@@ -80,11 +87,12 @@ func TestSegmentSorted(t *testing.T) {
 
 	sw := NewSegmentWriter("/tmp", s)
 
-	assert.False(isSortedByTs(s.FieldStorage))
+	findColumnByName(sw.segment.Columns, "_time")
+	//assert.False(isSortedByTs(c.))
 
 	err := sw.Write()
 
-	assert.True(isSortedByTs(s.FieldStorage))
+	//assert.True(isSortedByTs())
 
 	if !assert.NoErrorf(err, "an error occurred while writing the segment: %v", err) {
 		return
@@ -94,10 +102,10 @@ func TestSegmentSorted(t *testing.T) {
 func isSortedByTs(events []segment.Event) bool {
 	var ant uint64 = 0
 	for _, x := range events {
-		if x["ts"].(uint64) < ant {
+		if x["_time"].(uint64) < ant {
 			return false
 		} else {
-			ant = x["ts"].(uint64)
+			ant = x["_time"].(uint64)
 		}
 	}
 	return true

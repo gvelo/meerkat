@@ -19,6 +19,7 @@ func ReadTrie(path string) (*ondsk.BTrie, error) {
 	fType, err := br.ReadHeader()
 
 	if fType != io.StringIndexV1 {
+		file.UnMap()
 		return nil, errors.New("invalid file type")
 	}
 
@@ -27,6 +28,7 @@ func ReadTrie(path string) (*ondsk.BTrie, error) {
 	rootOffset, err := br.ReadFixed64()
 
 	if err != nil {
+		file.UnMap()
 		return nil, err
 	}
 

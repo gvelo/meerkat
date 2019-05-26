@@ -5,11 +5,11 @@ import (
 	"eventdb/segment/inmem"
 )
 
-type TrieWriter struct {
+type trieWriter struct {
 	bw *io.BinaryWriter
 }
 
-func NewTrieWriter(file string) (*TrieWriter, error) {
+func newTrieWriter(file string) (*trieWriter, error) {
 
 	bw, err := io.NewBinaryWriter(file)
 
@@ -17,13 +17,13 @@ func NewTrieWriter(file string) (*TrieWriter, error) {
 		return nil, err
 	}
 
-	return &TrieWriter{
+	return &trieWriter{
 		bw: bw,
 	}, nil
 
 }
 
-func (tw *TrieWriter) Write(trie *inmem.BTrie) error {
+func (tw *trieWriter) write(trie *inmem.BTrie) error {
 
 	err := tw.bw.WriteHeader(io.StringIndexV1)
 
@@ -43,7 +43,7 @@ func (tw *TrieWriter) Write(trie *inmem.BTrie) error {
 
 }
 
-func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
+func (tw *trieWriter) writeNode(node *inmem.Node) (int, error) {
 
 	// Write children first
 	for _, child := range node.Children {
@@ -117,6 +117,15 @@ func (tw *TrieWriter) writeNode(node *inmem.Node) (int, error) {
 
 }
 
-func (tw *TrieWriter) Close() error {
+func (tw *trieWriter) close() error {
 	return tw.bw.Close()
+}
+
+func WriteTrie(path string, trie *inmem.BTrie) error {
+	tw, err := newTrieWriter(path)
+	defer tw.close()
+	if err != nil {
+		return err
+	}
+	return tw.write(trie)
 }

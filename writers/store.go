@@ -2,14 +2,12 @@ package writers
 
 import (
 	"eventdb/io"
-	"eventdb/segment"
 )
 
-const tsField = "ts"
+/*
+func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]int, error) {
 
-func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]uint64, error) {
-
-	iOffsets := make([][]uint64, len(ii.Fields))
+	iOffsets := make([][]int, len(ii.Fields))
 
 	// for now, lets take the idx as the FieldId
 	for idx, info := range ii.Fields {
@@ -30,7 +28,7 @@ func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl in
 
 		var max, min = evts[0][tsField].(uint64), evts[0][tsField].(uint64)
 
-		offsets := make([]uint64, len(evts))
+		offsets := make([]int, len(evts))
 
 		for i, e := range evts {
 
@@ -70,8 +68,9 @@ func WriteStore(name string, evts []segment.Event, ii *segment.IndexInfo, ixl in
 
 	return iOffsets, nil
 }
+*/
 
-func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
+func WriteStoreIdx(name string, offsets [][]int, ixl int) error {
 
 	bw, err := io.NewBinaryWriter(name + idxExt)
 
@@ -97,7 +96,7 @@ func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
 	return nil
 }
 
-func writeLevel0(bw *io.BinaryWriter, offsets [][]uint64) ([]uint64, error) {
+func writeLevel0(bw *io.BinaryWriter, offsets [][]int) ([]uint64, error) {
 	o := make([]uint64, 0)
 
 	max := len(offsets[0])
@@ -111,7 +110,7 @@ func writeLevel0(bw *io.BinaryWriter, offsets [][]uint64) ([]uint64, error) {
 		o = append(o, uint64(bw.Offset))
 		bw.WriteVarUint64(uint64(i)) // # columns
 		for _, colOffsets := range offsets {
-			bw.WriteVarUint64(colOffsets[i])
+			bw.WriteVarUint64(uint64(colOffsets[i]))
 		}
 	}
 	return o, nil

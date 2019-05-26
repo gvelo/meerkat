@@ -19,7 +19,7 @@ func TestReadWritePosting(t *testing.T) {
 
 	file := "/tmp/posting.bin"
 
-	err := WritePosting(file, postingStore.Store)
+	err := WritePosting(file, postingStore)
 
 	if !assert.NoErrorf(err, "an error occurred while writing the posting list: %v", err) {
 		return
