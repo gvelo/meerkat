@@ -38,13 +38,33 @@ func (n *SLNode) Level() int {
 }
 
 func (n *SLNode) String() string {
-	return fmt.Sprintf("key: %d , level: %d , me: %p", n.key, n.level, &n)
+	return fmt.Sprintf("key: %v , level: %d , me: %p", n.key, n.level, &n)
 }
 
 type Comparator interface {
 	Compare(a interface{}, b interface{}) int
 	tailValue() interface{}
 	headValue() interface{}
+}
+
+type IntComparator struct{}
+
+func (c IntComparator) Compare(a interface{}, b interface{}) int {
+	if a.(int) < b.(int) {
+		return -1
+	}
+	if a.(int) > b.(int) {
+		return 1
+	}
+	return 0
+}
+
+func (c IntComparator) tailValue() interface{} {
+	return math.MaxInt64
+}
+
+func (c IntComparator) headValue() interface{} {
+	return math.MinInt64
 }
 
 type Uint64Comparator struct{}
@@ -58,9 +78,11 @@ func (c Uint64Comparator) Compare(a interface{}, b interface{}) int {
 	}
 	return 0
 }
+
 func (c Uint64Comparator) tailValue() interface{} {
 	return ^uint64(0)
 }
+
 func (c Uint64Comparator) headValue() interface{} {
 	return uint64(0)
 }
@@ -111,11 +133,11 @@ func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
 		panic("you should provide a comparator")
 	}
 
-	maxUint64 := c.tailValue()
-	minUint64 := c.headValue()
+	max := c.tailValue()
+	min := c.headValue()
 
-	var head = NewSLNode(minUint64, nil, maxLevel, Head)
-	var tail = NewSLNode(maxUint64, nil, maxLevel, Tail)
+	var head = NewSLNode(min, nil, maxLevel, Head)
+	var tail = NewSLNode(max, nil, maxLevel, Tail)
 
 	list := SkipList{maxLevel: maxLevel, p: p, head: head, tail: tail, level: 0, updateCallback: u, comparator: c, length: 0}
 

@@ -33,6 +33,8 @@ func WriteSkip(name string, sl *inmem.SkipList, ixl int) error {
 		switch it.Key().(type) {
 		case uint64:
 			key = float64(key.(uint64))
+		case int:
+			key = float64(key.(int))
 		case float64:
 			key = key.(float64)
 		}

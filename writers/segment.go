@@ -7,6 +7,7 @@ import (
 	"eventdb/text"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"math"
 	"path/filepath"
 )
 
@@ -68,7 +69,7 @@ func (sw *SegmentWriter) Write() error {
 
 	for i, col := range sw.segment.Columns[1:] {
 		col.SetSortMap(tsColumn.SortMap())
-		colOffset[i], err = sw.writeColumn(col)
+		colOffset[i+1], err = sw.writeColumn(col)
 		if err != nil {
 			return err
 		}
@@ -91,9 +92,14 @@ func (sw *SegmentWriter) Write() error {
 
 	/*
 
-		idx := sw.createAndLoadFieldIdx()
+			idx := sw.createAndLoadFieldIdx()
 
-		err := sw.writePosting()
+		err := sw.writePosting()err := sw.writeStore()
+		if err != nil {
+			return err
+		}
+
+		err = sw.writePosting()
 
 		if err != nil {
 			return err
@@ -136,7 +142,7 @@ func (sw *SegmentWriter) Write() error {
 			return err
 		}
 
-		return nil
+			return nil
 	*/
 }
 
@@ -149,7 +155,7 @@ func (sw *SegmentWriter) writeColumn(col inmem.Column) ([]int, error) {
 	case segment.FieldTypeText:
 		return sw.writeColText(col.(*inmem.ColumnStr))
 	case segment.FieldTypeFloat:
-	// TODO
+		return sw.writeColFloat(col.(*inmem.ColumnFloat))
 	default:
 		sw.log.Panic().Msgf("invalid column type [%v]", col.FieldInfo().Type)
 	}
@@ -193,7 +199,17 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) ([]int, error) {
 
 	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
 
-	// TODO add indexing.
+	posting := inmem.NewPostingStore()
+
+	var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
+		if n.UserData == nil {
+			n.UserData = posting.NewPostingList(uint32(v.(int)))
+		} else {
+			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
+		}
+		return n.UserData
+	}
+	sl := inmem.NewSkipList(posting, u, inmem.IntComparator{})
 
 	// TODO Replace by a compressed representation.
 
@@ -209,10 +225,91 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) ([]int, error) {
 
 	for i := 0; i < col.Size(); i++ {
 		offset[i] = bw.Offset
-		err := bw.WriteVarInt(col.Get(i))
+		x := col.Get(i)
+		err := bw.WriteVarInt(x)
+		sl.Add(x, i) // save val -> offsets
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if col.FieldInfo().Index {
+
+		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WritePosting(f, posting)
+		if err != nil {
+			return nil, err
+		}
+
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WriteSkip(f, sl, 100)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return offset, nil
+
+}
+
+func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) ([]int, error) {
+
+	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
+
+	posting := inmem.NewPostingStore()
+
+	var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
+		if n.UserData == nil {
+			n.UserData = posting.NewPostingList(uint32(v.(int)))
+		} else {
+			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
+		}
+		return n.UserData
+	}
+	sl := inmem.NewSkipList(posting, u, inmem.Float64Comparator{})
+
+	// TODO Replace by a compressed representation.
+
+	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+
+	bw, err := io.NewBinaryWriter(f)
+
+	if err != nil {
+		return nil, err
+	}
+
+	offset := make([]int, col.Size())
+
+	for i := 0; i < col.Size(); i++ {
+		offset[i] = bw.Offset
+		x := col.Get(i)
+		bits := math.Float64bits(x)
+		err := bw.WriteFixedUint64(bits)
+		sl.Add(x, i) // save val -> offsets
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if col.FieldInfo().Index {
+
+		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WritePosting(f, posting)
+		if err != nil {
+			return nil, err
+		}
+
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+
+		err = WriteSkip(f, sl, 100)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return offset, nil
@@ -341,9 +438,11 @@ func (sw *SegmentWriter) writeColText(col *inmem.ColumnStr) ([]int, error) {
 
 }
 
-func (sw *SegmentWriter) writeRowIndex([][]int) error {
-	//TODO: implement
-	return nil
+func (sw *SegmentWriter) writeRowIndex(offsets [][]int) error {
+
+	f := filepath.Join(sw.path, "Store"+idxExt)
+
+	return WriteStoreIdx(f, offsets, 100)
 }
 
 /*
@@ -389,7 +488,7 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 		}
 	}
 
-	timsort.Sort(sw.segment.FieldStorage, byTs)
+	inmem.Sort(sw.segment.FieldStorage, byTs)
 
 	for x, n := range sw.segment.FieldStorage {
 
@@ -401,15 +500,15 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 
 				case segment.FieldTypeInt:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(segment.Event)[info.Name].(uint64)
+					eventValue := n[info.Name].(uint64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeFloat:
 					idx := idx[i].(*inmem.SkipList)
-					eventValue := n.(segment.Event)[info.Name].(float64)
+					eventValue := n[info.Name].(float64)
 					idx.Add(eventValue, x)
 				case segment.FieldTypeKeyword:
 					idx := idx[i].(*inmem.BTrie)
-					eventValue := n.(segment.Event)[info.Name].(string)
+					eventValue := n[info.Name].(string)
 					idx.Add(eventValue, uint32(x))
 				case segment.FieldTypeText:
 					idx := idx[i].(*inmem.BTrie)
@@ -431,6 +530,23 @@ func (sw *SegmentWriter) createAndLoadFieldIdx() []interface{} {
 	}
 
 	return idx
+}
+
+func (sw *SegmentWriter) writeStore() error {
+
+	fileName := filepath.Join(sw.path, "store")
+
+	_, err := WriteStore(fileName, sw.segment.FieldStorage, sw.segment.IndexInfo, 100)
+
+	if err != nil {
+		sw.log.Error().
+			Err(err).
+			Msg("error writing posting list")
+		return errors.Wrapf(err, "error writing posting list segment=%v", sw.segment.ID)
+	}
+
+	return nil
+
 }
 
 func (sw *SegmentWriter) writePosting() error {

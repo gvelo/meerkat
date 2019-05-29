@@ -22,6 +22,10 @@ func (c *ColumnInt) Add(value interface{}) {
 	c.data = append(c.data, value.(int))
 }
 
+func (c *ColumnInt) Get(idx int) int {
+	return c.data[idx]
+}
+
 func (c *ColumnInt) Size() int {
 	return len(c.data)
 }
@@ -76,6 +80,12 @@ func (c *ColumnTimeStamp) Sorted() bool {
 
 func (c *ColumnTimeStamp) Sort() {
 	// TODO Timsort the columnt.
+	sort := func(a, b int) bool {
+		return a < b
+	}
+
+	Ints(c.data, sort)
+
 	c.sorted = true
 }
 
@@ -128,6 +138,36 @@ func (c *ColumnStr) SetSortMap(sMap []int) {
 	c.sMap = sMap
 }
 
+type ColumnFloat struct {
+	data  []float64 // TODO: use a buffer pool.
+	fInfo *segment.FieldInfo
+	sMap  []int
+}
+
+func (c *ColumnFloat) Add(value interface{}) {
+	c.data = append(c.data, value.(float64))
+}
+
+func (c *ColumnFloat) Get(idx int) float64 {
+	if c.sMap != nil {
+		return c.data[c.sMap[idx]]
+	} else {
+		return c.data[idx]
+	}
+}
+
+func (c *ColumnFloat) Size() int {
+	return len(c.data)
+}
+
+func (c *ColumnFloat) FieldInfo() *segment.FieldInfo {
+	return c.fInfo
+}
+
+func (c *ColumnFloat) SetSortMap(sMap []int) {
+	c.sMap = sMap
+}
+
 func NewColumnt(fInfo *segment.FieldInfo) Column {
 	switch fInfo.Type {
 	case segment.FieldTypeTimestamp:
@@ -150,6 +190,11 @@ func NewColumnt(fInfo *segment.FieldInfo) Column {
 	case segment.FieldTypeText:
 		return &ColumnStr{
 			data:  make([]string, 0),
+			fInfo: fInfo,
+		}
+	case segment.FieldTypeFloat:
+		return &ColumnFloat{
+			data:  make([]float64, 0),
 			fInfo: fInfo,
 		}
 	default:

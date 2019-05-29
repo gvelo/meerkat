@@ -2,78 +2,11 @@ package writers
 
 import (
 	"eventdb/io"
-	"eventdb/segment"
 )
 
-const tsField = "ts"
+func WriteStoreIdx(name string, offsets [][]int, ixl int) error {
 
-func WriteEvents(name string, evts []segment.Event, ii *segment.IndexInfo, ixl int) ([][]uint64, error) {
-
-	iOffsets := make([][]uint64, len(ii.Fields))
-
-	// for now, lets take the idx as the FieldId
-	for idx, info := range ii.Fields {
-
-		bw, err := io.NewBinaryWriter(name + "." + info.Name + binExt)
-
-		if err != nil {
-			return nil, err
-		}
-
-		defer bw.Close()
-
-		err = bw.WriteHeader(io.RowStoreV1)
-
-		if err != nil {
-			return nil, err
-		}
-
-		var max, min = evts[0][tsField].(uint64), evts[0][tsField].(uint64)
-
-		offsets := make([]uint64, len(evts))
-
-		for i, e := range evts {
-
-			if e[tsField].(uint64) > max {
-				max = e[tsField].(uint64)
-			}
-
-			if e[tsField].(uint64) < min {
-				min = e[tsField].(uint64)
-			}
-
-			offsets[i] = uint64(bw.Offset)
-			// it doesn't have any value
-			if i > 1 && offsets[i-1] == offsets[i] {
-				// sets 0 offset
-				offsets[i] = 0
-			}
-
-			v, ok := e[info.Name]
-			if ok { // got it
-				bw.WriteVarUint64(uint64(i)) // # id
-				bw.WriteValue(v, info)
-			}
-
-		}
-
-		o := bw.Offset
-		bw.WriteVarUint64(uint64(min))
-		bw.WriteVarUint64(uint64(max))
-		bw.WriteVarUint64(uint64(len(evts)))
-		bw.WriteFixedUint64(uint64(o))
-
-		iOffsets[idx] = offsets
-	}
-
-	WriteStoreIdx(name, iOffsets, ixl)
-
-	return iOffsets, nil
-}
-
-func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
-
-	bw, err := io.NewBinaryWriter(name + idxExt)
+	bw, err := io.NewBinaryWriter(name)
 
 	if err != nil {
 		return err
@@ -97,7 +30,7 @@ func WriteStoreIdx(name string, offsets [][]uint64, ixl int) error {
 	return nil
 }
 
-func writeLevel0(bw *io.BinaryWriter, offsets [][]uint64) ([]uint64, error) {
+func writeLevel0(bw *io.BinaryWriter, offsets [][]int) ([]uint64, error) {
 	o := make([]uint64, 0)
 
 	max := len(offsets[0])
@@ -111,7 +44,7 @@ func writeLevel0(bw *io.BinaryWriter, offsets [][]uint64) ([]uint64, error) {
 		o = append(o, uint64(bw.Offset))
 		bw.WriteVarUint64(uint64(i)) // # columns
 		for _, colOffsets := range offsets {
-			bw.WriteVarUint64(colOffsets[i])
+			bw.WriteVarUint64(uint64(colOffsets[i]))
 		}
 	}
 	return o, nil

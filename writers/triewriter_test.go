@@ -73,7 +73,7 @@ func TestBTrieReadWriter(t *testing.T) {
 
 	start = time.Now()
 
-	err := WritePosting("/tmp/posting-test.bin", ps.Store)
+	err := WritePosting("/tmp/posting-test.bin", ps)
 
 	if !assert.NoErrorf(err, "an error occurred while writing the posting list: %v", err) {
 		return
@@ -85,7 +85,7 @@ func TestBTrieReadWriter(t *testing.T) {
 
 	start = time.Now()
 
-	err = WriteTrie("/tmp/trie.bin",trie)
+	err = WriteTrie("/tmp/trie.bin", trie)
 
 	if !assert.NoErrorf(err, "an error occurred while writing trie to disk: %v", err) {
 		return
