@@ -22,10 +22,6 @@ func (c *ColumnInt) Add(value interface{}) {
 	c.data = append(c.data, value.(int))
 }
 
-func (c *ColumnInt) Get(idx int) int {
-	return c.data[idx]
-}
-
 func (c *ColumnInt) Size() int {
 	return len(c.data)
 }
@@ -79,7 +75,6 @@ func (c *ColumnTimeStamp) Sorted() bool {
 }
 
 func (c *ColumnTimeStamp) Sort() {
-	// TODO Timsort the columnt.
 	sort := func(a, b int) bool {
 		return a < b
 	}
