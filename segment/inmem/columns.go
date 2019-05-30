@@ -2,6 +2,7 @@ package inmem
 
 import (
 	"eventdb/segment"
+	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog/log"
 )
 
@@ -92,7 +93,7 @@ func (c *ColumnTimeStamp) Sort() {
 	for i := 0; i < len(c.data); i++ {
 		c.sortMap[i] = i
 	}
-	TimSort(c)
+	timsort.TimSort(c)
 	c.sorted = true
 }
 
