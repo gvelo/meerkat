@@ -57,8 +57,10 @@ func (c *ColumnTimeStamp) Add(value interface{}) {
 	if c.sorted && c.prev > v {
 		c.sorted = false
 	}
+
+	c.prev = v
+
 	c.data = append(c.data, v)
-	c.sortMap = append(c.sortMap, len(c.data))
 
 }
 
@@ -86,6 +88,10 @@ func (c *ColumnTimeStamp) Swap(i int, j int) {
 }
 
 func (c *ColumnTimeStamp) Sort() {
+	c.sortMap = make([]int, len(c.data))
+	for i := 0; i < len(c.data); i++ {
+		c.sortMap[i] = i
+	}
 	TimSort(c)
 	c.sorted = true
 }
@@ -173,11 +179,10 @@ func NewColumnt(fInfo *segment.FieldInfo) Column {
 	switch fInfo.Type {
 	case segment.FieldTypeTimestamp:
 		return &ColumnTimeStamp{
-			data:    make([]int, 0),
-			prev:    0,
-			sorted:  false,
-			fInfo:   fInfo,
-			sortMap: make([]int, 0),
+			data:   make([]int, 0),
+			prev:   0,
+			sorted: true,
+			fInfo:  fInfo,
 		}
 	case segment.FieldTypeInt:
 		return &ColumnInt{
