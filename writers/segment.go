@@ -200,16 +200,7 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) ([]int, error) {
 	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
 
 	posting := inmem.NewPostingStore()
-
-	var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
-		if n.UserData == nil {
-			n.UserData = posting.NewPostingList(uint32(v.(int)))
-		} else {
-			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
-		}
-		return n.UserData
-	}
-	sl := inmem.NewSkipList(posting, u, inmem.IntComparator{})
+	sl := inmem.NewSkipList(posting, inmem.IntComparator{})
 
 	// TODO Replace by a compressed representation.
 
@@ -260,16 +251,7 @@ func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) ([]int, error) {
 	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
 
 	posting := inmem.NewPostingStore()
-
-	var u inmem.OnUpdate = func(n *inmem.SLNode, v interface{}) interface{} {
-		if n.UserData == nil {
-			n.UserData = posting.NewPostingList(uint32(v.(int)))
-		} else {
-			n.UserData.(*inmem.PostingList).Bitmap.Add(uint32(v.(int)))
-		}
-		return n.UserData
-	}
-	sl := inmem.NewSkipList(posting, u, inmem.Float64Comparator{})
+	sl := inmem.NewSkipList(posting, inmem.Float64Comparator{})
 
 	// TODO Replace by a compressed representation.
 
