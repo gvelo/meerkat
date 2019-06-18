@@ -6,6 +6,7 @@ import (
 	"eventdb/segment/inmem"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -97,6 +98,31 @@ func TestSegmentSorted(t *testing.T) {
 	if !assert.NoErrorf(err, "an error occurred while writing the segment: %v", err) {
 		return
 	}
+}
+
+func TestColumnWriteSorted(t *testing.T) {
+
+	indexInfo := segment.NewIndexInfo("test-index")
+	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
+
+	s := inmem.NewSegment(indexInfo, "123456", nil)
+
+	for i := 0; i < 100; i++ {
+		e := make(segment.Event)
+		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
+		e["mun1"] = i
+
+		s.Add(e)
+	}
+
+	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
+
+	sw.Write()
+
+	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
+
+	log.Printf("%v", segment)
+
 }
 
 func isSortedByTs(events []segment.Event) bool {

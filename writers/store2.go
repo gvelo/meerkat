@@ -1,11 +1,11 @@
 package writers
 
+/*
 import (
 	"eventdb/io"
-	"eventdb/segment/inmem"
 )
 
-func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor, ixl int) error {
+func WriteStoreIdx(name string, offsets [][]int, ixl int) error {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -31,18 +31,22 @@ func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor, ixl int) error 
 	return nil
 }
 
-func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor) ([]uint64, error) {
+func writeLevel0(bw *io.BinaryWriter, offsets [][]int) ([]uint64, error) {
 	o := make([]uint64, 0)
 
-	max := len(offsets)
+	max := len(offsets[0])
+	for i := 1; i < len(offsets); i++ {
+		if max < len(offsets[i]) {
+			max = len(offsets[i])
+		}
+	}
 
 	for i := 0; i < max; i++ {
 		o = append(o, uint64(bw.Offset))
-		//bw.WriteVarUint64(uint64(i)) // # columns
-		//for _, colOffsets := range offsets {
-		bw.WriteVarUint64(uint64(offsets[i].StartID))
-		bw.WriteVarUint64(uint64(offsets[i].Offset))
-		//}
+		bw.WriteVarUint64(uint64(i)) // # columns
+		for _, colOffsets := range offsets {
+			bw.WriteVarUint64(uint64(colOffsets[i]))
+		}
 	}
 	return o, nil
 }
@@ -76,3 +80,4 @@ func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lv
 	lastOffset = offset
 	return processLevel(bw, nl, ns, lvl+1, ixl, ts, offset)
 }
+*/

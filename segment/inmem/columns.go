@@ -4,6 +4,7 @@ import (
 	"eventdb/segment"
 	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog/log"
+	"reflect"
 )
 
 type Column interface {
@@ -21,6 +22,10 @@ type ColumnInt struct {
 
 func (c *ColumnInt) Add(value interface{}) {
 	c.data = append(c.data, value.(int))
+}
+
+func (c *ColumnInt) DataType() reflect.Type {
+	return reflect.TypeOf(c.data)
 }
 
 func (c *ColumnInt) Size() int {
@@ -53,7 +58,13 @@ type ColumnTimeStamp struct {
 
 func (c *ColumnTimeStamp) Add(value interface{}) {
 
-	v := value.(int)
+	var v int
+	switch value.(type) {
+	case uint64:
+		v = int(value.(uint64))
+	default:
+		v = value.(int)
+	}
 
 	if c.sorted && c.prev > v {
 		c.sorted = false
@@ -80,9 +91,11 @@ func (c *ColumnTimeStamp) Sorted() bool {
 func (c *ColumnTimeStamp) Len() int {
 	return len(c.data)
 }
+
 func (c *ColumnTimeStamp) Less(i int, j int) bool {
 	return c.data[i] < c.data[j]
 }
+
 func (c *ColumnTimeStamp) Swap(i int, j int) {
 	c.data[i], c.data[j] = c.data[j], c.data[i]
 	c.sortMap[i], c.sortMap[j] = c.sortMap[j], c.sortMap[i]

@@ -30,7 +30,7 @@ func WriteSkip(name string, sl *inmem.SkipList, ixl int) error {
 		// TODO: FIX copio las claves, puede ocupar mucho...
 		// horrible como hago?
 		var key = it.Key()
-		switch it.Key().(type) {
+		switch key.(type) {
 		case uint64:
 			key = float64(key.(uint64))
 		case int:

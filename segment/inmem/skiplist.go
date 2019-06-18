@@ -351,7 +351,7 @@ func (i *Iterator) Next() *SLNode {
 	return i.curr
 }
 
-// Get next item Item in Level
+// Get next key Item in Level
 func (i *Iterator) Key() interface{} {
 	return i.curr.key
 }

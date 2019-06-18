@@ -138,7 +138,7 @@ func (sr *segmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, er
 			case segment.FieldTypeFloat:
 				index, err = ReadSkipList(fileName)
 			case segment.FieldTypeTimestamp:
-				//index, err = ReadTrie(fileName)
+				index, err = ReadSkipList(fileName)
 			default:
 				sr.log.Panic().
 					Str("field", fieldInfo.Name).

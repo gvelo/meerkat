@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"eventdb/segment"
+	"eventdb/segment/inmem"
 	"fmt"
 	"io"
 	"math"
@@ -87,6 +88,35 @@ func (br *BinaryWriter) WriteHeader(fileType FileType) error {
 	}
 
 	err = br.WriteByte(byte(fileType))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (br *BinaryWriter) WritePageHeader(page *inmem.Page) error {
+
+	err := br.WriteByte(byte(page.Enc))
+
+	if err != nil {
+		return err
+	}
+
+	err = br.WriteVarInt(page.Total)
+
+	if err != nil {
+		return err
+	}
+
+	err = br.WriteVarInt(page.StartID)
+
+	if err != nil {
+		return err
+	}
+
+	err = br.WriteVarInt(page.PayloadSize)
 
 	if err != nil {
 		return err
