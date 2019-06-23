@@ -1,9 +1,9 @@
 package main
 
 import (
-	"eventdb/readers"
 	"flag"
 	"fmt"
+	"meerkat/internal/storage/readers"
 	"os"
 )
 
