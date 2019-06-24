@@ -1,14 +1,26 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package readers
 
 import (
-	"errors"
+	"meerkat/internal/config"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment"
 	"meerkat/internal/storage/segment/ondsk"
-	"strings"
 )
 
-func ReadStore(path string, ii *segment.IndexInfo, ixl int) (*ondsk.OnDiskStore, error) {
+func ReadColumnIdx(path string, info *segment.FieldInfo) (*ondsk.OnDiskColumnIdx, error) {
 
 	file, err := io.MMap(path)
 
@@ -17,43 +29,23 @@ func ReadStore(path string, ii *segment.IndexInfo, ixl int) (*ondsk.OnDiskStore,
 	}
 
 	br := file.NewBinaryReader()
+	fileType, _ := br.ReadHeader()
 
-	fType, err := br.ReadHeader()
-
-	if fType != io.RowStoreIDXV1 {
-		return nil, errors.New("invalid file type")
+	if fileType != io.RowStoreIDXV1 {
+		panic("invalid file type")
 	}
 
-	br.Offset = br.Size - 16
-	rootOffset, _ := br.ReadFixed64()
-	lvl, _ := br.ReadFixed64()
+	br.Offset = br.Size - 16 // last number wrote.
+	ro, err := br.ReadFixed64()
+	lvl, err := br.ReadFixed64()
 
-	if err != nil {
-		return nil, err
-	}
+	return &ondsk.OnDiskColumnIdx{Br: br, Fi: info, RootOffset: int(ro), Ixl: config.SkipLevelSize, Lvl: int(lvl)}, err
 
-	cols := make([]*ondsk.OnDiskColumn, 0)
-
-	for _, fi := range ii.Fields {
-		col, _ := ReadColumn(path, fi)
-		cols = append(cols, col)
-	}
-
-	return &ondsk.OnDiskStore{
-		Br:         br,
-		RootOffset: int(rootOffset),
-		IndexInfo:  ii,
-		Lvl:        int(lvl),
-		Ixl:        ixl,
-		Columns:    cols,
-	}, nil
 }
 
 func ReadColumn(path string, info *segment.FieldInfo) (*ondsk.OnDiskColumn, error) {
 
-	n := strings.Replace(path, idxExt, "."+info.Name+binExt, 1)
-
-	file, err := io.MMap(n)
+	file, err := io.MMap(path)
 
 	if err != nil {
 		return nil, err

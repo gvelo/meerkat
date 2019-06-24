@@ -1,3 +1,16 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package inmem
 
 import (
@@ -23,6 +36,70 @@ type SLNode struct {
 	t        NodeType
 }
 
+type SkipListInterface interface {
+	Compare(a interface{}, b interface{}) int
+	TailValue() interface{}
+	HeadValue() interface{}
+}
+
+type IntInterface struct{}
+
+func (c IntInterface) Compare(a interface{}, b interface{}) int {
+	if a.(int) < b.(int) {
+		return -1
+	}
+	if a.(int) > b.(int) {
+		return 1
+	}
+	return 0
+}
+
+func (c IntInterface) TailValue() interface{} {
+	return math.MaxInt64
+}
+
+func (c IntInterface) HeadValue() interface{} {
+	return math.MinInt64
+}
+
+type Uint64Interface struct{}
+
+func (c Uint64Interface) Compare(a interface{}, b interface{}) int {
+	if a.(uint64) < b.(uint64) {
+		return -1
+	}
+	if a.(uint64) > b.(uint64) {
+		return 1
+	}
+	return 0
+}
+
+func (c Uint64Interface) TailValue() interface{} {
+	return ^uint64(0)
+}
+
+func (c Uint64Interface) HeadValue() interface{} {
+	return uint64(0)
+}
+
+type Float64Interface struct{}
+
+func (c Float64Interface) Compare(a interface{}, b interface{}) int {
+	if a.(float64) < b.(float64) {
+		return -1
+	}
+	if a.(float64) > b.(float64) {
+		return 1
+	}
+	return 0
+}
+func (c Float64Interface) TailValue() interface{} {
+	return math.MaxFloat64
+}
+func (c Float64Interface) HeadValue() interface{} {
+	return math.MaxFloat64 * -1
+}
+
 func NewSLNode(k interface{}, v interface{}, l int, t NodeType) *SLNode {
 
 	forward := make([]*SLNode, l)
@@ -41,70 +118,6 @@ func (n *SLNode) String() string {
 	return fmt.Sprintf("key: %v , level: %d , me: %p", n.key, n.level, &n)
 }
 
-type Comparator interface {
-	Compare(a interface{}, b interface{}) int
-	tailValue() interface{}
-	headValue() interface{}
-}
-
-type IntComparator struct{}
-
-func (c IntComparator) Compare(a interface{}, b interface{}) int {
-	if a.(int) < b.(int) {
-		return -1
-	}
-	if a.(int) > b.(int) {
-		return 1
-	}
-	return 0
-}
-
-func (c IntComparator) tailValue() interface{} {
-	return math.MaxInt64
-}
-
-func (c IntComparator) headValue() interface{} {
-	return math.MinInt64
-}
-
-type Uint64Comparator struct{}
-
-func (c Uint64Comparator) Compare(a interface{}, b interface{}) int {
-	if a.(uint64) < b.(uint64) {
-		return -1
-	}
-	if a.(uint64) > b.(uint64) {
-		return 1
-	}
-	return 0
-}
-
-func (c Uint64Comparator) tailValue() interface{} {
-	return ^uint64(0)
-}
-
-func (c Uint64Comparator) headValue() interface{} {
-	return uint64(0)
-}
-
-type Float64Comparator struct{}
-
-func (c Float64Comparator) Compare(a interface{}, b interface{}) int {
-	if a.(float64) < b.(float64) {
-		return -1
-	}
-	if a.(float64) > b.(float64) {
-		return 1
-	}
-	return 0
-}
-func (c Float64Comparator) tailValue() interface{} {
-	return math.MaxFloat64
-}
-func (c Float64Comparator) headValue() interface{} {
-	return math.MaxFloat64 * -1
-}
-
 type SkipList struct {
 	maxLevel       int     // In gral log 1/p ( N )
 	p              float32 // 1/p
@@ -112,7 +125,7 @@ type SkipList struct {
 	tail           *SLNode
 	level          int
 	updateCallback OnUpdate
-	comparator     Comparator
+	comparator     SkipListInterface
 	length         int
 	postingStore   *PostingStore
 }
@@ -121,7 +134,7 @@ func (s *SkipList) Level() int {
 	return s.level
 }
 
-func NewSkipList(p *PostingStore, c Comparator) *SkipList {
+func NewSkipList(p *PostingStore, c SkipListInterface) *SkipList {
 
 	var u OnUpdate = func(n *SLNode, v interface{}) interface{} {
 		if n.UserData == nil {
@@ -137,14 +150,14 @@ func NewSkipList(p *PostingStore, c Comparator) *SkipList {
 	return sl
 }
 
-func NewSL(p float32, maxLevel int, u OnUpdate, c Comparator) *SkipList {
+func NewSL(p float32, maxLevel int, u OnUpdate, c SkipListInterface) *SkipList {
 
 	if c == nil {
 		panic("you should provide a comparator")
 	}
 
-	max := c.tailValue()
-	min := c.headValue()
+	max := c.TailValue()
+	min := c.HeadValue()
 
 	var head = NewSLNode(min, nil, maxLevel, Head)
 	var tail = NewSLNode(max, nil, maxLevel, Tail)

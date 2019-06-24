@@ -1,11 +1,25 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package writers
 
 import (
+	"meerkat/internal/config"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment/inmem"
 )
 
-func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor, ixl int) error {
+func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor) error {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -16,10 +30,10 @@ func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor, ixl int) error 
 	defer bw.Close()
 	err = bw.WriteHeader(io.RowStoreIDXV1)
 
-	err, lvl, lvlOffset := nil, 0, bw.Offset
+	err, lvl, lvlOffset := nil, 1, bw.Offset
 	lvl0Offsets, _ := writeLevel0(bw, offsets)
-	if ixl < len(lvl0Offsets) {
-		err, lvl, lvlOffset = processLevel(bw, lvl0Offsets, nil, lvl, ixl, 0, 0)
+	if config.SkipLevelSize < len(lvl0Offsets) {
+		err, lvl, lvlOffset = processLevel(bw, lvl0Offsets, lvl, 0, 0)
 		if err != nil {
 			panic(err)
 		}
@@ -31,48 +45,35 @@ func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor, ixl int) error 
 	return nil
 }
 
-func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor) ([]uint64, error) {
-	o := make([]uint64, 0)
+func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor) ([]*inmem.PageDescriptor, error) {
+	o := make([]*inmem.PageDescriptor, 0)
 
-	max := len(offsets)
-
-	for i := 0; i < max; i++ {
-		o = append(o, uint64(bw.Offset))
-		//bw.WriteVarUint64(uint64(i)) // # columns
-		//for _, colOffsets := range offsets {
+	for i := 0; i < len(offsets); i++ {
+		// starting id , idx offset
+		o = append(o, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
 		bw.WriteVarUint64(uint64(offsets[i].StartID))
 		bw.WriteVarUint64(uint64(offsets[i].Offset))
-		//}
 	}
 	return o, nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lvl int, ixl int, ts uint64, lastOffset int) (error, int, int) {
+func processLevel(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor, lvl int, ts uint64, lastOffset int) (error, int, int) {
 
 	offset := int(bw.Offset)
 	if len(offsets) <= 1 {
 		return nil, lvl - 1, lastOffset
 	}
 
-	nl := make([]uint64, 0) // offsets storeFile
-	ns := make([]uint64, 0) // offsets idxile
+	nl := make([]*inmem.PageDescriptor, 0) // offsets storeFile
 
-	for i := 0; i < int(uint64(len(offsets))); i++ {
-		if lvl > 0 {
-			o := bw.Offset
-			bw.WriteVarUint64(offsets[i])
-			bw.WriteVarUint64(idxOffsets[i])
-			if i%ixl == 0 {
-				ns = append(ns, uint64(o))
-			}
+	for i := 0; i < len(offsets); i++ {
+
+		if i%config.SkipLevelSize == 0 {
+			nl = append(nl, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
 		}
-		if i%ixl == 0 {
-			nl = append(nl, offsets[i])
-			if lvl == 0 {
-				ns = append(ns, offsets[i])
-			}
-		}
+		bw.WriteVarUint64(uint64(offsets[i].StartID))
+		bw.WriteVarUint64(uint64(offsets[i].Offset))
+
 	}
-	lastOffset = offset
-	return processLevel(bw, nl, ns, lvl+1, ixl, ts, offset)
+	return processLevel(bw, nl, lvl+1, ts, offset)
 }

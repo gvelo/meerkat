@@ -1,15 +1,30 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package writers
 
 import (
 	"github.com/stretchr/testify/assert"
+	"meerkat/internal/config"
 	"meerkat/internal/storage/readers"
 	"meerkat/internal/storage/segment/inmem"
+	"meerkat/internal/storage/segment/ondsk"
 	"testing"
 	"time"
 )
 
 func setUpPostingListStore(qty int) (*inmem.SkipList, *inmem.PostingStore) {
-	sl := inmem.NewSL(.5, 16, nil, inmem.Float64Comparator{})
+	sl := inmem.NewSL(.5, 16, nil, inmem.Float64Interface{})
 	s := inmem.NewPostingStore()
 	c := 0.1
 	for i := 1; i <= qty; i++ {
@@ -40,13 +55,14 @@ func TestSkipList_Read1(t *testing.T) {
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err = WriteSkip(ip, sl, 5)
+	config.SkipLevelSize = 5
+	err = WriteSkipList(ip, sl)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("create sl took %v ", time.Since(start))
 
-	idx, _ := readers.ReadSkipList(ip)
+	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	start = time.Now()
 	o, _ := idx.Lookup(0.1)
 
@@ -75,14 +91,15 @@ func TestSkipList_Read6(t *testing.T) {
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err = WriteSkip(ip, sl, 5)
+	config.SkipLevelSize = 5
+	err = WriteSkipList(ip, sl)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	idx, _ := readers.ReadSkipList(ip)
+	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	o, _ := idx.Lookup(6.1)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
@@ -109,14 +126,15 @@ func TestSkipList_Read100(t *testing.T) {
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err = WriteSkip(ip, sl, 5)
+	config.SkipLevelSize = 5
+	err = WriteSkipList(ip, sl)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	idx, _ := readers.ReadSkipList(ip)
+	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	o, _ := idx.Lookup(99.1)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
@@ -143,14 +161,15 @@ func TestSkipList_Read200(t *testing.T) {
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err = WriteSkip(ip, sl, 20)
+	config.SkipLevelSize = 20
+	err = WriteSkipList(ip, sl)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	idx, _ := readers.ReadSkipList(ip)
+	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	o, _ := idx.Lookup(199.1)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 
@@ -178,14 +197,15 @@ func TestSkipList_Read1M(t *testing.T) {
 	t.Logf("setup sl & saving store took %v ", time.Since(start))
 
 	start = time.Now()
-	err = WriteSkip(ip, sl, 200)
+	config.SkipLevelSize = 200
+	err = WriteSkipList(ip, sl)
 	if err != nil {
 		t.Fail()
 	}
 	t.Logf("create sl took %v ", time.Since(start))
 
 	start = time.Now()
-	idx, _ := readers.ReadSkipList(ip)
+	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	o, _ := idx.Lookup(999999.1)
 	t.Logf("find sl in dist took %v ", time.Since(start))
 

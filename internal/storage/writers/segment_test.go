@@ -1,7 +1,21 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package writers
 
 import (
 	"fmt"
+	"github.com/RoaringBitmap/roaring"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
@@ -34,7 +48,7 @@ func TestSegmentWriterReader(t *testing.T) {
 
 	sw := NewSegmentWriter("/tmp", s)
 
-	err := Write()
+	err := sw.Write()
 
 	if !assert.NoErrorf(err, "an error occurred while writing the segment: %v", err) {
 		return
@@ -88,10 +102,10 @@ func TestSegmentSorted(t *testing.T) {
 
 	sw := NewSegmentWriter("/tmp", s)
 
-	findColumnByName(segment.Columns, "_time")
+	findColumnByName(sw.segment.Columns, "_time")
 	//assert.False(isSortedByTs(c.))
 
-	err := Write()
+	err := sw.Write()
 
 	//assert.True(isSortedByTs())
 
@@ -100,39 +114,139 @@ func TestSegmentSorted(t *testing.T) {
 	}
 }
 
-func TestColumnWriteSorted(t *testing.T) {
+func TestColumnWrite(t *testing.T) {
+
+	assert := assert.New(t)
+
+	indexInfo := segment.NewIndexInfo("test-index")
+	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
+	indexInfo.AddField("string", segment.FieldTypeText, true)
+	indexInfo.AddField("float", segment.FieldTypeFloat, true)
+
+	s := inmem.NewSegment(indexInfo, "123456", nil)
+
+	for i := 0; i < 150000; i++ {
+		e := make(segment.Event)
+		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
+		e["mun1"] = i
+		e["string"] = fmt.Sprintf("%d", i)
+		e["float"] = float64(i)
+		s.Add(e)
+	}
+
+	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
+
+	sw.Write()
+
+	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
+
+	log.Printf("Segmento %v", segment)
+
+	for z := 1; z < 4; z++ {
+		it := segment.Columns[z].Scan()
+
+		i := 0
+		for it.HasNext() {
+			it.Next()
+			i++
+		}
+
+		assert.Equal(1500, i)
+
+		b := roaring.NewBitmap()
+		b.Add(1)
+		b.Add(2)
+		b.Add(3)
+		b.Add(4)
+		b.Add(99)
+		segment.Columns[z].SetFilter(b)
+
+		i = 0
+		pages := make([]*inmem.Page, 0)
+		for it.HasNext() {
+			p := it.Next()
+			pages = append(pages, p)
+			i++
+		}
+		assert.Equal(0, pages[0].StartID)
+		assert.Equal(1, i)
+
+		b.Add(101)
+		segment.Columns[z].SetFilter(b)
+
+		i = 0
+		for it.HasNext() {
+			it.Next()
+			i++
+		}
+
+		assert.Equal(2, i)
+	}
+
+}
+
+func TestColumnWriteC1(t *testing.T) {
+
+	assert := assert.New(t)
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
 
 	s := inmem.NewSegment(indexInfo, "123456", nil)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 150000; i++ {
 		e := make(segment.Event)
 		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
 		e["mun1"] = i
-
 		s.Add(e)
 	}
 
 	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
 
-	Write()
+	sw.Write()
 
 	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
 
-	log.Printf("%v", segment)
+	log.Printf("Segmento %v", segment)
 
-}
+	z := 0
+	it := segment.Columns[z].Scan()
 
-func isSortedByTs(events []segment.Event) bool {
-	var ant uint64 = 0
-	for _, x := range events {
-		if x["_time"].(uint64) < ant {
-			return false
-		} else {
-			ant = x["_time"].(uint64)
-		}
+	i := 0
+	for it.HasNext() {
+		it.Next()
+		i++
 	}
-	return true
+
+	assert.Equal(1500, i)
+
+	b := roaring.NewBitmap()
+	b.Add(1)
+	b.Add(2)
+	b.Add(3)
+	b.Add(4)
+	b.Add(99)
+	segment.Columns[z].SetFilter(b)
+
+	i = 0
+	pages := make([]*inmem.Page, 0)
+	for it.HasNext() {
+		p := it.Next()
+		pages = append(pages, p)
+		i++
+	}
+	assert.Equal(0, pages[0].StartID)
+	assert.Equal(1, i)
+
+	b.Add(101)
+	segment.Columns[z].SetFilter(b)
+
+	i = 0
+	for it.HasNext() {
+		it.Next()
+		i++
+	}
+
+	assert.Equal(2, i)
+
 }

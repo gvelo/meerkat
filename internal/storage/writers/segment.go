@@ -1,9 +1,21 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package writers
 
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"math"
 	"meerkat/internal/config"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment"
@@ -13,11 +25,13 @@ import (
 	"path/filepath"
 )
 
+// TODO : Sacar codigo duplicado!!!!!!!!!
+
 const (
-	idxExt = ".idx"
-	binExt = ".bin"
-	colExt = ".col"
-	posExt = ".pos"
+	idxPosExt = ".ipos" // index for value in posting
+	idxPagExt = ".ipag" // index
+	pagExt    = ".pag"  // pages encoded
+	posExt    = ".pos"  // posting lists for values
 )
 
 type SegmentWriter struct {
@@ -109,20 +123,62 @@ func (sw *SegmentWriter) writeColumn(col inmem.Column) ([]*inmem.PageDescriptor,
 	return nil, nil
 }
 
-func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inmem.PageDescriptor, err error) {
+// TODO: ver eso de la generacion de codigo. templates...
+type slicer interface {
+	Add(interface{})
+	Get() interface{}
+	Reset()
+}
 
-	log := sw.log.With().Str("column", tsCol.FieldInfo().Name).Logger()
+type slicerInt struct {
+	data []int
+}
 
-	posting := inmem.NewPostingStore()
-	sl := inmem.NewSkipList(posting, inmem.IntComparator{})
+func (s *slicerInt) Add(a interface{}) {
+	s.data = append(s.data, a.(int))
+}
 
-	if !tsCol.Sorted() {
-		log.Debug().Msg("Sorting column")
-		tsCol.Sort()
-	}
+func (s *slicerInt) Get() interface{} {
+	return s.data
+}
 
-	// TODO Replace by a compressed representation.
-	f := filepath.Join(sw.path, tsCol.FieldInfo().Name+colExt)
+func (s *slicerInt) Reset() {
+	s.data = make([]int, 0)
+}
+
+type slicerFloat struct {
+	data []float64
+}
+
+func (s *slicerFloat) Add(a interface{}) {
+	s.data = append(s.data, a.(float64))
+}
+
+func (s *slicerFloat) Get() interface{} {
+	return s.data
+}
+
+func (s *slicerFloat) Reset() {
+	s.data = make([]float64, 0)
+}
+
+type slicerString struct {
+	data []string
+}
+
+func (s *slicerString) Add(a interface{}) {
+	s.data = append(s.data, a.(string))
+}
+
+func (s *slicerString) Get() interface{} {
+	return s.data
+}
+
+func (s *slicerString) Reset() {
+	s.data = make([]string, 0)
+}
+
+func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (pd []*inmem.PageDescriptor, err error) {
 
 	bw, err := io.NewBinaryWriter(f)
 	defer bw.Close()
@@ -131,44 +187,53 @@ func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inme
 		return nil, err
 	}
 
+	// Header
+	err = bw.WriteHeader(io.RowStoreV1)
+
+	if err != nil {
+		return nil, err
+	}
 	page := new(inmem.Page)
 	page.Total = 0
 	page.StartID = 0
 
 	// Page offset
 	pd = make([]*inmem.PageDescriptor, 0)
-	slice := make([]int, 0)
+	slice.Reset()
 
-	for i := 0; i < tsCol.Size(); i++ {
+	for i := 0; i < col.Size(); i++ {
 
-		x := tsCol.Get(i)
-		sl.Add(x, i) // save val -> ids
-		slice = append(slice, x)
+		x := col.Get(i)
+		if sl != nil {
+			sl.Add(x, i) // save val -> ids
+		}
+		slice.Add(x)
 		page.Total++
 
-		// TODO: por ahora fijo despues tenemos que ver....
 		if i > 0 && i%config.PageSize == 0 {
 
-			eh := encoding.NewEncoderHandler(tsCol.FieldInfo(), page)
-			r := eh.DoEncode(slice)
+			eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
+			r := eh.DoEncode(slice.Get())
 			page.PayloadSize = len(r.([]byte))
+			page.Total = config.PageSize
 
 			bw.WritePageHeader(page)
 			bw.Write(r.([]byte))
 
-			pd = append(pd, &inmem.PageDescriptor{StartID: i, Offset: bw.Offset})
+			pd = append(pd, &inmem.PageDescriptor{StartID: i - config.PageSize, Offset: bw.Offset})
 
-			page := new(inmem.Page)
+			page = new(inmem.Page)
 			page.Total = 0
-			page.StartID = i
+			page.StartID = i + 1
+			slice.Reset()
 
 		}
 
 	}
 
 	if page.Total != 0 {
-		eh := encoding.NewEncoderHandler(tsCol.FieldInfo(), page)
-		r := eh.DoEncode(slice)
+		eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
+		r := eh.DoEncode(slice.Get())
 		page.PayloadSize = len(r.([]byte))
 
 		bw.WritePageHeader(page)
@@ -177,16 +242,35 @@ func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inme
 		pd = append(pd, &inmem.PageDescriptor{StartID: page.StartID, Offset: bw.Offset})
 	}
 
-	f = filepath.Join(sw.path, tsCol.FieldInfo().Name+idxExt)
+	return
+}
+
+func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inmem.PageDescriptor, err error) {
+
+	log := sw.log.With().Str("column", tsCol.FieldInfo().Name).Logger()
+
+	posting := inmem.NewPostingStore()
+	sl := inmem.NewSkipList(posting, inmem.IntInterface{})
+
+	if !tsCol.Sorted() {
+		log.Debug().Msg("Sorting column")
+		tsCol.Sort()
+	}
+
+	f := filepath.Join(sw.path, tsCol.FieldInfo().Name+pagExt)
+
+	pd, err = writePages(f, tsCol, sl, &slicerInt{})
+
+	f = filepath.Join(sw.path, tsCol.FieldInfo().Name+posExt)
 
 	err = WritePosting(f, posting)
 	if err != nil {
 		return nil, err
 	}
 
-	f = filepath.Join(sw.path, tsCol.FieldInfo().Name+idxExt)
+	f = filepath.Join(sw.path, tsCol.FieldInfo().Name+idxPosExt)
 
-	err = WriteSkip(f, sl, config.SkipLevelSize)
+	err = WriteSkipList(f, sl)
 	if err != nil {
 		return nil, err
 	}
@@ -197,78 +281,25 @@ func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inme
 
 func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) (pd []*inmem.PageDescriptor, err error) {
 
-	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
-
 	posting := inmem.NewPostingStore()
-	sl := inmem.NewSkipList(posting, inmem.IntComparator{})
+	sl := inmem.NewSkipList(posting, inmem.IntInterface{})
 
-	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	bw, err := io.NewBinaryWriter(f)
-	defer bw.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	page := new(inmem.Page)
-	page.Total = 0
-	page.StartID = 0
-
-	// Page offset
-	pd = make([]*inmem.PageDescriptor, 0)
-	slice := make([]int, 0)
-
-	for i := 0; i < col.Size(); i++ {
-
-		x := col.Get(i)
-		slice = append(slice, x)
-		sl.Add(x, i) // save val -> ids
-		page.Total++
-
-		// TODO: por ahora fijo despues tenemos que ver....
-		if i > 0 && i%config.PageSize == 0 {
-
-			eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-			r := eh.DoEncode(slice)
-			page.PayloadSize = len(r.([]byte))
-
-			bw.WritePageHeader(page)
-			bw.Write(r.([]byte))
-
-			pd = append(pd, &inmem.PageDescriptor{StartID: i, Offset: bw.Offset})
-
-			page := new(inmem.Page)
-			page.Total = 0
-			page.StartID = i
-
-		}
-
-	}
-
-	if page.Total != 0 {
-		eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-		r := eh.DoEncode(slice)
-		page.PayloadSize = len(r.([]byte))
-
-		bw.WritePageHeader(page)
-		bw.Write(r.([]byte))
-
-		pd = append(pd, &inmem.PageDescriptor{StartID: page.StartID, Offset: bw.Offset})
-	}
+	pd, err = writePages(f, col, sl, &slicerInt{})
 
 	if col.FieldInfo().Index {
 
-		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f = filepath.Join(sw.path, col.FieldInfo().Name+posExt)
 
 		err = WritePosting(f, posting)
 		if err != nil {
 			return nil, err
 		}
 
-		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxPosExt)
 
-		err = WriteSkip(f, sl, config.SkipLevelSize)
+		err = WriteSkipList(f, sl)
 		if err != nil {
 			return nil, err
 		}
@@ -280,82 +311,27 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) (pd []*inmem.PageDesc
 
 func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) (pd []*inmem.PageDescriptor, err error) {
 
-	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
-
 	posting := inmem.NewPostingStore()
-	sl := inmem.NewSkipList(posting, inmem.Float64Comparator{})
+	sl := inmem.NewSkipList(posting, inmem.Float64Interface{})
 
 	// TODO Replace by a compressed representation.
 
-	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	bw, err := io.NewBinaryWriter(f)
-	defer bw.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	page := new(inmem.Page)
-	page.Total = 0
-	page.StartID = 0
-
-	// Page offset
-	pd = make([]*inmem.PageDescriptor, 0)
-	slice := make([]uint64, 0)
-
-	for i := 0; i < col.Size(); i++ {
-
-		x := col.Get(i)
-		bits := math.Float64bits(x)
-		slice = append(slice, bits)
-
-		sl.Add(x, i) // save val -> offsets
-		page.Total++
-
-		// TODO: por ahora fijo despues tenemos que ver....
-		if i > 0 && i%config.PageSize == 0 {
-
-			eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-			r := eh.DoEncode(slice)
-			page.PayloadSize = len(r.([]byte))
-
-			bw.WritePageHeader(page)
-			bw.Write(r.([]byte))
-
-			pd = append(pd, &inmem.PageDescriptor{StartID: i, Offset: bw.Offset})
-
-			page := new(inmem.Page)
-			page.Total = 0
-			page.StartID = i
-
-		}
-
-	}
-
-	if page.Total != 0 {
-		eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-		r := eh.DoEncode(slice)
-		page.PayloadSize = len(r.([]byte))
-
-		bw.WritePageHeader(page)
-		bw.Write(r.([]byte))
-
-		pd = append(pd, &inmem.PageDescriptor{StartID: page.StartID, Offset: bw.Offset})
-	}
+	pd, err = writePages(f, col, sl, &slicerFloat{})
 
 	if col.FieldInfo().Index {
 
-		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f = filepath.Join(sw.path, col.FieldInfo().Name+posExt)
 
 		err = WritePosting(f, posting)
 		if err != nil {
 			return nil, err
 		}
 
-		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxPosExt)
 
-		err = WriteSkip(f, sl, config.SkipLevelSize)
+		err = WriteSkipList(f, sl)
 		if err != nil {
 			return nil, err
 		}
@@ -368,88 +344,36 @@ func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) (pd []*inmem.Page
 
 func (sw *SegmentWriter) writeColText(col *inmem.ColumnStr) (pd []*inmem.PageDescriptor, err error) {
 
-	//log := sw.log.With().Str("column", col.FieldInfo().Name).Logger()
-
 	// TODO: optimization: if the column is not indexed we don't need a
 	//       posting list.
 	posting := inmem.NewPostingStore()
 
 	trie := sw.buildTrie(col, posting)
 
-	f := filepath.Join(sw.path, col.FieldInfo().Name+colExt)
+	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	bw, err := io.NewBinaryWriter(f)
-	defer bw.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	page := new(inmem.Page)
-	page.Total = 0
-	page.StartID = 0
-
-	// Page offset
-	pd = make([]*inmem.PageDescriptor, 0)
-	slice := make([]string, 0)
-
-	for i := 0; i < col.Size(); i++ {
-
-		x := col.Get(i)
-		slice = append(slice, x)
-		page.Total++
-
-		// TODO: por ahora fijo despues tenemos que ver....
-		if i > 0 && i%config.PageSize == 0 {
-
-			eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-			r := eh.DoEncode(slice)
-			page.PayloadSize = len(r.([]byte))
-
-			bw.WritePageHeader(page)
-			bw.Write(r.([]byte))
-
-			pd = append(pd, &inmem.PageDescriptor{StartID: i, Offset: bw.Offset})
-
-			page := new(inmem.Page)
-			page.Total = 0
-			page.StartID = i
-
-		}
-
-	}
-
-	if page.Total != 0 {
-		eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
-		r := eh.DoEncode(slice)
-		page.PayloadSize = len(r.([]byte))
-
-		bw.WritePageHeader(page)
-		bw.Write(r.([]byte))
-
-		pd = append(pd, &inmem.PageDescriptor{StartID: page.StartID, Offset: bw.Offset})
-	}
+	pd, err = writePages(f, col, nil, &slicerString{})
 
 	if col.FieldInfo().Index {
 
 		if col.FieldInfo().Type == segment.FieldTypeText {
 			tokenizer := text.NewTokenizer()
 			for i := 0; i < col.Size(); i++ {
-				tokens := tokenizer.Tokenize(col.Get(i))
+				tokens := tokenizer.Tokenize(col.Get(i).(string))
 				for _, token := range tokens {
 					trie.Add(token, uint32(i))
 				}
 			}
 		}
 
-		f = filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f = filepath.Join(sw.path, col.FieldInfo().Name+posExt)
 
 		err = WritePosting(f, posting)
 		if err != nil {
 			return nil, err
 		}
 
-		f := filepath.Join(sw.path, col.FieldInfo().Name+idxExt)
+		f := filepath.Join(sw.path, col.FieldInfo().Name+idxPosExt)
 
 		err = WriteTrie(f, trie)
 		if err != nil {
@@ -465,15 +389,15 @@ func (sw *SegmentWriter) writeColText(col *inmem.ColumnStr) (pd []*inmem.PageDes
 func (sw *SegmentWriter) buildTrie(col *inmem.ColumnStr, posting *inmem.PostingStore) *inmem.BTrie {
 	trie := inmem.NewBtrie(posting)
 	for i := 0; i < col.Size(); i++ {
-		trie.Add(col.Get(i), uint32(i))
+		trie.Add(col.Get(i).(string), uint32(i))
 	}
 	return trie
 }
 
 func (sw *SegmentWriter) writeRowIndex(offsets [][]*inmem.PageDescriptor) error {
 	for i, col := range offsets {
-		f := filepath.Join(sw.path, sw.segment.Columns[i].FieldInfo().Name+posExt)
-		WriteStoreIdx(f, col, config.SkipLevelSize)
+		f := filepath.Join(sw.path, sw.segment.Columns[i].FieldInfo().Name+idxPagExt)
+		WriteStoreIdx(f, col)
 	}
 	return nil
 }
@@ -556,8 +480,6 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 }
 
 func WriteSegment(path string, segment *inmem.Segment) error {
-
 	sw := NewSegmentWriter(path, segment)
 	return sw.Write()
-
 }
