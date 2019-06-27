@@ -75,13 +75,13 @@ func Test_btrie_bucketSize(t *testing.T) {
 		PostingStore: ps,
 	}
 
-	Root = bt.newNode()
+	bt.Root = bt.newNode()
 
 	for i := 0; i < 10; i++ {
 		bt.Add(fmt.Sprintf("test%v", i), 0)
 	}
 
-	assert.Equal(1, Size, "Size should be 1")
+	assert.Equal(1, bt.Size, "Size should be 1")
 
 	bt.Add("Test burst", 0)
 
@@ -97,7 +97,7 @@ func Test_btrie_singlelookup(t *testing.T) {
 
 	bt := NewBtrie(ps)
 
-	assert.Nil(Lookup("test"), "non empty index")
+	assert.Nil(bt.Lookup("test"), "non empty index")
 
 	bt.Add("test", 0)
 
@@ -117,7 +117,7 @@ func Test_btrie_lookup_cardinality(t *testing.T) {
 
 	bt := NewBtrie(ps)
 
-	assert.Nil(Lookup("test"), "non empty index")
+	assert.Nil(bt.Lookup("test"), "non empty index")
 
 	for i := 0; i < 100; i++ {
 		bt.Add("test", uint32(i))

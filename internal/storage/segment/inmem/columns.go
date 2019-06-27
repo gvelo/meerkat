@@ -17,7 +17,6 @@ import (
 	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage/segment"
-	"reflect"
 )
 
 type Column interface {
@@ -36,10 +35,6 @@ type ColumnInt struct {
 
 func (c *ColumnInt) Add(value interface{}) {
 	c.data = append(c.data, value.(int))
-}
-
-func (c *ColumnInt) DataType() reflect.Type {
-	return reflect.TypeOf(c.data)
 }
 
 func (c *ColumnInt) Size() int {

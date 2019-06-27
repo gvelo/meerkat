@@ -15,6 +15,7 @@ package encoding
 
 type Encoder interface {
 	Encode(values interface{}) []byte
+	AppendNext(e Encoder) Encoder
 }
 
 type RawEncoder struct {
@@ -39,4 +40,32 @@ func (e *RawEncoder) Encode(values interface{}) []byte {
 	} else {
 		return r
 	}
+}
+
+func (e *RawEncoder) AppendNext(ne Encoder) Encoder {
+	e.next = ne
+	return ne
+}
+
+type IntegerEncoder struct {
+	next Encoder
+}
+
+func (e *IntegerEncoder) Encode(values interface{}) []byte {
+	r := make([]byte, 0)
+	// nothing to do
+	switch values.(type) {
+	case []int:
+		r = UnsafeCastIntsToBytes(values.([]int))
+	}
+	if e.next != nil {
+		return e.next.Encode(r)
+	} else {
+		return r
+	}
+}
+
+func (e *IntegerEncoder) AppendNext(ne Encoder) Encoder {
+	e.next = ne
+	return ne
 }

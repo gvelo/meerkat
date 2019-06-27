@@ -24,7 +24,6 @@ type EncoderHandler struct {
 
 func NewEncoderHandler(fieldInfo *segment.FieldInfo, page *inmem.Page) *EncoderHandler {
 	// create a chain of encoders
-	page.Enc = inmem.Raw
 	chain := &RawEncoder{next: nil}
 	return &EncoderHandler{root: chain}
 }

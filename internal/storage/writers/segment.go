@@ -211,7 +211,7 @@ func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (p
 		page.Total++
 
 		if i > 0 && i%config.PageSize == 0 {
-
+			// TODO Use a pool.
 			eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
 			r := eh.DoEncode(slice.Get())
 			page.PayloadSize = len(r.([]byte))
@@ -232,6 +232,7 @@ func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (p
 	}
 
 	if page.Total != 0 {
+		// TODO Use a pool.
 		eh := encoding.NewEncoderHandler(col.FieldInfo(), page)
 		r := eh.DoEncode(slice.Get())
 		page.PayloadSize = len(r.([]byte))

@@ -28,54 +28,54 @@ func Test_newFileWriterReader(t *testing.T) {
 		t.Error(err)
 	}
 
-	WriteString("HOLA MANOLA")
-	WriteVarUint64(1)
-	WriteVarUint64(100)
-	WriteVarUint64(2023423423423432434)
-	WriteFixedUint64(2023423423423432222)
-	WriteFixedUint32(32)
+	fw.WriteString("HOLA MANOLA")
+	fw.WriteVarUint64(1)
+	fw.WriteVarUint64(100)
+	fw.WriteVarUint64(2023423423423432434)
+	fw.WriteFixedUint64(2023423423423432222)
+	fw.WriteFixedUint32(32)
 
 	//var x uint64 =
-	WriteVarUint64(math.MaxUint64)
+	fw.WriteVarUint64(math.MaxUint64)
 
-	Close()
+	fw.Close()
 
 	dat, err := ioutil.ReadFile("/tmp/test1.bin")
 	fr := NewBinaryReader(dat)
 	if err != nil {
 		t.Error(err)
 	}
-	s, err := ReadString()
+	s, err := fr.ReadString()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i1, err := ReadVarint64()
+	i1, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i2, err := ReadVarint64()
+	i2, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i3, err := ReadVarint64()
+	i3, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i4, err := ReadFixed64()
+	i4, err := fr.ReadFixed64()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i5, err := ReadFixed32()
+	i5, err := fr.ReadFixed32()
 	if err != nil {
 		t.Error(err)
 	}
 
-	i6, err := ReadVarint64()
+	i6, err := fr.ReadVarint64()
 	if err != nil {
 		t.Error(err)
 	}

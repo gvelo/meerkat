@@ -60,10 +60,10 @@ func TestAddEvent(t *testing.T) {
 	segment := NewSegment(indexInfo, "testid", writeChan)
 
 	for _, event := range events {
-		Add(event)
+		segment.Add(event)
 	}
 
-	Write()
+	segment.Write()
 
 }
 
@@ -75,10 +75,10 @@ func TestAddEventOnvalidState(t *testing.T) {
 
 	segment := NewSegment(indexInfo, "testid", writeChan)
 
-	Add(events[0])
-	Write()
+	segment.Add(events[0])
+	segment.Write()
 
-	assert.Panics(t, func() { Add(events[0]) }, "add event in invalid state should panic")
+	assert.Panics(t, func() { segment.Add(events[0]) }, "add event in invalid state should panic")
 
 }
 
@@ -90,10 +90,10 @@ func TestWriteOnInvalidState(t *testing.T) {
 
 	segment := NewSegment(indexInfo, "testid", writeChan)
 
-	Add(events[0])
-	Write()
+	segment.Add(events[0])
+	segment.Write()
 
-	assert.Panics(t, Write, "write segment on invalid state should panic")
+	assert.Panics(t, segment.Write, "write segment on invalid state should panic")
 
 }
 
@@ -105,8 +105,8 @@ func TestCloseOnInvalidState(t *testing.T) {
 
 	segment := NewSegment(indexInfo, "testid", writeChan)
 
-	Add(events[0])
+	segment.Add(events[0])
 
-	assert.Panics(t, Close, "close segment on invalid state should panic")
+	assert.Panics(t, segment.Close, "close segment on invalid state should panic")
 
 }
