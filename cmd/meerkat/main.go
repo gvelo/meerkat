@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"meerkat/internal/build"
+	"meerkat/internal/config"
 	"meerkat/internal/server"
 )
 
@@ -101,7 +102,7 @@ func Start(cmd *cobra.Command, args []string) {
 
 	}
 
-	var conf server.Config
+	var conf config.Config
 
 	err := viper.Unmarshal(&conf)
 

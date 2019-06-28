@@ -17,16 +17,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/build"
+	"meerkat/internal/cluster"
+	"meerkat/internal/config"
+	"os"
 )
 
-type Config struct {
-	LogLevel    string `json:"logLevel"`
-	Seeds       string `json:"seeds"`
-	DBPath      string `json:"dbpath"`
-	ClusterName string `json:"clusterName"`
-}
-
-func Start(c Config) {
+func Start(c config.Config) {
 
 	// Default level is info
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -38,5 +34,15 @@ func Start(c Config) {
 		zerolog.SetGlobalLevel(l)
 	}
 
+	if c.PrettyLog {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	}
+
+	log.Logger = log.With().Caller().Logger()
+
 	log.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
+
+	// start components
+
+	cluster.Start(c)
 }
