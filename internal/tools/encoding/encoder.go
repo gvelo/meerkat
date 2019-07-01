@@ -15,68 +15,148 @@ package encoding
 
 import (
 	"fmt"
+	"github.com/golang/snappy"
+	"log"
+	"meerkat/internal/storage/io"
+	"meerkat/internal/storage/segment"
+	"meerkat/internal/storage/segment/inmem"
+	"meerkat/internal/tools/utils"
 )
 
-type HandlerFunc func(...interface{})
-
-type middleware func(HandlerFunc) HandlerFunc
-
-func BuildChain(f HandlerFunc, m ...middleware) HandlerFunc {
-	if len(m) == 0 {
-		return f
-	}
-	return m[0](BuildChain(f, m[1:cap(m)]...))
+type Encoder interface {
+	Encode(data interface{}) []*inmem.PageDescriptor
 }
 
-func main() {
-
-	var privateChain = []middleware{
-		Encoding,
-		Writer,
-	}
-
-	chain := BuildChain(WriteToFile, privateChain...)
-	chain("3", "3")
-
-}
-
-var Encoding = func(f HandlerFunc) HandlerFunc {
+var EncoderHandler = func(f HandlerFunc) HandlerFunc {
 	return func(args ...interface{}) {
-		fmt.Println("start Encoding")
-		f(args)
-		fmt.Println("end Encoding")
-	}
-}
+		col := args[0].(inmem.Column)
+		slice := args[1].(utils.Slicer)
+		//total := slice.Total()
+		//c := args[2].(int)
 
-var Writer = func(f HandlerFunc) HandlerFunc {
-	return func(args ...interface{}) {
-		fmt.Println("start Writer")
-		f(args)
-		fmt.Println("end Writer")
-	}
-}
+		var e Encoder
+		var pages []*inmem.PageDescriptor
 
-var RawEncoder = func(f HandlerFunc) HandlerFunc {
-	return func(args ...interface{}) {
-		fmt.Println("start Writer")
-		r := make([]byte, 0)
-		// nothing to do
-		switch args[0].(type) {
-		case []byte:
-			r = args[0].([]byte)
-		case []int:
-			r = UnsafeCastIntsToBytes(args[0].([]int))
-		case []float64:
-			r = UnsafeCastFloatsToBytes(args[0].([]float64))
-		case []string:
-			r = CastStringToBytes(args[0].([]string))
+		switch col.FieldInfo().Type {
+		//case segment.FieldTypeFloat:
+		//	e = inmem.Float64Interface{}
+		//case segment.FieldTypeKeyword:
+		//	e = inmem.Float64Interface{}
+		case segment.FieldTypeText:
+			e = NewSnappyEncoder()
+			pages = e.Encode(slice)
+		case segment.FieldTypeInt:
+			e = NewRLEEncoder()
+			pages = e.Encode(slice)
+		//	e = inmem.IntInterface{}
+		//case segment.FieldTypeTimestamp:
+		//	e = inmem.IntInterface{}
+		default:
+			print("Could not encode.")
+			return
+
 		}
-		f(r)
+
+		f(pages)
+
 	}
+
 }
 
-// this is the handler func we are wrapping with middlewares
-func WriteToFile(args ...interface{}) {
+type SnappyEncoder struct {
+}
 
-	println("w,r")
+func NewSnappyEncoder() Encoder {
+	return new(SnappyEncoder)
+}
+
+func (e *SnappyEncoder) Encode(data interface{}) []*inmem.PageDescriptor {
+
+	src := data.(utils.Slicer).Get().([]string)
+
+	pages := make([]*inmem.PageDescriptor, 0)
+	b := make([]byte, 0, 40000)
+	pd := new(inmem.PageDescriptor)
+	pd.StartID = 0
+	for i := 0; i < len(src); i++ {
+		// Encoding para despues separar los strings.
+		str := fmt.Sprintf("%d %v", len(src[i]), src[i])
+		b = append(b, []byte(str)...)
+
+		if len(b) >= 32000 || i == len(src) {
+			pd.Data = snappy.Encode(nil, b)
+			pd.Enc = inmem.Snappy
+
+			log.Printf("pagina %v len(b) %v", pd, len(b))
+
+			pages = append(pages, pd)
+			pd = new(inmem.PageDescriptor)
+			pd.Data = nil
+			pd.StartID = i
+			b = make([]byte, 0, 40000)
+
+		}
+	}
+	return pages
+}
+
+type RLEIntegerEncoder struct {
+}
+
+func NewRLEEncoder() Encoder {
+	return new(RLEIntegerEncoder)
+}
+
+func (e *RLEIntegerEncoder) Encode(data interface{}) []*inmem.PageDescriptor {
+
+	src := data.(utils.Slicer).Get().([]int)
+	return EncodeRLE(src)
+}
+
+func EncodeRLE(nums []int) []*inmem.PageDescriptor {
+	size := len(nums)
+
+	if size == 0 {
+		return nil
+	}
+
+	pages := make([]*inmem.PageDescriptor, 0)
+
+	pd := new(inmem.PageDescriptor)
+	pd.StartID = 0
+
+	bw, _ := io.NewBufferBinaryWriter()
+	var cur = nums[0]
+	var run int
+
+	for i := 0; i < size; i++ {
+		num := nums[i]
+
+		if num != cur {
+			bw.WriteVarInt(cur)
+			bw.WriteVarInt(run)
+			cur = num
+			run = 0
+
+			bw.Flush()
+			pd.Data = bw.Buffer.Bytes()
+			pd.Enc = inmem.RLE
+			pages = append(pages, pd)
+
+			pd = new(inmem.PageDescriptor)
+			pd.StartID = i
+
+		}
+
+		run++
+	}
+
+	bw.WriteVarInt(cur)
+	bw.WriteVarInt(run)
+
+	bw.Flush() // Writes to buffer.
+	pd.Data = bw.Buffer.Bytes()
+	pd.Enc = inmem.RLE
+	pages = append(pages, pd)
+	return pages
 }

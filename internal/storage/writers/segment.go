@@ -22,10 +22,9 @@ import (
 	"meerkat/internal/storage/segment/inmem"
 	"meerkat/internal/storage/text"
 	"meerkat/internal/tools/encoding"
+	"meerkat/internal/tools/utils"
 	"path/filepath"
 )
-
-// TODO : Sacar codigo duplicado!!!!!!!!!
 
 const (
 	idxPosExt = ".ipos" // index for value in posting
@@ -123,62 +122,7 @@ func (sw *SegmentWriter) writeColumn(col inmem.Column) ([]*inmem.PageDescriptor,
 	return nil, nil
 }
 
-// TODO: ver eso de la generacion de codigo. templates...
-type slicer interface {
-	Add(interface{})
-	Get() interface{}
-	Reset()
-}
-
-type slicerInt struct {
-	data []int
-}
-
-func (s *slicerInt) Add(a interface{}) {
-	s.data = append(s.data, a.(int))
-}
-
-func (s *slicerInt) Get() interface{} {
-	return s.data
-}
-
-func (s *slicerInt) Reset() {
-	s.data = make([]int, 0)
-}
-
-type slicerFloat struct {
-	data []float64
-}
-
-func (s *slicerFloat) Add(a interface{}) {
-	s.data = append(s.data, a.(float64))
-}
-
-func (s *slicerFloat) Get() interface{} {
-	return s.data
-}
-
-func (s *slicerFloat) Reset() {
-	s.data = make([]float64, 0)
-}
-
-type slicerString struct {
-	data []string
-}
-
-func (s *slicerString) Add(a interface{}) {
-	s.data = append(s.data, a.(string))
-}
-
-func (s *slicerString) Get() interface{} {
-	return s.data
-}
-
-func (s *slicerString) Reset() {
-	s.data = make([]string, 0)
-}
-
-func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (pd []*inmem.PageDescriptor, err error) {
+func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice utils.Slicer) (pd []*inmem.PageDescriptor, err error) {
 
 	bw, err := io.NewBinaryWriter(f)
 	defer bw.Close()
@@ -260,7 +204,7 @@ func (sw *SegmentWriter) writeTSColumn(tsCol *inmem.ColumnTimeStamp) (pd []*inme
 
 	f := filepath.Join(sw.path, tsCol.FieldInfo().Name+pagExt)
 
-	pd, err = writePages(f, tsCol, sl, &slicerInt{})
+	pd, err = writePages(f, tsCol, sl, &utils.SlicerInt{})
 
 	f = filepath.Join(sw.path, tsCol.FieldInfo().Name+posExt)
 
@@ -287,7 +231,7 @@ func (sw *SegmentWriter) writeColInt(col *inmem.ColumnInt) (pd []*inmem.PageDesc
 
 	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	pd, err = writePages(f, col, sl, &slicerInt{})
+	pd, err = writePages(f, col, sl, &utils.SlicerInt{})
 
 	if col.FieldInfo().Index {
 
@@ -319,7 +263,7 @@ func (sw *SegmentWriter) writeColFloat(col *inmem.ColumnFloat) (pd []*inmem.Page
 
 	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	pd, err = writePages(f, col, sl, &slicerFloat{})
+	pd, err = writePages(f, col, sl, &utils.SlicerFloat{})
 
 	if col.FieldInfo().Index {
 
@@ -353,7 +297,7 @@ func (sw *SegmentWriter) writeColText(col *inmem.ColumnStr) (pd []*inmem.PageDes
 
 	f := filepath.Join(sw.path, col.FieldInfo().Name+pagExt)
 
-	pd, err = writePages(f, col, nil, &slicerString{})
+	pd, err = writePages(f, col, nil, &utils.SlicerString{})
 
 	if col.FieldInfo().Index {
 
@@ -476,7 +420,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 
 	return nil
 
-	// TODO add field cardinality, max/min TS and SegmentID
+	// TODO add fields cardinality, max/min TS and SegmentID
 
 }
 

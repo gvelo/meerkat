@@ -36,7 +36,7 @@ type SLNode struct {
 	t        NodeType
 }
 
-type SkipListInterface interface {
+type ComparatorInterface interface {
 	Compare(a interface{}, b interface{}) int
 	TailValue() interface{}
 	HeadValue() interface{}
@@ -125,8 +125,8 @@ type SkipList struct {
 	tail           *SLNode
 	level          int
 	updateCallback OnUpdate
-	comparator     SkipListInterface
-	length         int
+	comparator     ComparatorInterface
+	Length         int
 	postingStore   *PostingStore
 }
 
@@ -134,7 +134,7 @@ func (s *SkipList) Level() int {
 	return s.level
 }
 
-func NewSkipList(p *PostingStore, c SkipListInterface) *SkipList {
+func NewSkipList(p *PostingStore, c ComparatorInterface) *SkipList {
 
 	var u OnUpdate = func(n *SLNode, v interface{}) interface{} {
 		if n.UserData == nil {
@@ -150,7 +150,7 @@ func NewSkipList(p *PostingStore, c SkipListInterface) *SkipList {
 	return sl
 }
 
-func NewSL(p float32, maxLevel int, u OnUpdate, c SkipListInterface) *SkipList {
+func NewSL(p float32, maxLevel int, u OnUpdate, c ComparatorInterface) *SkipList {
 
 	if c == nil {
 		panic("you should provide a comparator")
@@ -162,7 +162,7 @@ func NewSL(p float32, maxLevel int, u OnUpdate, c SkipListInterface) *SkipList {
 	var head = NewSLNode(min, nil, maxLevel, Head)
 	var tail = NewSLNode(max, nil, maxLevel, Tail)
 
-	list := SkipList{maxLevel: maxLevel, p: p, head: head, tail: tail, level: 0, updateCallback: u, comparator: c, length: 0}
+	list := SkipList{maxLevel: maxLevel, p: p, head: head, tail: tail, level: 0, updateCallback: u, comparator: c, Length: 0}
 
 	for i := maxLevel - 1; i >= 0; i-- {
 		head.forward[i] = tail
@@ -228,7 +228,7 @@ func (list *SkipList) InsertOrUpdate(key interface{}, v interface{}) *SkipList {
 			list.level = lvl
 		}
 		x = NewSLNode(key, nil, lvl, Internal)
-		list.length++
+		list.Length++
 		if list.updateCallback != nil {
 			list.updateCallback(x, v)
 		} else {
@@ -261,7 +261,7 @@ func (list *SkipList) Delete(key interface{}) {
 			update[i].forward[i] = x.forward[i]
 		}
 		x = nil
-		list.length--
+		list.Length--
 		for i := list.level; list.level > 0 && list.head.forward[list.level] == nil; i-- {
 			list.level = list.level - 1
 		}

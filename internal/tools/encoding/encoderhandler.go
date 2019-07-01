@@ -18,16 +18,15 @@ import (
 	"meerkat/internal/storage/segment/inmem"
 )
 
-type EncoderHandler struct {
+type OldEncoderHandler struct {
 	root Encoder
 }
 
-func NewEncoderHandler(fieldInfo *segment.FieldInfo, page *inmem.Page) *EncoderHandler {
+func NewEncoderHandler(fieldInfo *segment.FieldInfo, page *inmem.Page) *OldEncoderHandler {
 	// create a chain of encoders
-	chain := &RawEncoder{next: nil}
-	return &EncoderHandler{root: chain}
+	return nil
 }
 
-func (e *EncoderHandler) DoEncode(slice interface{}) interface{} {
+func (e *OldEncoderHandler) DoEncode(slice interface{}) interface{} {
 	return e.root.Encode(slice)
 }

@@ -6,6 +6,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/glycerine/goconvey v0.0.0-20190315024820-982ee783a72e // indirect
+	github.com/golang/snappy v0.0.1
 	github.com/gopherjs/gopherjs v0.0.0-20190309154008-847fc94819f9 // indirect
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1
 	github.com/rs/zerolog v1.14.3

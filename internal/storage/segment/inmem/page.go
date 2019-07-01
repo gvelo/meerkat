@@ -37,6 +37,8 @@ type Page struct {
 type PageDescriptor struct {
 	StartID int
 	Offset  int
+	Data    []byte
+	Enc     Encoding
 }
 
 func (pd *PageDescriptor) String() string {
