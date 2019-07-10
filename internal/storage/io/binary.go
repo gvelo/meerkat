@@ -149,6 +149,12 @@ func (br *BinaryWriter) WritePageHeader(page *inmem.Page) error {
 		return err
 	}
 
+	err = br.WriteVarInt(page.Offset)
+
+	if err != nil {
+		return err
+	}
+
 	err = br.WriteVarInt(page.Total)
 
 	if err != nil {
@@ -370,6 +376,12 @@ func (br *BinaryReader) ReadPageHeader() (*inmem.Page, error) {
 
 	b := br.ReadByte()
 	p.Enc = inmem.Encoding(b)
+
+	p.Offset, err = br.ReadVarInt()
+	if err != nil {
+		return nil, err
+	}
+
 	p.Total, err = br.ReadVarInt()
 	if err != nil {
 		return nil, err
@@ -536,7 +548,7 @@ func (br *BinaryReader) ReadFixed32() (x uint64, err error) {
 	return
 }
 
-// ReadZigzag64 reads a zigzag-encoded 64-bit integer
+// ReadZigZag64 reads a zigzag-encoded 64-bit integer
 // from the Buffer.
 // This is the format used for the sint64 protocol buffer type.
 func (br *BinaryReader) ReadZigzag64() (x uint64, err error) {

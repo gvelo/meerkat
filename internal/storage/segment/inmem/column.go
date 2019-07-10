@@ -25,6 +25,7 @@ type Column interface {
 	Add(value interface{})
 	SetSortMap(sMap []int)
 	Get(idx int) interface{}
+	Data() interface{}
 }
 
 type ColumnInt struct {
@@ -39,6 +40,10 @@ func (c *ColumnInt) Add(value interface{}) {
 
 func (c *ColumnInt) Size() int {
 	return len(c.data)
+}
+
+func (c *ColumnInt) Data() interface{} {
+	return c.data
 }
 
 func (c *ColumnInt) FieldInfo() *segment.FieldInfo {
@@ -87,6 +92,10 @@ func (c *ColumnTimeStamp) Add(value interface{}) {
 
 func (c *ColumnTimeStamp) Get(idx int) interface{} {
 	return c.data[idx]
+}
+
+func (c *ColumnTimeStamp) Data() interface{} {
+	return c.data
 }
 
 func (c *ColumnTimeStamp) Size() int {
@@ -156,6 +165,10 @@ func (c *ColumnStr) Get(idx int) interface{} {
 	}
 }
 
+func (c *ColumnStr) Data() interface{} {
+	return c.data
+}
+
 func (c *ColumnStr) Size() int {
 	return len(c.data)
 }
@@ -184,6 +197,10 @@ func (c *ColumnFloat) Get(idx int) interface{} {
 	} else {
 		return c.data[idx]
 	}
+}
+
+func (c *ColumnFloat) Data() interface{} {
+	return c.data
 }
 
 func (c *ColumnFloat) Size() int {

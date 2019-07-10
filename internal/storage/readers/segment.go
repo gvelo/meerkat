@@ -98,7 +98,7 @@ func (sr *segmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 			return nil, err
 		}
 
-		fieldType, err := br.ReadVarInt()
+		fieldType, _ := br.ReadVarInt()
 
 		if err != nil {
 			return nil, err
@@ -172,16 +172,12 @@ func (sr *segmentReader) readIdx(fields []*segment.FieldInfo) ([]interface{}, er
 			var err error
 
 			switch fieldInfo.Type {
-			case segment.FieldTypeText:
+			case segment.FieldTypeText, segment.FieldTypeKeyword:
 				index, err = ReadTrie(fileName)
-			case segment.FieldTypeKeyword:
-				index, err = ReadTrie(fileName)
-			case segment.FieldTypeInt:
+			case segment.FieldTypeInt, segment.FieldTypeTimestamp:
 				index, err = ReadSkipList(fileName, ondsk.IntInterface{})
 			case segment.FieldTypeFloat:
-				index, err = ReadSkipList(fileName, ondsk.IntInterface{})
-			case segment.FieldTypeTimestamp:
-				index, err = ReadSkipList(fileName, ondsk.IntInterface{})
+				index, err = ReadSkipList(fileName, ondsk.FloatInterface{})
 			default:
 				sr.log.Panic().
 					Str("field", fieldInfo.Name).

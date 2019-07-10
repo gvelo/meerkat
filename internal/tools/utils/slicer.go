@@ -3,6 +3,7 @@ package utils
 type Slicer interface {
 	Add(interface{})
 	Get() interface{}
+	GetIdx(int) interface{}
 	Reset()
 	Total() int
 }
@@ -17,6 +18,10 @@ func (s *SlicerInt) Add(a interface{}) {
 
 func (s *SlicerInt) Get() interface{} {
 	return s.data
+}
+
+func (s *SlicerInt) GetIdx(i int) interface{} {
+	return s.data[i]
 }
 
 func (s *SlicerInt) Total() int {
@@ -39,6 +44,10 @@ func (s *SlicerFloat) Get() interface{} {
 	return s.data
 }
 
+func (s *SlicerFloat) GetIdx(i int) interface{} {
+	return s.data[i]
+}
+
 func (s *SlicerFloat) Reset() {
 	s.data = make([]float64, 0)
 }
@@ -49,6 +58,10 @@ func (s *SlicerFloat) Total() int {
 
 type SlicerString struct {
 	data []string
+}
+
+func (s *SlicerString) GetIdx(i int) interface{} {
+	return s.data[i]
 }
 
 func (s *SlicerString) Add(a interface{}) {

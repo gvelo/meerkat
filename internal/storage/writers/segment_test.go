@@ -41,7 +41,7 @@ func TestSegmentWriterReader(t *testing.T) {
 		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
 		e["ts"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
-		e["mun1"] = uint64(i)
+		e["mun1"] = i
 		e["float"] = float64(i)
 		s.Add(e)
 	}
@@ -95,7 +95,7 @@ func TestSegmentSorted(t *testing.T) {
 		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
 		e["ts"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
-		e["mun1"] = uint64(i)
+		e["mun1"] = i
 		e["float"] = float64(i)
 		s.Add(e)
 	}
@@ -114,23 +114,21 @@ func TestSegmentSorted(t *testing.T) {
 	}
 }
 
-func TestColumnWrite(t *testing.T) {
+func TestColumnWrite_Num(t *testing.T) {
 
 	assert := assert.New(t)
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
-	indexInfo.AddField("string", segment.FieldTypeText, true)
-	indexInfo.AddField("float", segment.FieldTypeFloat, true)
+	//indexInfo.AddField("string", segment.FieldTypeText, true)
+	//indexInfo.AddField("float", segment.FieldTypeFloat, true)
 
 	s := inmem.NewSegment(indexInfo, "123456", nil)
 
-	for i := 0; i < 150000; i++ {
+	for i := 0; i < 10000; i++ {
 		e := make(segment.Event)
 		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
 		e["mun1"] = i
-		e["string"] = fmt.Sprintf("%d", i)
-		e["float"] = float64(i)
 		s.Add(e)
 	}
 
@@ -142,23 +140,22 @@ func TestColumnWrite(t *testing.T) {
 
 	log.Printf("Segmento %v", segment)
 
-	for z := 1; z < 4; z++ {
+	for z := 1; z < 2; z++ {
 		it := segment.Columns[z].Scan()
-
+		t.Logf("Processing column %s", segment.IndexInfo.Fields[z].Name)
 		i := 0
+
 		for it.HasNext() {
 			it.Next()
 			i++
 		}
-
-		assert.Equal(1500, i)
 
 		b := roaring.NewBitmap()
 		b.Add(1)
 		b.Add(2)
 		b.Add(3)
 		b.Add(4)
-		b.Add(99)
+		b.Add(990)
 		segment.Columns[z].SetFilter(b)
 
 		i = 0
@@ -171,7 +168,7 @@ func TestColumnWrite(t *testing.T) {
 		assert.Equal(0, pages[0].StartID)
 		assert.Equal(1, i)
 
-		b.Add(101)
+		b.Add(1001)
 		segment.Columns[z].SetFilter(b)
 
 		i = 0
@@ -182,71 +179,5 @@ func TestColumnWrite(t *testing.T) {
 
 		assert.Equal(2, i)
 	}
-
-}
-
-func TestColumnWriteC1(t *testing.T) {
-
-	assert := assert.New(t)
-
-	indexInfo := segment.NewIndexInfo("test-index")
-	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
-
-	s := inmem.NewSegment(indexInfo, "123456", nil)
-
-	for i := 0; i < 150000; i++ {
-		e := make(segment.Event)
-		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
-		e["mun1"] = i
-		s.Add(e)
-	}
-
-	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
-
-	sw.Write()
-
-	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
-
-	log.Printf("Segmento %v", segment)
-
-	z := 0
-	it := segment.Columns[z].Scan()
-
-	i := 0
-	for it.HasNext() {
-		it.Next()
-		i++
-	}
-
-	assert.Equal(1500, i)
-
-	b := roaring.NewBitmap()
-	b.Add(1)
-	b.Add(2)
-	b.Add(3)
-	b.Add(4)
-	b.Add(99)
-	segment.Columns[z].SetFilter(b)
-
-	i = 0
-	pages := make([]*inmem.Page, 0)
-	for it.HasNext() {
-		p := it.Next()
-		pages = append(pages, p)
-		i++
-	}
-	assert.Equal(0, pages[0].StartID)
-	assert.Equal(1, i)
-
-	b.Add(101)
-	segment.Columns[z].SetFilter(b)
-
-	i = 0
-	for it.HasNext() {
-		it.Next()
-		i++
-	}
-
-	assert.Equal(2, i)
 
 }

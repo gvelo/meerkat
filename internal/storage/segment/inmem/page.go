@@ -23,24 +23,19 @@ const (
 	Simple8B
 	DoubleDelta
 	Raw
-	ZigZag
+	Dictionary
+	VarInt
 	Snappy
 )
 
 type Page struct {
-	Enc         Encoding
 	StartID     int
-	PayloadSize int
+	Offset      int
+	Enc         Encoding
 	Total       int
+	PayloadSize int
 }
 
-type PageDescriptor struct {
-	StartID int
-	Offset  int
-	Data    []byte
-	Enc     Encoding
-}
-
-func (pd *PageDescriptor) String() string {
+func (pd *Page) String() string {
 	return fmt.Sprintf("{ S: %d, O :%d  }", pd.StartID, pd.Offset)
 }

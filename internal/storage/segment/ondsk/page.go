@@ -11,22 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encoding
+package ondsk
 
-import (
-	"meerkat/internal/storage/segment"
-	"meerkat/internal/storage/segment/inmem"
-)
+import "fmt"
 
-type OldEncoderHandler struct {
-	root Encoder
+// Type represent the type of a field.
+type Encoding uint
+
+type Page struct {
+	Enc         Encoding
+	StartID     int
+	PayloadSize int
+	Total       int
 }
 
-func NewEncoderHandler(fieldInfo *segment.FieldInfo, page *inmem.Page) *OldEncoderHandler {
-	// create a chain of encoders
-	return nil
-}
-
-func (e *OldEncoderHandler) DoEncode(slice interface{}) interface{} {
-	return e.root.Encode(slice)
+func (p *Page) String() string {
+	return fmt.Sprintf("{ S: %d, O :%d  }", p.StartID, p.PayloadSize)
 }

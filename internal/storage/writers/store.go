@@ -1,6 +1,6 @@
 // Copyright 2019 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
+// you may not use this path except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -14,12 +14,13 @@
 package writers
 
 import (
+	"log"
 	"meerkat/internal/config"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment/inmem"
 )
 
-func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor) error {
+func WriteStoreIdx(name string, offsets []*inmem.Page) error {
 
 	bw, err := io.NewBinaryWriter(name)
 
@@ -45,31 +46,31 @@ func WriteStoreIdx(name string, offsets []*inmem.PageDescriptor) error {
 	return nil
 }
 
-func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor) ([]*inmem.PageDescriptor, error) {
-	o := make([]*inmem.PageDescriptor, 0)
-
+func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.Page) ([]*inmem.Page, error) {
+	o := make([]*inmem.Page, 0)
 	for i := 0; i < len(offsets); i++ {
 		// starting id , idx offset
-		o = append(o, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
+		o = append(o, &inmem.Page{StartID: offsets[i].StartID, Offset: bw.Offset})
 		bw.WriteVarUint64(uint64(offsets[i].StartID))
 		bw.WriteVarUint64(uint64(offsets[i].Offset))
 	}
+	log.Printf("Write Lvl 0 %v", offsets)
 	return o, nil
 }
 
-func processLevel(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor, lvl int, ts uint64, lastOffset int) (error, int, int) {
+func processLevel(bw *io.BinaryWriter, offsets []*inmem.Page, lvl int, ts uint64, lastOffset int) (error, int, int) {
 
 	offset := int(bw.Offset)
 	if len(offsets) <= 1 {
 		return nil, lvl - 1, lastOffset
 	}
 
-	nl := make([]*inmem.PageDescriptor, 0) // offsets storeFile
+	nl := make([]*inmem.Page, 0) // offsets storeFile
 
 	for i := 0; i < len(offsets); i++ {
 
 		if i%config.SkipLevelSize == 0 {
-			nl = append(nl, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
+			nl = append(nl, &inmem.Page{StartID: offsets[i].StartID, Offset: bw.Offset})
 		}
 		bw.WriteVarUint64(uint64(offsets[i].StartID))
 		bw.WriteVarUint64(uint64(offsets[i].Offset))

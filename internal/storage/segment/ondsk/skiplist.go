@@ -95,7 +95,7 @@ func (i FloatInterface) Compare(a interface{}, b interface{}) int {
 	return 0
 }
 
-func (sl *SkipList) Lookup(id interface{}) (uint64, error) {
+func (sl *SkipList) Lookup(id interface{}) (int, error) {
 	_, o, ok, _ := sl.findOffsetSkipList(id)
 	if ok {
 		return o, nil
@@ -103,14 +103,14 @@ func (sl *SkipList) Lookup(id interface{}) (uint64, error) {
 	return 0, nil
 }
 
-func (sl *SkipList) findOffsetSkipList(id interface{}) (interface{}, uint64, bool, error) {
+func (sl *SkipList) findOffsetSkipList(id interface{}) (interface{}, int, bool, error) {
 
 	r, start, err := sl.readSkipList(int(sl.RootOffset), sl.Lvl, id)
 	return r, start, true, err
 
 }
 
-func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface{}, uint64, error) {
+func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface{}, int, error) {
 
 	sl.Br.Offset = offset
 
@@ -120,7 +120,7 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		if lvl == 0 {
 
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarint64()
+			kOffset, _ := sl.Br.ReadVarInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
 				return k, kOffset, nil
@@ -133,10 +133,10 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		} else {
 			sl.Br.Offset = offset
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarint64()
+			kOffset, _ := sl.Br.ReadVarInt()
 			next := sl.Br.Offset
 			kn := sl.Interface.ReadValue(sl)
-			sl.Br.ReadVarint64()
+			sl.Br.ReadVarInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
 				return sl.readSkipList(int(kOffset), lvl-1, id)
