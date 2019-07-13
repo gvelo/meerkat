@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage/segment"
 	"meerkat/internal/storage/segment/inmem"
-	"meerkat/internal/tools/utils"
 	"testing"
 	"time"
 )
@@ -27,18 +26,16 @@ func TestSnappyEncoder_Encode(t *testing.T) {
 
 	assert := assert.New(t)
 
-	fi := &segment.FieldInfo{0, "_time", segment.FieldTypeTimestamp, true}
+	fi := &segment.FieldInfo{0, "STR", segment.FieldTypeText, true}
 	c := inmem.NewColumnt(fi)
-	mp := NewMiddlewarePayload("/tmp/", c, &utils.SlicerString{})
+	mp := NewMiddlewarePayload("/tmp/", c)
 	enc := NewSnappyEncoder(mp)
 
-	slice := make([]string, 0)
-
 	for i := 0; i < 10000; i++ {
-		slice = append(slice, fmt.Sprintf("String numero %d", i))
+		c.Add(fmt.Sprintf("String numero %d", i))
 	}
 
-	s := enc.Encode(slice)
+	s := enc.Encode(c)
 
 	sum := 0
 	for i := 0; i < len(s); i++ {
@@ -59,18 +56,17 @@ func TestRLEIntegerEncoder_Encode(t *testing.T) {
 	fi := &segment.FieldInfo{0, "Rle", segment.FieldTypeInt, true}
 	c := inmem.NewColumnt(fi)
 
-	slice := make([]int, 0)
 	x := 0
 	for i := 0; i < 10000; i++ {
 		if i%1000 == 0 {
 			x = x + 1
 		}
-		slice = append(slice, x)
+		c.Add(x)
 	}
 
-	mp := NewMiddlewarePayload("/tmp/", c, &utils.SlicerInt{})
+	mp := NewMiddlewarePayload("/tmp/", c)
 	enc := NewRLEEncoder(mp)
-	s := enc.Encode(slice)
+	s := enc.Encode(c)
 
 	assert.NotNil(s)
 	assert.Equal(10, len(s))
@@ -104,10 +100,10 @@ func TestNewDictionaryEncoder(t *testing.T) {
 		c.Add(s)
 	}
 
-	mp := NewMiddlewarePayload("/tmp/", c, new(utils.SlicerInt))
+	mp := NewMiddlewarePayload("/tmp/", c)
 	mp.Cardinality = len(dict)
 	e := NewDictionaryEncoder(mp)
-	pages := e.Encode(c.Data())
+	pages := e.Encode(c)
 
 	assert.NotNil(pages)
 	assert.Equal(10, len(pages))
@@ -139,7 +135,7 @@ func TestColumnTimeStamp_Middleware(t *testing.T) {
 		EncoderHandler,
 	}
 
-	mp := NewMiddlewarePayload("/tmp/", c, new(utils.SlicerInt))
+	mp := NewMiddlewarePayload("/tmp/", c)
 
 	executeChain := BuildChain(WriteToFile, privateChain...)
 	err := executeChain(mp)
@@ -172,7 +168,7 @@ func TestColumnInt_Middleware(t *testing.T) {
 		EncoderHandler,
 	}
 
-	mp := NewMiddlewarePayload("/tmp/", c, new(utils.SlicerInt))
+	mp := NewMiddlewarePayload("/tmp/", c)
 
 	executeChain := BuildChain(WriteToFile, privateChain...)
 	err := executeChain(mp)
@@ -204,7 +200,7 @@ func TestColumnText_Middleware(t *testing.T) {
 		EncoderHandler,
 	}
 
-	mp := NewMiddlewarePayload("/tmp/", c, new(utils.SlicerString))
+	mp := NewMiddlewarePayload("/tmp/", c)
 
 	executeChain := BuildChain(WriteToFile, privateChain...)
 	err := executeChain(mp)

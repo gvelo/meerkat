@@ -29,11 +29,11 @@ const (
 )
 
 type Page struct {
-	StartID     int
-	Offset      int
-	Enc         Encoding
-	Total       int
-	PayloadSize int
+	StartID     int      // Starting Id
+	Offset      int      // offset to page´s start
+	Enc         Encoding // Encoding type
+	Total       int      // Total rows
+	PayloadSize int      // Payload Size
 }
 
 func (pd *Page) String() string {

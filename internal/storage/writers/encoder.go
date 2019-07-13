@@ -25,7 +25,7 @@ import (
 )
 
 type Encoder interface {
-	Encode(data interface{}) []*inmem.Page
+	Encode(col inmem.Column) []*inmem.Page
 }
 
 var EncoderHandler = func(f HandlerFunc) HandlerFunc {
@@ -48,7 +48,7 @@ var EncoderHandler = func(f HandlerFunc) HandlerFunc {
 			return nil
 
 		}
-		mp.Pages = e.Encode(mp.Col.Data())
+		mp.Pages = e.Encode(mp.Col)
 		return f(mp)
 
 	}
@@ -78,9 +78,7 @@ func NewSnappyEncoder(mp *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *SnappyEncoder) Encode(data interface{}) []*inmem.Page {
-
-	src := data.([]string)
+func (e *SnappyEncoder) Encode(col inmem.Column) []*inmem.Page {
 
 	f := filepath.Join(e.path, e.fieldInfo.Name+pagExt)
 
@@ -96,9 +94,10 @@ func (e *SnappyEncoder) Encode(data interface{}) []*inmem.Page {
 	b := make([]byte, 0, 40000)
 	pd := new(inmem.Page)
 	pd.StartID = 0
-	for i := 0; i < len(src); i++ {
+
+	for i := 0; i < col.Size(); i++ {
 		// Encoding para despues separar los strings.
-		str := fmt.Sprintf("%d %v", len(src[i]), src[i])
+		str := fmt.Sprintf("%d %v", len(col.Get(i).(string)), col.Get(i))
 		b = append(b, []byte(str)...)
 
 		if len(b) >= 32000 {
@@ -128,7 +127,7 @@ func (e *SnappyEncoder) Encode(data interface{}) []*inmem.Page {
 		log.Printf("pagina %v len(b) %v", pd, len(b))
 
 		pd.Offset = bw.Offset
-		pd.Total = len(src) - pd.StartID
+		pd.Total = col.Size() - pd.StartID
 		bw.WritePageHeader(pd)
 		bw.Write(ed)
 
@@ -150,14 +149,13 @@ func NewRLEEncoder(payload *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *RLEIntegerEncoder) Encode(data interface{}) []*inmem.Page {
-	src := data.([]int)
-	return EncodeRLE(e.path, e.info, src)
+func (e *RLEIntegerEncoder) Encode(col inmem.Column) []*inmem.Page {
+	return EncodeRLE(e.path, e.info, col)
 }
 
-func EncodeRLE(path string, fieldInfo *segment.FieldInfo, data []int) []*inmem.Page {
+func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*inmem.Page {
 
-	size := len(data)
+	size := col.Size()
 
 	if size == 0 {
 		return nil
@@ -178,11 +176,11 @@ func EncodeRLE(path string, fieldInfo *segment.FieldInfo, data []int) []*inmem.P
 		return nil
 	}
 
-	var cur = data[0]
+	var cur = col.Get(0).(int)
 	var run int
 
 	for i := 0; i < size; i++ {
-		num := data[i]
+		num := col.Get(i).(int)
 
 		if num != cur {
 
@@ -233,9 +231,8 @@ func NewVarIntEncoder(payload *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *VarIntEncoder) Encode(data interface{}) []*inmem.Page {
-	d := data.([]int)
-	size := len(d)
+func (e *VarIntEncoder) Encode(col inmem.Column) []*inmem.Page {
+	size := col.Size()
 
 	if size == 0 {
 		return nil
@@ -253,33 +250,43 @@ func (e *VarIntEncoder) Encode(data interface{}) []*inmem.Page {
 		return nil
 	}
 
-	// create the batches
-	batchSize := 1000
-	var batches [][]int
-
-	for batchSize < len(d) {
-		d, batches = d[batchSize:], append(batches, d[0:batchSize:batchSize])
-	}
-	batches = append(batches, d)
-
 	bt, _ := io.NewBufferBinaryWriter()
 
+	bz := 1000
 	idCounter := 0
-	// write
-	for i := 0; i < len(batches); i++ {
 
-		pd := new(inmem.Page)
-		pd.StartID = idCounter
-		pd.Total = len(batches[i])
-		idCounter = idCounter + pd.Total
-		for x := 0; x < len(batches[i]); x++ {
-			bt.WriteVarInt(batches[i][x])
+	// write
+	for i := 0; i < col.Size(); i++ {
+
+		bt.WriteVarInt(col.Get(i).(int))
+
+		if i > 0 && i%bz == 0 {
+			pd := new(inmem.Page)
+			pd.Total = bz
+			pd.StartID = idCounter
+			idCounter = idCounter + bz
+			pd.Offset = bw.Offset
+			pd.PayloadSize = bt.Offset
+			bw.WritePageHeader(pd)
+			bt.Flush()
+			bw.Write(bt.Buffer.Bytes())
+			bt.Buffer.Reset()
+			pages = append(pages, pd)
 		}
+
+	}
+
+	if bt.Offset > 0 {
+		pd := new(inmem.Page)
+		pd.Total = bz
+		pd.StartID = idCounter
+		idCounter = idCounter + bz
 		pd.Offset = bw.Offset
+		pd.PayloadSize = bt.Offset
 		bw.WritePageHeader(pd)
 		bt.Flush()
-		pd.PayloadSize = bt.Offset
 		bw.Write(bt.Buffer.Bytes())
+		bt.Buffer.Reset()
 		pages = append(pages, pd)
 	}
 
@@ -300,10 +307,9 @@ func NewDictionaryEncoder(mp *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *EncodeDictionary) Encode(data interface{}) []*inmem.Page {
+func (e *EncodeDictionary) Encode(col inmem.Column) []*inmem.Page {
 
-	src := data.([]string)
-	size := len(src)
+	size := col.Size()
 
 	if size == 0 {
 		return nil
@@ -325,12 +331,12 @@ func (e *EncodeDictionary) Encode(data interface{}) []*inmem.Page {
 
 	for i := 0; i < size; i++ {
 		if len(dict) < e.cardinality {
-			if dict[src[i]] == 0 {
-				dict[src[i]] = len(dict) + 1
+			if dict[col.Get(i).(string)] == 0 {
+				dict[col.Get(i).(string)] = len(dict) + 1
 			}
 		}
 
-		bt.WriteVarInt(dict[src[i]])
+		bt.WriteVarInt(dict[col.Get(i).(string)])
 
 		if i != 0 && i%1000 == 0 {
 
@@ -375,21 +381,20 @@ func buildData(bw *io.BufferBinaryWriter) []byte {
 }
 
 //TODO: implementar Double Delta (sin el double) o algo asi.
-type FloatNoEncoder struct {
+type FloatDeltaEncoder struct {
 	path string
 	info *segment.FieldInfo
 }
 
 func NewFloatNOEncoder(payload *MiddlewarePayload) Encoder {
-	e := new(FloatNoEncoder)
+	e := new(FloatDeltaEncoder)
 	e.path = payload.Path
 	e.info = payload.Col.FieldInfo()
 	return e
 }
 
-func (e *FloatNoEncoder) Encode(data interface{}) []*inmem.Page {
-	d := data.([]float64)
-	size := len(d)
+func (e *FloatDeltaEncoder) Encode(col inmem.Column) []*inmem.Page {
+	size := col.Size()
 
 	if size == 0 {
 		return nil
@@ -407,32 +412,41 @@ func (e *FloatNoEncoder) Encode(data interface{}) []*inmem.Page {
 		return nil
 	}
 
-	// create the batches
-	batchSize := 1000
-	var batches [][]float64
-
-	for batchSize < len(d) {
-		d, batches = d[batchSize:], append(batches, d[0:batchSize:batchSize])
-	}
-	batches = append(batches, d)
-
 	bt, _ := io.NewBufferBinaryWriter()
 
-	// write
-	for i := 0; i < len(batches); i++ {
+	bz := 1000
+	idCounter := 0
 
-		pd := new(inmem.Page)
-		pd.StartID = i
-		pd.Total = len(batches[i])
-		for x := 0; x < len(batches[i]); x++ {
-			x := math.Float64bits(batches[i][x])
-			bt.WriteFixedUint64(x)
+	// write
+	for i := 0; i < col.Size(); i++ {
+		x := math.Float64bits(col.Get(i).(float64))
+		bt.WriteVarUint64(x)
+		if i > 0 && i%bz == 0 {
+			pd := new(inmem.Page)
+			pd.Total = bz
+			pd.StartID = idCounter
+			idCounter = idCounter + bz
+			pd.Offset = bw.Offset
+			pd.PayloadSize = bt.Offset
+			bw.WritePageHeader(pd)
+			bt.Flush()
+			bw.Write(bt.Buffer.Bytes())
+			bt.Buffer.Reset()
+			pages = append(pages, pd)
 		}
+
+	}
+
+	if bt.Offset > 0 {
+		pd := new(inmem.Page)
+		pd.Total = size - idCounter
 		pd.Offset = bw.Offset
+		pd.StartID = idCounter
+		pd.PayloadSize = bt.Offset
 		bw.WritePageHeader(pd)
 		bt.Flush()
-		pd.PayloadSize = bt.Offset
 		bw.Write(bt.Buffer.Bytes())
+		bt.Buffer.Reset()
 		pages = append(pages, pd)
 	}
 

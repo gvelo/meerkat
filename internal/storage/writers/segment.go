@@ -19,7 +19,6 @@ import (
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment"
 	"meerkat/internal/storage/segment/inmem"
-	"meerkat/internal/tools/utils"
 	"path/filepath"
 )
 
@@ -104,13 +103,13 @@ func (sw *SegmentWriter) writeColumn(col inmem.Column) (pd []*inmem.Page, err er
 	switch col.FieldInfo().Type {
 	case segment.FieldTypeInt, segment.FieldTypeTimestamp:
 		chain = chainSkip
-		mp = NewMiddlewarePayload(sw.path, col, new(utils.SlicerInt))
+		mp = NewMiddlewarePayload(sw.path, col)
 	case segment.FieldTypeKeyword, segment.FieldTypeText:
 		chain = chainBTrie
-		mp = NewMiddlewarePayload(sw.path, col, new(utils.SlicerString))
+		mp = NewMiddlewarePayload(sw.path, col)
 	case segment.FieldTypeFloat:
 		chain = chainSkip
-		mp = NewMiddlewarePayload(sw.path, col, new(utils.SlicerFloat))
+		mp = NewMiddlewarePayload(sw.path, col)
 	default:
 		sw.log.Panic().Msgf("invalid column type [%v]", col.FieldInfo().Type)
 	}

@@ -120,8 +120,6 @@ func TestColumnWrite_Num(t *testing.T) {
 
 	indexInfo := segment.NewIndexInfo("test-index")
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
-	//indexInfo.AddField("string", segment.FieldTypeText, true)
-	//indexInfo.AddField("float", segment.FieldTypeFloat, true)
 
 	s := inmem.NewSegment(indexInfo, "123456", nil)
 

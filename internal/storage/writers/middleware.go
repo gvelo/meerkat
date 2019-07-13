@@ -19,7 +19,6 @@ import (
 	"meerkat/internal/storage/segment/inmem"
 	"meerkat/internal/storage/text"
 	"meerkat/internal/tools"
-	"meerkat/internal/tools/utils"
 	"path/filepath"
 )
 
@@ -74,7 +73,6 @@ var BuildSkip = func(f HandlerFunc) HandlerFunc {
 		for i := 0; i < mp.Col.Size(); i++ {
 			x := mp.Col.Get(i)
 			mp.Sl.Add(x, i)
-			mp.Slice.Add(x)
 		}
 		mp.Cardinality = mp.Sl.Length
 		return f(mp)
@@ -85,14 +83,12 @@ var BuildBTrie = func(f HandlerFunc) HandlerFunc {
 	return func(mp *MiddlewarePayload, args ...interface{}) error {
 
 		col := mp.Col
-		slice := mp.Slice
 		mp.Posting = inmem.NewPostingStore()
 		mp.Trie = inmem.NewBtrie(mp.Posting)
 
 		for i := 0; i < col.Size(); i++ {
 			x := col.Get(i)
-			mp.Trie.Add(col.Get(i).(string), uint32(i)) // save val -> ids
-			slice.Add(x)
+			mp.Trie.Add(x.(string), uint32(i)) // save val -> ids
 		}
 		mp.Cardinality = mp.Trie.Cardinality
 		return f(mp)
@@ -102,7 +98,6 @@ var BuildBTrie = func(f HandlerFunc) HandlerFunc {
 type MiddlewarePayload struct {
 	Path        string
 	Col         inmem.Column
-	Slice       utils.Slicer
 	Trie        *inmem.BTrie
 	Sl          *inmem.SkipList
 	Posting     *inmem.PostingStore
@@ -110,11 +105,10 @@ type MiddlewarePayload struct {
 	Cardinality int
 }
 
-func NewMiddlewarePayload(path string, column inmem.Column, slicer utils.Slicer) *MiddlewarePayload {
+func NewMiddlewarePayload(path string, column inmem.Column) *MiddlewarePayload {
 	mp := new(MiddlewarePayload)
 	mp.Path = path
 	mp.Col = column
-	mp.Slice = slicer
 	return mp
 }
 
