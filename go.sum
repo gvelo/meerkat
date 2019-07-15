@@ -46,6 +46,8 @@ github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff h1:86HlEv0y
 github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff/go.mod h1:KSQcGKpxUMHk3nbYzs/tIBAM2iDooCn0BmttHOJEbLs=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 h1:qLC7fQah7D6K1B0ujays3HV9gkFtllcxhzImRR7ArPQ=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
+github.com/spenczar/fpc v0.0.0-20170401035850-1262d7d5cced h1:ng9lnbXl4QRVGr20liE8dEzpNMOKVaR9CRRZkxA9s/o=
+github.com/spenczar/fpc v0.0.0-20170401035850-1262d7d5cced/go.mod h1:uBhuyS2HSMfVpynBhH2ludjpwZsX6ZUEzj25ukz2miY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

@@ -11,5 +11,6 @@ require (
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1
 	github.com/rs/zerolog v1.14.3
 	github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac // indirect
+	github.com/spenczar/fpc v0.0.0-20170401035850-1262d7d5cced
 	github.com/stretchr/testify v1.3.0
 )

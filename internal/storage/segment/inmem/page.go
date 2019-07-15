@@ -21,7 +21,7 @@ type Encoding uint
 const (
 	RLE Encoding = iota
 	Simple8B
-	DoubleDelta
+	FPC
 	Raw
 	Dictionary
 	VarInt

@@ -16,8 +16,8 @@ package writers
 import (
 	"fmt"
 	"github.com/golang/snappy"
+	"github.com/spenczar/fpc"
 	"log"
-	"math"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/segment"
 	"meerkat/internal/storage/segment/inmem"
@@ -34,7 +34,7 @@ var EncoderHandler = func(f HandlerFunc) HandlerFunc {
 		var e Encoder
 		switch mp.Col.FieldInfo().Type {
 		case segment.FieldTypeFloat: // double delta (simple deberia... ) por ahora no encodea.
-			e = NewFloatNOEncoder(mp)
+			e = NewFloatFPCEncoder(mp)
 		case segment.FieldTypeKeyword: // dict
 			e = NewDictionaryEncoder(mp)
 		case segment.FieldTypeText: // Snappy
@@ -380,20 +380,19 @@ func buildData(bw *io.BufferBinaryWriter) []byte {
 
 }
 
-//TODO: implementar Double Delta (sin el double) o algo asi.
-type FloatDeltaEncoder struct {
+type FPCEncoder struct {
 	path string
 	info *segment.FieldInfo
 }
 
-func NewFloatNOEncoder(payload *MiddlewarePayload) Encoder {
-	e := new(FloatDeltaEncoder)
+func NewFloatFPCEncoder(payload *MiddlewarePayload) Encoder {
+	e := new(FPCEncoder)
 	e.path = payload.Path
 	e.info = payload.Col.FieldInfo()
 	return e
 }
 
-func (e *FloatDeltaEncoder) Encode(col inmem.Column) []*inmem.Page {
+func (e *FPCEncoder) Encode(col inmem.Column) []*inmem.Page {
 	size := col.Size()
 
 	if size == 0 {
@@ -412,41 +411,50 @@ func (e *FloatDeltaEncoder) Encode(col inmem.Column) []*inmem.Page {
 		return nil
 	}
 
-	bt, _ := io.NewBufferBinaryWriter()
-
-	bz := 1000
+	bsz := 1000
 	idCounter := 0
+	t := 0
 
+	bt, _ := io.NewBufferBinaryWriter()
+	fpcw := fpc.NewWriter(bt)
 	// write
 	for i := 0; i < col.Size(); i++ {
-		x := math.Float64bits(col.Get(i).(float64))
-		bt.WriteVarUint64(x)
-		if i > 0 && i%bz == 0 {
+
+		fpcw.WriteFloat(col.Get(i).(float64))
+		t = t + 1
+
+		if i > 0 && i%bsz == 0 {
+
 			pd := new(inmem.Page)
-			pd.Total = bz
+			pd.Total = t
 			pd.StartID = idCounter
-			idCounter = idCounter + bz
+			idCounter = idCounter + pd.Total
 			pd.Offset = bw.Offset
+			pd.Enc = inmem.FPC
+			fpcw.Flush()
+			bt.Flush()
 			pd.PayloadSize = bt.Offset
 			bw.WritePageHeader(pd)
-			bt.Flush()
 			bw.Write(bt.Buffer.Bytes())
-			bt.Buffer.Reset()
 			pages = append(pages, pd)
+			t = 0
+
 		}
 
 	}
 
-	if bt.Offset > 0 {
+	if t > 0 {
 		pd := new(inmem.Page)
-		pd.Total = size - idCounter
-		pd.Offset = bw.Offset
+		pd.Total = t
 		pd.StartID = idCounter
+		idCounter = idCounter + pd.Total
+		pd.Offset = bw.Offset
+		pd.Enc = inmem.FPC
+		fpcw.Flush()
+		bt.Flush()
 		pd.PayloadSize = bt.Offset
 		bw.WritePageHeader(pd)
-		bt.Flush()
 		bw.Write(bt.Buffer.Bytes())
-		bt.Buffer.Reset()
 		pages = append(pages, pd)
 	}
 

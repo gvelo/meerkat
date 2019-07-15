@@ -214,3 +214,34 @@ func TestColumnText_Middleware(t *testing.T) {
 	a.Equal(100000, sum)
 
 }
+
+func TestColumnFloat_Middleware(t *testing.T) {
+
+	a := assert.New(t)
+
+	fi := &segment.FieldInfo{0, "float", segment.FieldTypeFloat, true}
+	c := inmem.NewColumnt(fi)
+
+	for i := 0; i < 100000; i++ {
+		c.Add(float64(i))
+	}
+
+	var privateChain = []Middleware{
+		BuildSkip,
+		EncoderHandler,
+	}
+
+	mp := NewMiddlewarePayload("/tmp/", c)
+
+	executeChain := BuildChain(WriteToFile, privateChain...)
+	err := executeChain(mp)
+	a.Equal(nil, err)
+
+	sum := 0
+	for i := 0; i < len(mp.Pages); i++ {
+		sum = sum + mp.Pages[i].Total
+	}
+
+	a.Equal(100000, sum)
+
+}
