@@ -79,7 +79,7 @@ func (c *ColumnImpl) SetFilter(bitmap *roaring.Bitmap) {
 		if lastPage == nil {
 			lastPage = processPage(c, i)
 		} else {
-			if int(i) >= lastPage.StartID+lastPage.Total {
+			if int(i) > lastPage.StartID+lastPage.Total {
 				lastPage = processPage(c, i)
 			}
 		}

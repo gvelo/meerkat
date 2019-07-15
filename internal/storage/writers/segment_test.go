@@ -222,6 +222,7 @@ func TestColumnWrite_Float(t *testing.T) {
 		b.Add(3)
 		b.Add(4)
 		b.Add(990)
+		b.Add(1001)
 		segment.Columns[z].SetFilter(b)
 
 		i = 0
@@ -234,7 +235,7 @@ func TestColumnWrite_Float(t *testing.T) {
 		assert.Equal(0, pages[0].StartID)
 		assert.Equal(1, i)
 
-		b.Add(1001)
+		b.Add(1002)
 		segment.Columns[z].SetFilter(b)
 
 		i = 0
