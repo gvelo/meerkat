@@ -148,7 +148,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	}
 
 	// Field Count
-	err = bw.WriteVarInt(len(sw.segment.IndexInfo.Fields))
+	err = bw.WriteVarUInt(len(sw.segment.IndexInfo.Fields))
 
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 			return err
 		}
 
-		err = bw.WriteVarInt(int(field.Type))
+		err = bw.WriteVarUInt(int(field.Type))
 		if err != nil {
 			return err
 		}
@@ -182,7 +182,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	// segment stats.
 
 	// Event count
-	err = bw.WriteVarInt(int(sw.segment.EventCount))
+	err = bw.WriteVarUInt(int(sw.segment.EventCount))
 
 	if err != nil {
 		return err

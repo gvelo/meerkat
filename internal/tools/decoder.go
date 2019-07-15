@@ -61,7 +61,7 @@ func (d *IntDecoder) HasNext() bool {
 		return true
 	}
 
-	num, err := d.br.ReadVarInt()
+	num, err := d.br.ReadVarUInt()
 	if err == golangIo.EOF {
 		return false
 	}
@@ -71,7 +71,7 @@ func (d *IntDecoder) HasNext() bool {
 		return false
 	}
 
-	run, err := d.br.ReadVarInt()
+	run, err := d.br.ReadVarUInt()
 	if err == golangIo.EOF {
 		d.err = golangIo.ErrUnexpectedEOF
 		return false
@@ -123,10 +123,10 @@ func (e *DictionaryDecoder) Decode(data interface{}) interface{} {
 		p := pages[0]
 
 		br := io.NewBinaryReader(p.Data)
-		keys, _ := br.ReadVarInt()
+		keys, _ := br.ReadVarUInt()
 		dict := make(map[int]string)
 		for i := 0; i < keys; i++ {
-			k, _ := br.ReadVarInt()
+			k, _ := br.ReadVarUInt()
 			v, _ := br.ReadString()
 			dict[k] = v
 		}
@@ -159,7 +159,7 @@ func (d *DictDecoder) Next() interface{} {
 // Next returns true if a value was scanned.
 func (d *DictDecoder) HasNext() bool {
 
-	num, err := d.br.ReadVarInt()
+	num, err := d.br.ReadVarUInt()
 	if err == golangIo.EOF {
 		return false
 	}

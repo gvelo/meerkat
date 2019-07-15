@@ -82,7 +82,7 @@ func (sr *segmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 		return nil, err
 	}
 
-	fieldCount, err := br.ReadVarInt()
+	fieldCount, err := br.ReadVarUInt()
 
 	if err != nil {
 		return nil, err
@@ -98,13 +98,13 @@ func (sr *segmentReader) readIndexInfo() (*segment.IndexInfo, error) {
 			return nil, err
 		}
 
-		fieldType, _ := br.ReadVarInt()
+		fieldType, _ := br.ReadVarUInt()
 
 		if err != nil {
 			return nil, err
 		}
 
-		indexed, err := br.ReadVarInt()
+		indexed, err := br.ReadVarUInt()
 
 		if err != nil {
 			return nil, err

@@ -56,10 +56,10 @@ func (sl *OnDiskColumnIdx) processLevel(offset int, lvl int, id int, start int) 
 	// search this Lvl
 	for i := 0; i < int(math.MaxUint32); i++ {
 
-		sId1, _ := sl.Br.ReadVarInt()
-		oId1, _ := sl.Br.ReadVarInt()
+		sId1, _ := sl.Br.ReadVarUInt()
+		oId1, _ := sl.Br.ReadVarUInt()
 
-		sId2, _ := sl.Br.ReadVarInt()
+		sId2, _ := sl.Br.ReadVarUInt()
 
 		if int(sId2) > id {
 			return sl.processLevel(int(oId1), lvl-1, id, int(sId1))

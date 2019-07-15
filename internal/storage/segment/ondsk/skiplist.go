@@ -35,7 +35,7 @@ type IntInterface struct {
 }
 
 func (i IntInterface) ReadValue(sl *SkipList) interface{} {
-	n, err := sl.Br.ReadVarInt()
+	n, err := sl.Br.ReadVarUInt()
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ type UInt32Interface struct {
 }
 
 func (i UInt32Interface) ReadValue(sl *SkipList) interface{} {
-	n, err := sl.Br.ReadVarInt()
+	n, err := sl.Br.ReadVarUInt()
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +120,7 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		if lvl == 0 {
 
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarInt()
+			kOffset, _ := sl.Br.ReadVarUInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
 				return k, kOffset, nil
@@ -133,10 +133,10 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		} else {
 			sl.Br.Offset = offset
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarInt()
+			kOffset, _ := sl.Br.ReadVarUInt()
 			next := sl.Br.Offset
 			kn := sl.Interface.ReadValue(sl)
-			sl.Br.ReadVarInt()
+			sl.Br.ReadVarUInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
 				return sl.readSkipList(int(kOffset), lvl-1, id)
