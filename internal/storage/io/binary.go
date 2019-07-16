@@ -28,7 +28,7 @@ import (
 type FileType byte
 
 const (
-	MagicNumber = "ed"
+	MagicNumber = "mk"
 	Version     = "01"
 
 	PostingListV1 FileType = 0
@@ -183,14 +183,10 @@ func (bw *baseBinaryWriter) WriteByte(x byte) error {
 }
 
 func (bw *baseBinaryWriter) WriteVarInt(i int) error {
-	return bw.WriteZigzag64(uint64(i))
+	return bw.WriteZigzag64(i)
 }
 
 func (bw *baseBinaryWriter) WriteVarUInt(i int) error {
-	return bw.WriteVarUint64(uint64(i))
-}
-
-func (bw *baseBinaryWriter) WriteVarUInt32(i uint32) error {
 	return bw.WriteVarUint64(uint64(i))
 }
 
@@ -258,19 +254,10 @@ func (bw *baseBinaryWriter) WriteFixedUint32(x uint64) error {
 // EncodeZigzag64 writes a zigzag-encoded 64-bit integer
 // to the Buffer.
 // This is the format used for the sint64 protocol buffer type.
-func (bw *baseBinaryWriter) WriteZigzag64(x uint64) error {
+func (bw *baseBinaryWriter) WriteZigzag64(x int) error {
 	// use signed number to get arithmetic right shift.
 	bw.Offset += 8
-	return bw.WriteVarUint64(uint64((x << 1) ^ uint64(int64(x)>>63)))
-}
-
-// EncodeZigzag32 writes a zigzag-encoded 32-bit integer
-// to the Buffer.
-// This is the format used for the sint32 protocol buffer type.
-func (bw *baseBinaryWriter) WriteZigzag32(x uint64) error {
-	// use signed number to get arithmetic right shift.
-	bw.Offset += 4
-	return bw.WriteVarUint64(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
+	return bw.WriteVarUint64((uint64(x) << 1) ^ uint64(x>>63))
 }
 
 // EncodeRawBytes writes a count-delimited byte buffer to the Buffer.

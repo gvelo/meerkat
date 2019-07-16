@@ -42,7 +42,6 @@ func WriteSkipList(name string, sl *inmem.SkipList) error {
 	it := sl.NewIterator(0)
 	for it.HasNext() {
 		// TODO: FIX copio las claves, puede ocupar mucho...
-		// horrible como hago?
 		var key = it.Key()
 		switch key.(type) {
 		case uint64:
@@ -84,7 +83,7 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 	nl := make([]uint64, 0)
 	nk := make([]float64, 0)
 
-	for i := 0; i < int(uint64(len(offsets))); i++ {
+	for i := 0; i < len(offsets); i++ {
 		o := bw.Offset
 		bw.WriteFixedUint64(math.Float64bits(keys[i]))
 		bw.WriteVarUint64(offsets[i])
