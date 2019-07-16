@@ -28,7 +28,7 @@ import (
 type FileType byte
 
 const (
-	MagicNumber = "ed"
+	MagicNumber = "mk"
 	Version     = "01"
 
 	PostingListV1 FileType = 0
@@ -149,25 +149,25 @@ func (br *BinaryWriter) WritePageHeader(page *inmem.Page) error {
 		return err
 	}
 
-	err = br.WriteVarInt(page.Offset)
+	err = br.WriteVarUInt(page.Offset)
 
 	if err != nil {
 		return err
 	}
 
-	err = br.WriteVarInt(page.Total)
+	err = br.WriteVarUInt(page.Total)
 
 	if err != nil {
 		return err
 	}
 
-	err = br.WriteVarInt(page.StartID)
+	err = br.WriteVarUInt(page.StartID)
 
 	if err != nil {
 		return err
 	}
 
-	err = br.WriteVarInt(page.PayloadSize)
+	err = br.WriteVarUInt(page.PayloadSize)
 
 	if err != nil {
 		return err
@@ -183,10 +183,10 @@ func (bw *baseBinaryWriter) WriteByte(x byte) error {
 }
 
 func (bw *baseBinaryWriter) WriteVarInt(i int) error {
-	return bw.WriteVarUint64(uint64(i))
+	return bw.WriteZigzag64(i)
 }
 
-func (bw *baseBinaryWriter) WriteVarUInt32(i uint32) error {
+func (bw *baseBinaryWriter) WriteVarUInt(i int) error {
 	return bw.WriteVarUint64(uint64(i))
 }
 
@@ -254,26 +254,17 @@ func (bw *baseBinaryWriter) WriteFixedUint32(x uint64) error {
 // EncodeZigzag64 writes a zigzag-encoded 64-bit integer
 // to the Buffer.
 // This is the format used for the sint64 protocol buffer type.
-func (bw *baseBinaryWriter) WriteZigzag64(x uint64) error {
+func (bw *baseBinaryWriter) WriteZigzag64(x int) error {
 	// use signed number to get arithmetic right shift.
 	bw.Offset += 8
-	return bw.WriteVarUint64(uint64((x << 1) ^ uint64(int64(x)>>63)))
-}
-
-// EncodeZigzag32 writes a zigzag-encoded 32-bit integer
-// to the Buffer.
-// This is the format used for the sint32 protocol buffer type.
-func (bw *baseBinaryWriter) WriteZigzag32(x uint64) error {
-	// use signed number to get arithmetic right shift.
-	bw.Offset += 4
-	return bw.WriteVarUint64(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
+	return bw.WriteVarUint64((uint64(x) << 1) ^ uint64(x>>63))
 }
 
 // EncodeRawBytes writes a count-delimited byte buffer to the Buffer.
 // This is the format used for the bytes protocol buffer
 // type and for embedded messages.
 func (bw *baseBinaryWriter) WriteBytes(b []byte) error {
-	err := bw.WriteVarInt(len(b))
+	err := bw.WriteVarUInt(len(b))
 	if err != nil {
 		return err
 	}
@@ -297,7 +288,7 @@ func (bw *baseBinaryWriter) Write(b []byte) (int, error) {
 // This is the format used for the proto2 string type.
 func (bw *baseBinaryWriter) WriteString(s string) error {
 	l := len(s)
-	bw.WriteVarInt(l)
+	bw.WriteVarUInt(l)
 	bw.writer.WriteString(s)
 	bw.Offset += l
 	return nil
@@ -377,20 +368,20 @@ func (br *BinaryReader) ReadPageHeader() (*inmem.Page, error) {
 	b := br.ReadByte()
 	p.Enc = inmem.Encoding(b)
 
-	p.Offset, err = br.ReadVarInt()
+	p.Offset, err = br.ReadVarUInt()
 	if err != nil {
 		return nil, err
 	}
 
-	p.Total, err = br.ReadVarInt()
+	p.Total, err = br.ReadVarUInt()
 	if err != nil {
 		return nil, err
 	}
-	p.StartID, err = br.ReadVarInt()
+	p.StartID, err = br.ReadVarUInt()
 	if err != nil {
 		return nil, err
 	}
-	p.PayloadSize, err = br.ReadVarInt()
+	p.PayloadSize, err = br.ReadVarUInt()
 	if err != nil {
 		return nil, err
 	}
@@ -404,11 +395,11 @@ func (br *BinaryReader) ReadByte() byte {
 	return b
 }
 
-// ReadVarint64 reads a varint-encoded integer from the Buffer.
+// ReadVarUInt64 reads a varint-encoded integer from the Buffer.
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
-func (br *BinaryReader) ReadVarint64() (x uint64, err error) {
+func (br *BinaryReader) ReadVarUInt64() (x uint64, err error) {
 	i := br.Offset
 	if br.Offset >= len(br.bytes) {
 		return 0, io.ErrUnexpectedEOF
@@ -502,7 +493,12 @@ done:
 }
 
 func (br *BinaryReader) ReadVarInt() (int, error) {
-	i, err := br.ReadVarint64()
+	i, err := br.ReadZigzag64()
+	return int(i), err
+}
+
+func (br *BinaryReader) ReadVarUInt() (int, error) {
+	i, err := br.ReadVarUInt64()
 	return int(i), err
 }
 
@@ -552,7 +548,7 @@ func (br *BinaryReader) ReadFixed32() (x uint64, err error) {
 // from the Buffer.
 // This is the format used for the sint64 protocol buffer type.
 func (br *BinaryReader) ReadZigzag64() (x uint64, err error) {
-	x, err = br.ReadVarint64()
+	x, err = br.ReadVarUInt64()
 	if err != nil {
 		return
 	}
@@ -564,7 +560,7 @@ func (br *BinaryReader) ReadZigzag64() (x uint64, err error) {
 // from  the Buffer.
 // This is the format used for the sint32 protocol buffer type.
 func (br *BinaryReader) ReadZigzag32() (x uint64, err error) {
-	x, err = br.ReadVarint64()
+	x, err = br.ReadVarUInt64()
 	if err != nil {
 		return
 	}
@@ -577,7 +573,7 @@ func (br *BinaryReader) ReadZigzag32() (x uint64, err error) {
 // type and for embedded messages.
 func (br *BinaryReader) ReadBytes() (buf []byte, err error) {
 
-	n, err := br.ReadVarInt()
+	n, err := br.ReadVarUInt()
 
 	if err != nil {
 		return nil, err
@@ -614,13 +610,13 @@ func (br *BinaryReader) ReadString() (s string, err error) {
 func (br *BinaryReader) ReadValue(info *segment.FieldInfo) (interface{}, error) {
 	switch info.Type {
 	case segment.FieldTypeInt:
-		return br.ReadVarint64()
+		return br.ReadVarUInt64()
 	case segment.FieldTypeText:
 		return br.ReadString()
 	case segment.FieldTypeKeyword:
 		return br.ReadString()
 	case segment.FieldTypeTimestamp:
-		return br.ReadVarint64()
+		return br.ReadVarUInt64()
 	case segment.FieldTypeFloat:
 		return br.ReadFixed64()
 	}

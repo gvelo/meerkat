@@ -30,13 +30,13 @@ func Test_newFileWriterReader(t *testing.T) {
 
 	fw.WriteString("HOLA MANOLA")
 	fw.WriteVarInt(-1)
-	fw.WriteVarUint64(100)
-	fw.WriteVarUint64(2023423423423432434)
+	fw.WriteVarInt(100)
+	fw.WriteVarInt(2023423423423432434)
 	fw.WriteFixedUint64(2023423423423432222)
 	fw.WriteFixedUint32(32)
 
 	//var x uint64 =
-	fw.WriteVarUint64(math.MaxUint64)
+	fw.WriteVarUInt(math.MaxInt64)
 
 	fw.Close()
 
@@ -75,18 +75,18 @@ func Test_newFileWriterReader(t *testing.T) {
 		t.Error(err)
 	}
 
-	i6, err := fr.ReadVarInt()
+	i6, err := fr.ReadVarUInt()
 	if err != nil {
 		t.Error(err)
 	}
 
 	assert.Equal(t, "HOLA MANOLA", s)
 	assert.Equal(t, -1, i1)
-	assert.Equal(t, uint64(100), i2)
-	assert.Equal(t, uint64(2023423423423432434), i3)
+	assert.Equal(t, int(100), i2)
+	assert.Equal(t, int(2023423423423432434), i3)
 	assert.Equal(t, uint64(2023423423423432222), i4)
 	assert.Equal(t, uint64(32), i5)
-	assert.True(t, math.MaxUint64 == i6)
+	assert.Equal(t, math.MaxInt64, i6)
 }
 
 // Read ZigZags y VarInts.
@@ -95,13 +95,13 @@ func Test_IntWriteRead(t *testing.T) {
 	assert := assert.New(t)
 
 	bw, _ := NewBufferBinaryWriter()
-	bw.WriteVarInt(-15)
+	bw.WriteVarUInt(-15)
 	bw.Flush()
 
 	b := bw.Buffer.Bytes()
 
 	br := NewBinaryReader(b)
-	i, _ := br.ReadVarInt()
+	i, _ := br.ReadVarUInt()
 
 	assert.Equal(-15, i)
 

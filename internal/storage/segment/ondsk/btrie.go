@@ -34,13 +34,13 @@ nodesearch:
 	for i := 0; i < len(term); i++ {
 
 		// consume Node posting ( only read on final state )
-		_, err := br.ReadVarInt()
+		_, err := br.ReadVarUInt()
 
 		if err != nil {
 			return 0, err
 		}
 
-		childCount, err := br.ReadVarInt()
+		childCount, err := br.ReadVarUInt()
 
 		if err != nil {
 			return 0, err
@@ -49,7 +49,7 @@ nodesearch:
 		for c := 0; c < int(childCount); c++ {
 
 			key := br.ReadByte()
-			value, err := br.ReadVarInt()
+			value, err := br.ReadVarUInt()
 
 			if err != nil {
 				return 0, err
@@ -62,7 +62,7 @@ nodesearch:
 
 		}
 
-		bucketCount, err := br.ReadVarInt()
+		bucketCount, err := br.ReadVarUInt()
 
 		if err != nil {
 			return 0, err
@@ -76,7 +76,7 @@ nodesearch:
 				return 0, err
 			}
 
-			offset, err := br.ReadVarInt()
+			offset, err := br.ReadVarUInt()
 
 			if err != nil {
 				return 0, err
@@ -93,7 +93,7 @@ nodesearch:
 
 	}
 
-	offset, err := br.ReadVarInt()
+	offset, err := br.ReadVarUInt()
 
 	if err != nil {
 		return 0, err

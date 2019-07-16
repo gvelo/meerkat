@@ -190,8 +190,8 @@ func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*i
 			bw.WritePageHeader(pd)
 
 			b := bw.Offset // to calculate payload
-			bw.WriteVarInt(cur)
-			bw.WriteVarInt(run)
+			bw.WriteVarUInt(cur)
+			bw.WriteVarUInt(run)
 			a := bw.Offset
 			pd.PayloadSize = a - b
 			pd.Total = i - pd.StartID
@@ -212,8 +212,8 @@ func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*i
 	pd.Offset = bw.Offset
 	pd.Total = size - pd.StartID
 	bw.WritePageHeader(pd)
-	bw.WriteVarInt(cur)
-	bw.WriteVarInt(run)
+	bw.WriteVarUInt(cur)
+	bw.WriteVarUInt(run)
 	pages = append(pages, pd)
 
 	return pages
@@ -258,7 +258,7 @@ func (e *VarIntEncoder) Encode(col inmem.Column) []*inmem.Page {
 	// write
 	for i := 0; i < col.Size(); i++ {
 
-		bt.WriteVarInt(col.Get(i).(int))
+		bt.WriteVarUInt(col.Get(i).(int))
 
 		if i > 0 && i%bz == 0 {
 			pd := new(inmem.Page)
@@ -336,7 +336,7 @@ func (e *EncodeDictionary) Encode(col inmem.Column) []*inmem.Page {
 			}
 		}
 
-		bt.WriteVarInt(dict[col.Get(i).(string)])
+		bt.WriteVarUInt(dict[col.Get(i).(string)])
 
 		if i != 0 && i%1000 == 0 {
 
@@ -361,9 +361,9 @@ func (e *EncodeDictionary) Encode(col inmem.Column) []*inmem.Page {
 
 	// write dictionary to file´s bottom
 	offset := bw.Offset
-	bw.WriteVarInt(len(dict))
+	bw.WriteVarUInt(len(dict))
 	for k, v := range dict {
-		bw.WriteVarInt(v)
+		bw.WriteVarUInt(v)
 		bw.WriteBytes([]byte(k))
 	}
 	bw.WriteFixedUint64(uint64(offset))

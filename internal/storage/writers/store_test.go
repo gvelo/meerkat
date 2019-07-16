@@ -14,7 +14,6 @@
 package writers
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage/segment"
 	"meerkat/internal/storage/segment/inmem"
@@ -99,7 +98,7 @@ func createEvents(num int) []segment.Event {
 			"msg":    fmt.Sprintf("test message %d ", i),
 			"source": "log",
 			"num1":   uint64(i),
-			"num2":   uint64(float64(i)),
+			"num2":   float64(i),
 		}
 		evts = append(evts, evt)
 	}

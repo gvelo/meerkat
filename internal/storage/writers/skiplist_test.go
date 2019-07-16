@@ -64,7 +64,10 @@ func TestSkipList_Read1(t *testing.T) {
 
 	idx, _ := readers.ReadSkipList(ip, ondsk.FloatInterface{})
 	start = time.Now()
-	o, _ := idx.Lookup(0.1)
+	o, _ := idx.Lookup(11.22220)
+	a.Equal(0, o, "Error Element Found ")
+
+	o, _ = idx.Lookup(0.1)
 
 	t.Logf("find sl in dist took %v ", time.Since(start))
 

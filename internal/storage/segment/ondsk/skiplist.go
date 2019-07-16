@@ -35,7 +35,7 @@ type IntInterface struct {
 }
 
 func (i IntInterface) ReadValue(sl *SkipList) interface{} {
-	n, err := sl.Br.ReadVarInt()
+	n, err := sl.Br.ReadVarUInt()
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ type UInt32Interface struct {
 }
 
 func (i UInt32Interface) ReadValue(sl *SkipList) interface{} {
-	n, err := sl.Br.ReadVarInt()
+	n, err := sl.Br.ReadVarUInt()
 	if err != nil {
 		panic(err)
 	}
@@ -104,13 +104,10 @@ func (sl *SkipList) Lookup(id interface{}) (int, error) {
 }
 
 func (sl *SkipList) findOffsetSkipList(id interface{}) (interface{}, int, bool, error) {
-
-	r, start, err := sl.readSkipList(int(sl.RootOffset), sl.Lvl, id)
-	return r, start, true, err
-
+	return sl.readSkipList(int(sl.RootOffset), sl.Lvl, id)
 }
 
-func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface{}, int, error) {
+func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface{}, int, bool, error) {
 
 	sl.Br.Offset = offset
 
@@ -120,23 +117,23 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		if lvl == 0 {
 
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarInt()
+			kOffset, _ := sl.Br.ReadVarUInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
-				return k, kOffset, nil
+				return k, kOffset, true, nil
 			}
 
 			if sl.Interface.Compare(k, id) > 0 {
 				// not found
-				return k, kOffset, nil
+				return k, kOffset, false, nil
 			}
 		} else {
 			sl.Br.Offset = offset
 			k := sl.Interface.ReadValue(sl)
-			kOffset, _ := sl.Br.ReadVarInt()
+			kOffset, _ := sl.Br.ReadVarUInt()
 			next := sl.Br.Offset
 			kn := sl.Interface.ReadValue(sl)
-			sl.Br.ReadVarInt()
+			sl.Br.ReadVarUInt()
 
 			if sl.Interface.Compare(k, id) == 0 {
 				return sl.readSkipList(int(kOffset), lvl-1, id)
@@ -145,7 +142,7 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 			if sl.Interface.Compare(kn, id) > 0 {
 				// done, not found
 				if lvl == 0 {
-					return 0, 0, nil
+					return 0, 0, false, nil
 				}
 				return sl.readSkipList(int(kOffset), lvl-1, id)
 			}
@@ -153,6 +150,6 @@ func (sl *SkipList) readSkipList(offset int, lvl int, id interface{}) (interface
 		}
 
 	}
-	return 0, 0, nil
+	return 0, 0, false, nil
 
 }

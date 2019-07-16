@@ -78,13 +78,13 @@ func (tw *trieWriter) writeNode(node *inmem.Node) (int, error) {
 		postingOffset = node.Posting.Offset
 	}
 
-	err := tw.bw.WriteVarInt(postingOffset)
+	err := tw.bw.WriteVarUInt(postingOffset)
 
 	if err != nil {
 		return 0, err
 	}
 
-	err = tw.bw.WriteVarInt(len(node.Children))
+	err = tw.bw.WriteVarUInt(len(node.Children))
 	if err != nil {
 		return -1, err
 	}
@@ -96,7 +96,7 @@ func (tw *trieWriter) writeNode(node *inmem.Node) (int, error) {
 			return -1, err
 		}
 
-		err = tw.bw.WriteVarInt(child.Offset)
+		err = tw.bw.WriteVarUInt(child.Offset)
 
 		if err != nil {
 			return -1, err
@@ -104,7 +104,7 @@ func (tw *trieWriter) writeNode(node *inmem.Node) (int, error) {
 
 	}
 
-	err = tw.bw.WriteVarInt(len(node.Bucket))
+	err = tw.bw.WriteVarUInt(len(node.Bucket))
 
 	if err != nil {
 		return -1, err
@@ -118,7 +118,7 @@ func (tw *trieWriter) writeNode(node *inmem.Node) (int, error) {
 			return -1, err
 		}
 
-		err = tw.bw.WriteVarInt(record.Posting.Offset)
+		err = tw.bw.WriteVarUInt(record.Posting.Offset)
 
 		if err != nil {
 			return -1, err

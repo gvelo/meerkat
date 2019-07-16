@@ -109,6 +109,53 @@ func TestSkipList_InsertOrUpdate(t *testing.T) {
 
 }
 
+func setUpValuesInIntSplitList() *SkipList {
+
+	skipList := NewSL(.5, 16, u, IntInterface{})
+
+	skipList.InsertOrUpdate(-13, nil)
+	skipList.InsertOrUpdate(-1, nil)
+	skipList.InsertOrUpdate(-123, nil)
+	skipList.InsertOrUpdate(-555, nil)
+	skipList.InsertOrUpdate(-553, nil)
+	skipList.InsertOrUpdate(554, nil)
+	skipList.InsertOrUpdate(124, nil)
+	skipList.InsertOrUpdate(125, nil)
+	skipList.InsertOrUpdate(1222, nil)
+
+	return skipList
+}
+
+func TestIntSkipList_Insert(t *testing.T) {
+
+	a := assert.New(t)
+	skipList := setUpValuesInIntSplitList()
+	a.Equal(skipList.Length, 9)
+
+	node := skipList.head.forward[0]
+	for node.forward[0] != nil {
+		a.True(skipList.comparator.Compare(node.key, node.forward[0].key) == -1)
+		node = node.forward[0]
+	}
+}
+
+func TestIntSkipList_Delete(t *testing.T) {
+	// flaky test, deberiamos chequear todos los niveles.
+	a := assert.New(t)
+	skipList := setUpValuesInIntSplitList()
+	a.Equal(skipList.Length, 9)
+
+	res, found := skipList.Search(-553)
+	a.True(found)
+
+	skipList.Delete(-553)
+	a.Equal(skipList.Length, 8)
+	res, found = skipList.Search(-553)
+	a.Nil(res)
+	a.False(found)
+
+}
+
 func BenchmarkSkipList_Insert(b *testing.B) {
 
 	list := createRandomList(5000)
