@@ -90,6 +90,7 @@ func TestStoreWriterReaderFewEvents(t *testing.T) {
 
 }
 
+/*
 func createEvents(num int) []segment.Event {
 	evts := make([]segment.Event, 0)
 	for i := 0; i < num; i++ {
@@ -105,7 +106,7 @@ func createEvents(num int) []segment.Event {
 	return evts
 }
 
-/*
+
 func TestStoreWriterReaderMoreEvents(t *testing.T) {
 	a := assert.New(t)
 	p := "/tmp/store"
