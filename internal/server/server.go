@@ -47,7 +47,7 @@ func Start(c config.Config) {
 
 	seeds := strings.Split(c.Seeds, ",")
 
-	cl := cluster.NewCluster(seeds, c.DBPath)
+	cl := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
 
 	err := cl.Start()
 

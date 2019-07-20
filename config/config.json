@@ -3,5 +3,5 @@
   "prettyLog": "true",
   "seeds": "10.13.12.12",
   "dbPath": "/var/meerkat",
-  "clusterName": "meerkat"
+  "gossipPort": -1
 }

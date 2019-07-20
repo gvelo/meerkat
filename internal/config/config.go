@@ -24,4 +24,5 @@ type Config struct {
 	Seeds       string `json:"seeds"`
 	DBPath      string `json:"dbPath"`
 	ClusterName string `json:"clusterName"`
+	GossipPort  int    `json:"gossipPort"`
 }

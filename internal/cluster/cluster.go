@@ -47,9 +47,10 @@ type clusterConfig struct {
 	Nodes []net.IP
 }
 
-func NewCluster(seeds []string, dbPath string) Cluster {
+func NewCluster(port int, seeds []string, dbPath string) Cluster {
 
 	cl := &cluster{
+		port:      port,
 		confPath:  path.Join(dbPath, confFile),
 		seeds:     seeds,
 		log:       log.With().Str("component", "cluster").Logger(),
@@ -62,6 +63,7 @@ func NewCluster(seeds []string, dbPath string) Cluster {
 }
 
 type cluster struct {
+	port      int
 	seeds     []string
 	log       zerolog.Logger
 	conf      clusterConfig
@@ -224,6 +226,10 @@ func (c *cluster) initSerf() error {
 	serfConf.Tags["hostname"] = hostName
 	serfConf.Tags["bootstrapping"] = "true"
 	serfConf.EventCh = c.serfChan
+
+	if c.port != -1 {
+		serfConf.MemberlistConfig.BindPort = c.port
+	}
 
 	// TODO(gvelo): redirect serf log to zerolog
 	// TODO(gvelo): save last known members to cluster config file
