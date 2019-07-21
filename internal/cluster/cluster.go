@@ -122,21 +122,30 @@ func (c *cluster) LiveMembers() []serf.Member {
 
 func (c *cluster) join() error {
 
-	c.log.Info().Msgf("trying to join the Serf cluster")
-
 	// first, try to join using the provided seeds.
+	if len(c.seeds) > 0 {
 
-	n, err := c.serf.Join(c.seeds, true)
+		c.log.Info().Msgf("trying to join seeds %v", c.seeds)
 
-	if err == nil {
-		c.log.Info().Msgf("%v nodes successfully joined", n)
-		return nil
+		n, err := c.serf.Join(c.seeds, true)
+
+		if err == nil {
+			c.log.Info().Msgf("%v nodes successfully joined", n)
+			return nil
+		}
+
 	}
 
 	// TODO(gvelo): if we are unable to contact the seeds try
 	// to contact the last known nodes in batch on N nodes.
 
-	return err
+	if len(c.conf.Nodes) > 0 {
+		c.log.Info().Msgf("trying to join nodes %v", c.conf.Nodes)
+	}
+
+	c.log.Info().Msg("no nodes available")
+
+	return nil
 
 }
 

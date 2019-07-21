@@ -45,7 +45,13 @@ func Start(c config.Config) {
 
 	// start components
 
-	seeds := strings.Split(c.Seeds, ",")
+	var seeds []string
+
+	if c.Seeds == "" {
+		seeds = make([]string, 0)
+	} else {
+		seeds = strings.Split(c.Seeds, ",")
+	}
 
 	cl := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
 
