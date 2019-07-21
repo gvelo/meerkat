@@ -1,0 +1,8 @@
+FROM golang:latest
+RUN mkdir /build
+RUN mkdir /data
+COPY . /build
+WORKDIR /build
+RUN build/build.sh
+WORKDIR /
+CMD ["/build/meerkat","start","-c","/build/config/config.json","-d","/data"]
