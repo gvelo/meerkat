@@ -20,6 +20,9 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/config"
 	"meerkat/internal/server"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var rootCmd *cobra.Command
@@ -112,4 +115,14 @@ func Start(cmd *cobra.Command, args []string) {
 
 	server.Start(conf)
 
+	handleSignals()
+
+}
+
+//TODO(gvelo): implement properly
+func handleSignals() {
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+
+	_ = <-signalCh
 }
