@@ -27,11 +27,9 @@ import (
 )
 
 const (
-	confFile = "cluster.json"
-	confPerm = 0660
-
-	tagBoostrapping = "bootstrapping"
-	tagHostname     = "hostname"
+	confFile    = "cluster.json"
+	confPerm    = 0660
+	tagHostname = "hostname"
 )
 
 // Cluster is used to track cluster node membership and to inform
@@ -51,19 +49,13 @@ type Cluster interface {
 	// this cluster. This includes only nodes ready to receive requests.
 	LiveMembers() []serf.Member
 
-	// Start trying to join the cluster. Return error if no node could
-	// be contacted.
-	Start() error
+	// Start trying to join the cluster.
+	Join()
 
 	// Shutdow first leave the cluster gracefully and then shuts down
 	// the Serf instance, stopping all networkvactivity and background
 	// maintenance associated with the instance.
 	Shutdown()
-
-	// Ready set the ready state on the local node. A call to this method signal
-	// that the bootstrapping has finished and the node is ready to receive
-	// requests from other nodes in the cluster.
-	Ready() error
 
 	// AddEventChan add a channel to receive serf events. Care must be taken
 	// that this channel doesn't block either by processing the event quick
@@ -82,9 +74,9 @@ type clusterConfig struct {
 }
 
 // NewCluster return a new cluster instance.
-func NewCluster(port int, seeds []string, dbPath string) Cluster {
+func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
 
-	cl := &cluster{
+	c := &cluster{
 		port:      port,
 		confPath:  path.Join(dbPath, confFile),
 		seeds:     seeds,
@@ -93,7 +85,21 @@ func NewCluster(port int, seeds []string, dbPath string) Cluster {
 		eventChan: make(map[chan serf.Event]chan serf.Event),
 	}
 
-	return cl
+	c.log.Info().Msg("creating cluster")
+
+	err := c.initConfig()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.initSerf()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 
 }
 
@@ -149,7 +155,7 @@ func (c *cluster) LiveMembers() []serf.Member {
 	live := members[:0]
 
 	for _, m := range members {
-		if m.Status == serf.StatusAlive && m.Tags[tagBoostrapping] == "F" {
+		if m.Status == serf.StatusAlive {
 			live = append(live, m)
 		}
 	}
@@ -157,7 +163,7 @@ func (c *cluster) LiveMembers() []serf.Member {
 	return live
 }
 
-func (c *cluster) join() error {
+func (c *cluster) Join() {
 
 	// TODO(gvelo): add retry if we are unable to join any nodes.
 
@@ -170,7 +176,7 @@ func (c *cluster) join() error {
 
 		if err == nil {
 			c.log.Info().Msgf("%v nodes successfully joined", n)
-			return nil
+			return
 		}
 
 	}
@@ -184,7 +190,7 @@ func (c *cluster) join() error {
 
 	c.log.Info().Msg("no nodes available")
 
-	return nil
+	return
 
 }
 
@@ -207,33 +213,6 @@ func (c *cluster) Shutdown() {
 	} else {
 		c.log.Info().Msg("cluster shutdown ok")
 	}
-
-}
-
-func (c *cluster) Ready() error {
-	err := c.SetTag(tagBoostrapping, "F")
-	return err
-}
-
-func (c *cluster) Start() error {
-
-	c.log.Info().Msg("starting cluster")
-
-	err := c.initConfig()
-
-	if err != nil {
-		return err
-	}
-
-	err = c.initSerf()
-
-	if err != nil {
-		return err
-	}
-
-	err = c.join()
-
-	return err
 
 }
 
@@ -272,7 +251,6 @@ func (c *cluster) initSerf() error {
 	serfConf.Init()
 	serfConf.NodeName = c.conf.Name
 	serfConf.Tags[tagHostname] = hostName
-	serfConf.Tags[tagBoostrapping] = "T"
 	serfConf.EventCh = c.serfChan
 
 	if c.port != -1 {

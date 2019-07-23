@@ -53,15 +53,13 @@ func Start(c config.Config) {
 		seeds = strings.Split(c.Seeds, ",")
 	}
 
-	cl := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
-
-	err := cl.Start()
+	cl, err := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot start cluster")
+		log.Panic().Err(err).Msg("cannot create cluster")
 		return
 	}
 
-	cl.Ready()
+	cl.Join()
 
 }
