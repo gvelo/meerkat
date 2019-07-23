@@ -131,6 +131,8 @@ func (c *cluster) SetTag(name string, value string) error {
 
 	c.log.Info().Msgf("set node tag [%v]=%v", name, value)
 
+	c.tags[name] = value
+
 	err := c.serf.SetTags(c.tags)
 
 	return err
