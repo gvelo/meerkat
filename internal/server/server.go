@@ -20,6 +20,7 @@ import (
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
 	"os"
+	"strings"
 )
 
 func Start(c config.Config) {
@@ -44,5 +45,23 @@ func Start(c config.Config) {
 
 	// start components
 
-	cluster.Start(c)
+	var seeds []string
+
+	if c.Seeds == "" {
+		seeds = make([]string, 0)
+	} else {
+		seeds = strings.Split(c.Seeds, ",")
+	}
+
+	cl := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
+
+	err := cl.Start()
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot start cluster")
+		return
+	}
+
+	cl.Ready()
+
 }

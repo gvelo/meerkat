@@ -1,7 +1,7 @@
 {
   "logLevel": "debug",
   "prettyLog": "true",
-  "seeds": "10.13.12.12",
+  "seeds": "",
   "dbPath": "/var/meerkat",
-  "clusterName": "meerkat"
+  "gossipPort": -1
 }

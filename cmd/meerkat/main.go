@@ -20,6 +20,9 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/config"
 	"meerkat/internal/server"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var rootCmd *cobra.Command
@@ -27,7 +30,7 @@ var logLevel string
 var configFile string
 var dbpath string
 var seeds string
-var clusterName string
+var gossipPort int
 
 func init() {
 
@@ -52,12 +55,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config-file", "c", "", "config file path")
 	rootCmd.PersistentFlags().StringVarP(&dbpath, "dbpath", "d", "", "database files path")
 	rootCmd.PersistentFlags().StringVarP(&seeds, "seeds", "s", "", "the IP addresses of the clusters seed servers")
-	rootCmd.PersistentFlags().StringVarP(&clusterName, "cluster-name", "n", "", "the cluster name")
+	rootCmd.PersistentFlags().IntVarP(&gossipPort, "gossip-port", "g", -1, "the gossip bind port")
 
 	err := viper.BindPFlag("loglevel", rootCmd.PersistentFlags().Lookup("log-level"))
 	err = viper.BindPFlag("dbpath", rootCmd.PersistentFlags().Lookup("dbpath"))
 	err = viper.BindPFlag("seeds", rootCmd.PersistentFlags().Lookup("seeds"))
-	err = viper.BindPFlag("clusterName", rootCmd.PersistentFlags().Lookup("cluster-name"))
+	err = viper.BindPFlag("gossipPort", rootCmd.PersistentFlags().Lookup("gossip-port"))
 
 	if err != nil {
 		panic(err)
@@ -112,4 +115,14 @@ func Start(cmd *cobra.Command, args []string) {
 
 	server.Start(conf)
 
+	handleSignals()
+
+}
+
+//TODO(gvelo): implement properly
+func handleSignals() {
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+
+	_ = <-signalCh
 }
