@@ -17,3 +17,12 @@ var (
 	PageSize      = 100
 	SkipLevelSize = 100
 )
+
+type Config struct {
+	LogLevel    string `json:"logLevel"`
+	PrettyLog   bool   `json:"prettyLog"`
+	Seeds       string `json:"seeds"`
+	DBPath      string `json:"dbPath"`
+	ClusterName string `json:"clusterName"`
+	GossipPort  int    `json:"gossipPort"`
+}
