@@ -4,9 +4,9 @@ options { tokenVocab=MqlLexer; }
 
 //stats sum(b) BY index
 // Rules
-start : a EOF ;
+start : completeCommand EOF ;
 
-identifier_list: IDENTIFIER (',' IDENTIFIER )* ;
+identifierList: IDENTIFIER (',' IDENTIFIER )* ;
 
 // stats expresion
 agrupTypes
@@ -30,32 +30,64 @@ agrupTypes
 
 agrupCall: agrupTypes LPAREN IDENTIFIER RPAREN;
 
-stat_expresion : STATS agrupCall (','agrupCall)* (AS IDENTIFIER)? BY IDENTIFIER;
+literal
+ : STRING_LITERAL                                 #stringLiteral
+ | DECIMAL_LITERAL                                #decimalLiteral
+ | FLOAT_LITERAL                                  #floatLiteral
+ | BOOL_LITERAL                                   #boolLiteral
+ | IDENTIFIER                                     #identifier
+ ;
 
-// where expresion
+expression
+ : LPAREN expression RPAREN                             #parenExpression
+ | left=IDENTIFIER op=comparator right=literal          #comparatorExpression
+ | left=expression op=binary right=expression           #binaryExpression
+ ;
 
-comparators
-    : EQUAL
-    | LE
-    | GE
-    | NOTEQUAL
+comparator
+ : GT | GE | LT | LE | ASSIGN
+ ;
+
+binary
+ : AND | OR
+ ;
+
+commands
+    : whereCommand
+    | renameCommand
+    | statCommand
+    | fieldCommand
+    | dedupCommand
+    | sortCommand
+    | headCommand
+    | binCommand
     ;
 
-expression: IDENTIFIER comparators IDENTIFIER;
-
-expressions
-    : expression ( ( AND | OR )  expression)*
-    ;
-
-where_expresion : WHERE expressions;
+// where command
+whereCommand : WHERE expression;
 
 // select expresion
+selectCommand: SOURCE_TYPE ASSIGN IDENTIFIER expression*;
 
-select_expression: SOURCE_TYPE ASSIGN IDENTIFIER (expression)*;
+// rename expresion
+renameCommand: RENAME (IDENTIFIER AS IDENTIFIER)+;
 
+// stats expresion
+statCommand : STATS agrupCall (AS IDENTIFIER)? (COMMA agrupCall (AS IDENTIFIER)? )*  BY IDENTIFIER;
+
+// bin expresion
+binCommand : BIN (IDENTIFIER | TIME_FIELD)? BIN_SPAN ASSIGN TIME_LITERAL;
 
 // fields expresion
+fieldCommand: FIELDS (ADD|SUB)? identifierList;
 
-fields: FIELDS (ADD|SUB)? identifier_list;
+// dedup expresion
+dedupCommand: DEDUP identifierList;
 
-a: select_expression;
+// sort expresion
+sortCommand: SORT identifierList;
+
+// head expresion
+headCommand: HEAD DECIMAL_LITERAL;
+
+completeCommand: selectCommand ( BITOR commands )* ;

@@ -4,9 +4,15 @@ lexer grammar MqlLexer;
 // Keywords
 
 SOURCE_TYPE: 'sourcetype';
+RENAME: 'rename';
 SEARCH: 'seach';
+DEDUP: 'dedup';
 WHERE: 'where';
+SORT: 'sort';
+HEAD: 'head';
 TOP: 'top';
+BIN: 'bin';
+BIN_SPAN: 'span';
 FIELDS: 'fields';
 STATS: 'stats';
 AS: 'as';
@@ -73,7 +79,7 @@ DECIMAL_LITERAL:    ('0' | [1-9] (Digits? | '_'+ Digits)) [lL]?;
 HEX_LITERAL:        '0' [xX] [0-9a-fA-F] ([0-9a-fA-F_]* [0-9a-fA-F])? [lL]?;
 OCT_LITERAL:        '0' '_'* [0-7] ([0-7_]* [0-7])? [lL]?;
 BINARY_LITERAL:     '0' [bB] [01] ([01_]* [01])? [lL]?;
-
+TIME_LITERAL:       DECIMAL_LITERAL SpanLength;
 FLOAT_LITERAL:      (Digits '.' Digits? | '.' Digits) ExponentPart? [fFdD]?
              |       Digits (ExponentPart [fFdD]? | [fFdD])
              ;
@@ -89,7 +95,59 @@ CHAR_LITERAL:       '\'' (~['\\\r\n] | EscapeSequence) '\'';
 STRING_LITERAL:     '"' (~["\\\r\n] | EscapeSequence)* '"';
 NULL_LITERAL:       'null';
 
+
+TIME_FIELD: '_time';
+
 // Fragment rules
+
+fragment Miliseconds
+    : 'ms'
+    ;
+
+fragment Month
+    : 'mon'
+    | 'month'
+    | 'months'
+    ;
+
+fragment Days
+    : 'd'
+    | 'day'
+    | 'days'
+    ;
+
+fragment Hours
+    : 'h'
+    | 'hr'
+    | 'hrs'
+    | 'hour'
+    | 'hours'
+    ;
+
+fragment Minutes
+    : 'm'
+    | 'min'
+    | 'mins'
+    | 'minute'
+    | 'minutes'
+    ;
+
+fragment Seconds
+    : 's'
+    | 'sec'
+    | 'secs'
+    | 'second'
+    | 'seconds'
+    ;
+
+fragment SpanLength
+    : Miliseconds
+    | Seconds
+    | Minutes
+    | Hours
+    | Days
+    | Month
+    ;
 
 fragment ExponentPart
     : [eE] [+-]? Digits

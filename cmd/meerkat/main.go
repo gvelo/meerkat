@@ -16,10 +16,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"meerkat/internal/build"
-	"meerkat/internal/query"
-	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/query/rel"
 	"os"
 	"strings"
 )
@@ -54,27 +52,11 @@ func main() {
 		fmt.Println("subcommand 'q'")
 		fmt.Println("  tail:", infoCmd.Args())
 		// ie: -q "stats avg(a) by field1"
-		processQuery(infoCmd.Args())
+		str := strings.Join(infoCmd.Args(), "")
+		rel.ProcessQuery(str)
 	default:
-		fmt.Println("Show command")
+		fmt.Println("No command")
 		os.Exit(1)
 	}
 
-}
-
-func processQuery(str []string) {
-
-	q := strings.Join(str, "")
-	fmt.Println("Query ", q)
-	is := antlr.NewInputStream(q)
-
-	// Create the Lexer
-	lexer := mql_parser.NewMqlLexer(is)
-	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
-
-	// Create the Parser
-	p := mql_parser.NewMqlParser(stream)
-
-	// Finally parse the expression
-	antlr.ParseTreeVisitor.Visit(new(query.MQLVisitor), p.Start())
 }
