@@ -16,9 +16,11 @@ package server
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
+	"net"
 	"os"
 	"strings"
 )
@@ -42,11 +44,17 @@ func Start(c config.Config) {
 	log.Logger = log.With().Caller().Logger()
 
 	log.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
-
 	// start components
 
-	var seeds []string
+	lis, err := net.Listen("tcp", ":9191")
 
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to listen: 9191")
+	}
+
+	grpcServer := grpc.NewServer()
+
+	var seeds []string
 	if c.Seeds == "" {
 		seeds = make([]string, 0)
 	} else {
@@ -54,11 +62,31 @@ func Start(c config.Config) {
 	}
 
 	cl, err := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
-
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot create cluster")
 		return
 	}
+
+	transport, err := cluster.NewTransport(cl)
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot create transport")
+		return
+	}
+
+	_, err = cluster.NewCatalog(grpcServer, c.DBPath, cl, transport)
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot create catalog")
+	}
+
+	go func() {
+		err = grpcServer.Serve(lis)
+		if err != nil {
+			log.Panic().Err(err).Msg("cannot create grpc server")
+			return
+		}
+	}()
 
 	cl.Join()
 

@@ -5,6 +5,8 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/glycerine/goconvey v0.0.0-20190315024820-982ee783a72e // indirect
+	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/pprof v0.0.0-20190515194954-54271f7e092f // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gopherjs/gopherjs v0.0.0-20190309154008-847fc94819f9 // indirect
@@ -16,5 +18,8 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0
+	github.com/twmb/murmur3 v1.0.0
+	go.etcd.io/bbolt v1.3.3
 	golang.org/x/arch v0.0.0-20190312162104-788fe5ffcd8c // indirect
+	google.golang.org/grpc v1.22.1
 )

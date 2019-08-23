@@ -1,0 +1,44 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package meerkat.cluster;
+option go_package = "cluster";
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+message Entry {
+  string map_name                = 1 ;
+  string key                     = 2 ;
+  bytes  value                   = 3 ;
+  google.protobuf.Timestamp time = 4 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+  bool   deleted                 = 5 ;
+}
+
+message AddRequest{
+  repeated Entry entries = 1 [(gogoproto.nullable) = false];
+}
+
+message AddResponse{}
+
+message SnapshotRequest{}
+
+message SnapshotResponse{
+  repeated Entry entries = 1 [(gogoproto.nullable) = false];
+}
+
+service Catalog {
+  rpc Add(AddRequest) returns (AddResponse) {}
+  rpc SnapShot(SnapshotRequest) returns (SnapshotResponse) {}
+}

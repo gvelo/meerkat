@@ -137,6 +137,10 @@ func (c *cluster) SetTag(name string, value string) error {
 
 	c.log.Info().Msgf("set node tag [%v]=%v", name, value)
 
+	if c.tags[name] == value {
+		return nil
+	}
+
 	c.tags[name] = value
 
 	err := c.serf.SetTags(c.tags)
@@ -145,7 +149,18 @@ func (c *cluster) SetTag(name string, value string) error {
 }
 
 func (c *cluster) Members() []serf.Member {
-	return c.serf.Members()
+	members := c.serf.Members()
+
+	others := members[:0]
+
+	for _, m := range members {
+		if m.Name != c.conf.Name {
+			others = append(others, m)
+		}
+	}
+
+	return others
+
 }
 
 func (c *cluster) LiveMembers() []serf.Member {
@@ -155,7 +170,7 @@ func (c *cluster) LiveMembers() []serf.Member {
 	live := members[:0]
 
 	for _, m := range members {
-		if m.Status == serf.StatusAlive {
+		if m.Status == serf.StatusAlive && m.Name != c.conf.Name {
 			live = append(live, m)
 		}
 	}
