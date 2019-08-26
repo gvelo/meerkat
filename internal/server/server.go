@@ -67,14 +67,21 @@ func Start(c config.Config) {
 		return
 	}
 
-	transport, err := cluster.NewTransport(cl)
+	connRegistry, err := cluster.NewConnRegistry(cl)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create transport")
+		log.Panic().Err(err).Msg("cannot create catalogRPC")
 		return
 	}
 
-	_, err = cluster.NewCatalog(grpcServer, c.DBPath, cl, transport)
+	catalogRPC, err := cluster.NewCatalogRPC(connRegistry)
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot create catalogRPC")
+		return
+	}
+
+	_, err = cluster.NewCatalog(grpcServer, c.DBPath, cl, catalogRPC)
 
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot create catalog")

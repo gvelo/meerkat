@@ -357,7 +357,7 @@ func (cs *catalogServer) SnapShot(ctx context.Context, snapshotRequest *Snapshot
 	return r, nil
 }
 
-func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, tr Transport) (Catalog, error) {
+func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, catalogRPC CatalogRPC) (Catalog, error) {
 
 	c, err := createCatalog(path)
 
@@ -375,7 +375,7 @@ func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, tr Transport
 
 	RegisterCatalogServer(grpcSrv, cs)
 
-	c.replicator = createCatalogReplicator(cluster, c, c.replicaChan, tr)
+	c.replicator = createCatalogReplicator(cluster, c, c.replicaChan, catalogRPC)
 
 	c.replicator.start()
 
@@ -409,23 +409,23 @@ func createCatalog(dbPath string) (*catalog, error) {
 	return c, nil
 }
 
-func createCatalogReplicator(cluster Cluster, catalog Catalog, deltaCh chan []Entry, transport Transport) *catalogReplicator {
+func createCatalogReplicator(cluster Cluster, catalog Catalog, deltaCh chan []Entry, catalogRPC CatalogRPC) *catalogReplicator {
 	return &catalogReplicator{
-		cluster:   cluster,
-		catalog:   catalog,
-		deltaCh:   deltaCh,
-		transport: transport,
-		log:       log.With().Str("component", "catalogReplicator").Logger(),
+		cluster:    cluster,
+		catalog:    catalog,
+		deltaCh:    deltaCh,
+		catalogRPC: catalogRPC,
+		log:        log.With().Str("component", "catalogReplicator").Logger(),
 	}
 }
 
 //TODO(gvelo): split in broadcast & sync.
 type catalogReplicator struct {
-	cluster   Cluster
-	catalog   Catalog
-	deltaCh   chan []Entry
-	transport Transport
-	log       zerolog.Logger
+	cluster    Cluster
+	catalog    Catalog
+	deltaCh    chan []Entry
+	catalogRPC CatalogRPC
+	log        zerolog.Logger
 }
 
 func (cr *catalogReplicator) start() {
@@ -443,18 +443,16 @@ func (cr *catalogReplicator) start() {
 func (cr *catalogReplicator) broacast() {
 	for delta := range cr.deltaCh {
 		cr.log.Debug().Msg("broadcasting catalog delta")
-		cr.transport.SendDelta(context.TODO(), delta)
+		cr.catalogRPC.SendDelta(context.TODO(), delta)
 	}
 }
 
 func (cr *catalogReplicator) sync() {
 
 	cr.log.Info().Msg("syncing catalog")
-	maxDiff := 3 // TODO(gvelo) magic number.
 	members := cr.cluster.LiveMembers()
 	localVersion := cr.catalog.Hash()
-	var diff []string
-	i := 0
+	diff := make(map[string]string)
 
 	cr.log.Info().Msgf("syncing catalog with local version %v", localVersion)
 
@@ -469,29 +467,30 @@ func (cr *catalogReplicator) sync() {
 		}
 
 		if localVersion != catalogVersion {
-			diff = append(diff, m.Name)
-			i++
-		}
-
-		if i > maxDiff {
-			break
+			diff[catalogVersion] = m.Name
 		}
 
 	}
 
-	if i == 0 {
+	if len(diff) == 0 {
 		return
 	}
 
-	out := make(chan SnapshotResult, i)
-	cr.transport.GetSnapShot(context.TODO(), diff, out)
+	diffMembers := make([]string, len(diff))[:0]
 
-	for r := 0; r < i; r++ {
-		sr := <-out
-		if sr.err != nil {
-			cr.log.Error().Err(sr.err).Str("member", sr.member).Msg("error retrieving catalog snapshot")
+	for _, m := range diff {
+		diffMembers = append(diffMembers, m)
+	}
+
+	snapshots := cr.catalogRPC.GetSnapShot(context.TODO(), diffMembers)
+
+	for _, snapshot := range snapshots {
+
+		if snapshot.err != nil {
+			cr.log.Error().Err(snapshot.err).Msgf("Error retriving snapshot from node %v", snapshot.member)
+			continue
 		}
-		cr.catalog.MergeSnapshot(sr.Snapshot)
+		cr.catalog.MergeSnapshot(snapshot.Snapshot)
 	}
 
 	err := cr.cluster.SetTag("catalog", cr.catalog.Hash())
