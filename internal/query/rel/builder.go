@@ -1,6 +1,23 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rel
 
-import "meerkat/internal/tools"
+import (
+	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/tools"
+)
 
 type Builder interface {
 	Scan(name string) Builder
@@ -18,6 +35,7 @@ type Builder interface {
 	Match(regex string) Builder
 	And(a interface{}) Builder
 	Or(o interface{}) Builder
+	CreateExpresion(e interface{}) *Exp
 	Build() *ParsedTree
 }
 
@@ -46,7 +64,7 @@ func (r *relationalAlgBuilder) pop() interface{} {
 }
 
 func (r *relationalAlgBuilder) Scan(name string) Builder {
-	ts := NewTableScan(name)
+	ts := NewIndexScan(name)
 	r.push(ts)
 	return r
 }
@@ -117,4 +135,41 @@ func (r *relationalAlgBuilder) Match(regex string) Builder {
 
 func (r *relationalAlgBuilder) Build() *ParsedTree {
 	return &ParsedTree{IndexScan: r.peek().(*IndexScan)}
+}
+
+func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *Exp {
+
+	var e *Exp
+	switch  l.(type) {
+	case *mql_parser.DecimalLiteralContext:
+		e = &Exp{
+			ExpType: DECIMAL,
+			Value:   l.(*mql_parser.DecimalLiteralContext).GetText(),
+		}
+	case *mql_parser.FloatLiteralContext:
+		e = &Exp{
+			ExpType: FLOAT,
+			Value:   l.(*mql_parser.FloatLiteralContext).GetText(),
+		}
+	case *mql_parser.BoolLiteralContext:
+		e = &Exp{
+			ExpType: BOOL,
+			Value:   l.(*mql_parser.BoolLiteralContext).GetText(),
+		}
+	case *mql_parser.IdentifierContext:
+		e = &Exp{
+			ExpType: IDENTIFIER,
+			Value:   l.(*mql_parser.IdentifierContext).GetText(),
+		}
+	case *antlr.CommonToken: // string
+		e = &Exp{
+			ExpType: STRING,
+			Value:   l.(*antlr.CommonToken).GetText(),
+		}
+	default:
+		tools.Logf("Could not create expresion %s ", e.Value )
+	}
+
+	tools.Logf(" %s ", e.Value )
+	return e
 }

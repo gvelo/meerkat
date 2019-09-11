@@ -1,4 +1,4 @@
-SOURCE_TYPE=1
+INDEX_NAME=1
 RENAME=2
 SEARCH=3
 DEDUP=4
@@ -74,7 +74,7 @@ IDENTIFIER=73
 WS=74
 COMMENT=75
 LINE_COMMENT=76
-'sourcetype'=1
+'indexname'=1
 'rename'=2
 'seach'=3
 'dedup'=4

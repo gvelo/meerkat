@@ -11,7 +11,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rel
+package plan
 
-type Context interface {
+import (
+	"meerkat/internal/query/rel"
+	"testing"
+)
+
+func buildIndexScan() *rel.ParsedTree {
+
+	parser := rel.NewMqlParser()
+	sql := "indexname=name  campo1=12 and  ( campo2>12  or campo1=2) "
+
+	return parser.Parse(sql)
+
+}
+
+func TestMeerkatOptimizer_OptimizeQuery(t *testing.T) {
+
+	p := buildIndexScan()
+
+	o := NewMeerkatOptimizer()
+
+	o.optimizeFilters(p.IndexScan.GetFilter())
+
+
+
+
+
+
 }

@@ -1,3 +1,16 @@
+// Copyright 2019 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rel
 
 import (
@@ -10,6 +23,7 @@ import (
 type MQLListener struct {
 	*antlr.BaseParseTreeListener
 	builder Builder
+	lexer   *mql_parser.MqlLexer
 }
 
 func (l *MQLListener) EnterStart(c *mql_parser.StartContext) {
@@ -208,9 +222,10 @@ func (l *MQLListener) ExitCompleteCommand(c *mql_parser.CompleteCommandContext) 
 
 }
 
-func NewListener() *MQLListener {
+func NewListener(lexer *mql_parser.MqlLexer) *MQLListener {
 	l := new(MQLListener)
 	l.builder = NewRelBuilder()
+	l.lexer = lexer
 	return l
 }
 
@@ -230,33 +245,46 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *Filter {
 		return nil
 	}
 	switch ctx.(type) {
+	// something AND | OR something
 	case *mql_parser.BinaryExpressionContext:
-		// something AND | OR something
+
 		lf := ctx.(*mql_parser.BinaryExpressionContext).GetLeft()
 		rg := ctx.(*mql_parser.BinaryExpressionContext).GetRight()
 
 		op := ctx.(*mql_parser.BinaryExpressionContext).GetOp()
 
+		tools.Logf("Bin %v" , op.GetText())
+
+
 		leftFilter := l.buildFilters(lf)
 		rightFilter := l.buildFilters(rg)
 
+
 		f := NewFilter(leftFilter, parseOperator(op.GetText()), rightFilter)
+
 		return f
 
+	//  ( binary expression )
 	case *mql_parser.ParenExpressionContext:
-		//  ( binary expression )
-		p := ctx.(*mql_parser.ParenExpressionContext)
-		c := p.GetChild(1) // Binary
-		return l.buildFilters(c.(antlr.ParserRuleContext))
 
+		p := ctx.(*mql_parser.ParenExpressionContext)
+		c := p.GetChild(1)
+		f := l.buildFilters(c.(antlr.ParserRuleContext))
+		f.Group = true
+		return f
+
+	// something > = != ...  something
 	case *mql_parser.ComparatorExpressionContext:
-		// something > = != ...  something
+
 		lf := ctx.(*mql_parser.ComparatorExpressionContext).GetLeft()
+
 		rg := ctx.(*mql_parser.ComparatorExpressionContext).GetRight()
 
 		op := ctx.(*mql_parser.ComparatorExpressionContext).GetOp()
 
-		f := NewFilter(lf.GetText(), parseOperator(op.GetText()), rg.GetText())
+		tools.Logf("Comp %v" , op.GetText())
+
+		f := NewFilter(l.builder.CreateExpresion(lf), parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
 		return f
 
 	default:
@@ -265,6 +293,10 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *Filter {
 	}
 
 	return nil
+}
+
+func (l *MQLListener) GetTree() *ParsedTree {
+	return l.builder.Build()
 }
 
 func parseOperator(s string) Operator {

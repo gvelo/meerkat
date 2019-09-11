@@ -14,111 +14,112 @@ var _ = fmt.Printf
 var _ = reflect.Copy
 var _ = strconv.Itoa
 
+
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 78, 171,
-	4, 2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7,
-	4, 8, 9, 8, 4, 9, 9, 9, 4, 10, 9, 10, 4, 11, 9, 11, 4, 12, 9, 12, 4, 13,
-	9, 13, 4, 14, 9, 14, 4, 15, 9, 15, 4, 16, 9, 16, 4, 17, 9, 17, 4, 18, 9,
-	18, 4, 19, 9, 19, 4, 20, 9, 20, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 7,
-	3, 47, 10, 3, 12, 3, 14, 3, 50, 11, 3, 3, 4, 3, 4, 3, 5, 3, 5, 3, 5, 3,
-	5, 3, 5, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 5, 6, 64, 10, 6, 3, 7, 3, 7, 3,
-	7, 3, 7, 3, 7, 3, 7, 3, 7, 3, 7, 3, 7, 5, 7, 75, 10, 7, 3, 7, 3, 7, 3,
-	7, 3, 7, 7, 7, 81, 10, 7, 12, 7, 14, 7, 84, 11, 7, 3, 8, 3, 8, 3, 9, 3,
-	9, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 5, 10, 98, 10,
-	10, 3, 11, 3, 11, 3, 11, 3, 12, 3, 12, 3, 12, 3, 12, 7, 12, 107, 10, 12,
-	12, 12, 14, 12, 110, 11, 12, 3, 13, 3, 13, 3, 13, 3, 13, 6, 13, 116, 10,
-	13, 13, 13, 14, 13, 117, 3, 14, 3, 14, 3, 14, 3, 14, 5, 14, 124, 10, 14,
-	3, 14, 3, 14, 3, 14, 3, 14, 5, 14, 130, 10, 14, 7, 14, 132, 10, 14, 12,
-	14, 14, 14, 135, 11, 14, 3, 14, 3, 14, 3, 14, 3, 15, 3, 15, 5, 15, 142,
-	10, 15, 3, 15, 3, 15, 3, 15, 3, 15, 3, 16, 3, 16, 5, 16, 150, 10, 16, 3,
-	16, 3, 16, 3, 17, 3, 17, 3, 17, 3, 18, 3, 18, 3, 18, 3, 19, 3, 19, 3, 19,
-	3, 20, 3, 20, 3, 20, 7, 20, 166, 10, 20, 12, 20, 14, 20, 169, 11, 20, 3,
-	20, 2, 3, 12, 21, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
-	32, 34, 36, 38, 2, 7, 3, 2, 19, 34, 4, 2, 44, 46, 52, 53, 3, 2, 17, 18,
-	3, 2, 74, 75, 3, 2, 55, 56, 2, 173, 2, 40, 3, 2, 2, 2, 4, 43, 3, 2, 2,
-	2, 6, 51, 3, 2, 2, 2, 8, 53, 3, 2, 2, 2, 10, 63, 3, 2, 2, 2, 12, 74, 3,
-	2, 2, 2, 14, 85, 3, 2, 2, 2, 16, 87, 3, 2, 2, 2, 18, 97, 3, 2, 2, 2, 20,
-	99, 3, 2, 2, 2, 22, 102, 3, 2, 2, 2, 24, 111, 3, 2, 2, 2, 26, 119, 3, 2,
-	2, 2, 28, 139, 3, 2, 2, 2, 30, 147, 3, 2, 2, 2, 32, 153, 3, 2, 2, 2, 34,
-	156, 3, 2, 2, 2, 36, 159, 3, 2, 2, 2, 38, 162, 3, 2, 2, 2, 40, 41, 5, 38,
-	20, 2, 41, 42, 7, 2, 2, 3, 42, 3, 3, 2, 2, 2, 43, 48, 7, 75, 2, 2, 44,
-	45, 7, 42, 2, 2, 45, 47, 7, 75, 2, 2, 46, 44, 3, 2, 2, 2, 47, 50, 3, 2,
-	2, 2, 48, 46, 3, 2, 2, 2, 48, 49, 3, 2, 2, 2, 49, 5, 3, 2, 2, 2, 50, 48,
-	3, 2, 2, 2, 51, 52, 9, 2, 2, 2, 52, 7, 3, 2, 2, 2, 53, 54, 5, 6, 4, 2,
-	54, 55, 7, 35, 2, 2, 55, 56, 7, 75, 2, 2, 56, 57, 7, 36, 2, 2, 57, 9, 3,
-	2, 2, 2, 58, 64, 7, 72, 2, 2, 59, 64, 7, 63, 2, 2, 60, 64, 7, 68, 2, 2,
-	61, 64, 7, 70, 2, 2, 62, 64, 7, 75, 2, 2, 63, 58, 3, 2, 2, 2, 63, 59, 3,
-	2, 2, 2, 63, 60, 3, 2, 2, 2, 63, 61, 3, 2, 2, 2, 63, 62, 3, 2, 2, 2, 64,
-	11, 3, 2, 2, 2, 65, 66, 8, 7, 1, 2, 66, 67, 7, 35, 2, 2, 67, 68, 5, 12,
-	7, 2, 68, 69, 7, 36, 2, 2, 69, 75, 3, 2, 2, 2, 70, 71, 7, 75, 2, 2, 71,
-	72, 5, 14, 8, 2, 72, 73, 5, 10, 6, 2, 73, 75, 3, 2, 2, 2, 74, 65, 3, 2,
-	2, 2, 74, 70, 3, 2, 2, 2, 75, 82, 3, 2, 2, 2, 76, 77, 12, 3, 2, 2, 77,
-	78, 5, 16, 9, 2, 78, 79, 5, 12, 7, 4, 79, 81, 3, 2, 2, 2, 80, 76, 3, 2,
-	2, 2, 81, 84, 3, 2, 2, 2, 82, 80, 3, 2, 2, 2, 82, 83, 3, 2, 2, 2, 83, 13,
-	3, 2, 2, 2, 84, 82, 3, 2, 2, 2, 85, 86, 9, 3, 2, 2, 86, 15, 3, 2, 2, 2,
-	87, 88, 9, 4, 2, 2, 88, 17, 3, 2, 2, 2, 89, 98, 5, 20, 11, 2, 90, 98, 5,
-	24, 13, 2, 91, 98, 5, 26, 14, 2, 92, 98, 5, 30, 16, 2, 93, 98, 5, 32, 17,
-	2, 94, 98, 5, 34, 18, 2, 95, 98, 5, 36, 19, 2, 96, 98, 5, 28, 15, 2, 97,
-	89, 3, 2, 2, 2, 97, 90, 3, 2, 2, 2, 97, 91, 3, 2, 2, 2, 97, 92, 3, 2, 2,
-	2, 97, 93, 3, 2, 2, 2, 97, 94, 3, 2, 2, 2, 97, 95, 3, 2, 2, 2, 97, 96,
-	3, 2, 2, 2, 98, 19, 3, 2, 2, 2, 99, 100, 7, 7, 2, 2, 100, 101, 5, 12, 7,
-	2, 101, 21, 3, 2, 2, 2, 102, 103, 7, 3, 2, 2, 103, 104, 7, 44, 2, 2, 104,
-	108, 7, 75, 2, 2, 105, 107, 5, 12, 7, 2, 106, 105, 3, 2, 2, 2, 107, 110,
-	3, 2, 2, 2, 108, 106, 3, 2, 2, 2, 108, 109, 3, 2, 2, 2, 109, 23, 3, 2,
-	2, 2, 110, 108, 3, 2, 2, 2, 111, 115, 7, 4, 2, 2, 112, 113, 7, 75, 2, 2,
-	113, 114, 7, 15, 2, 2, 114, 116, 7, 75, 2, 2, 115, 112, 3, 2, 2, 2, 116,
-	117, 3, 2, 2, 2, 117, 115, 3, 2, 2, 2, 117, 118, 3, 2, 2, 2, 118, 25, 3,
-	2, 2, 2, 119, 120, 7, 14, 2, 2, 120, 123, 5, 8, 5, 2, 121, 122, 7, 15,
-	2, 2, 122, 124, 7, 75, 2, 2, 123, 121, 3, 2, 2, 2, 123, 124, 3, 2, 2, 2,
-	124, 133, 3, 2, 2, 2, 125, 126, 7, 42, 2, 2, 126, 129, 5, 8, 5, 2, 127,
-	128, 7, 15, 2, 2, 128, 130, 7, 75, 2, 2, 129, 127, 3, 2, 2, 2, 129, 130,
-	3, 2, 2, 2, 130, 132, 3, 2, 2, 2, 131, 125, 3, 2, 2, 2, 132, 135, 3, 2,
-	2, 2, 133, 131, 3, 2, 2, 2, 133, 134, 3, 2, 2, 2, 134, 136, 3, 2, 2, 2,
-	135, 133, 3, 2, 2, 2, 136, 137, 7, 16, 2, 2, 137, 138, 7, 75, 2, 2, 138,
-	27, 3, 2, 2, 2, 139, 141, 7, 11, 2, 2, 140, 142, 9, 5, 2, 2, 141, 140,
-	3, 2, 2, 2, 141, 142, 3, 2, 2, 2, 142, 143, 3, 2, 2, 2, 143, 144, 7, 12,
-	2, 2, 144, 145, 7, 44, 2, 2, 145, 146, 7, 67, 2, 2, 146, 29, 3, 2, 2, 2,
-	147, 149, 7, 13, 2, 2, 148, 150, 9, 6, 2, 2, 149, 148, 3, 2, 2, 2, 149,
-	150, 3, 2, 2, 2, 150, 151, 3, 2, 2, 2, 151, 152, 5, 4, 3, 2, 152, 31, 3,
-	2, 2, 2, 153, 154, 7, 6, 2, 2, 154, 155, 5, 4, 3, 2, 155, 33, 3, 2, 2,
-	2, 156, 157, 7, 8, 2, 2, 157, 158, 5, 4, 3, 2, 158, 35, 3, 2, 2, 2, 159,
-	160, 7, 9, 2, 2, 160, 161, 7, 63, 2, 2, 161, 37, 3, 2, 2, 2, 162, 167,
-	5, 22, 12, 2, 163, 164, 7, 60, 2, 2, 164, 166, 5, 18, 10, 2, 165, 163,
-	3, 2, 2, 2, 166, 169, 3, 2, 2, 2, 167, 165, 3, 2, 2, 2, 167, 168, 3, 2,
-	2, 2, 168, 39, 3, 2, 2, 2, 169, 167, 3, 2, 2, 2, 15, 48, 63, 74, 82, 97,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 78, 171, 
+	4, 2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7, 
+	4, 8, 9, 8, 4, 9, 9, 9, 4, 10, 9, 10, 4, 11, 9, 11, 4, 12, 9, 12, 4, 13, 
+	9, 13, 4, 14, 9, 14, 4, 15, 9, 15, 4, 16, 9, 16, 4, 17, 9, 17, 4, 18, 9, 
+	18, 4, 19, 9, 19, 4, 20, 9, 20, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 7, 
+	3, 47, 10, 3, 12, 3, 14, 3, 50, 11, 3, 3, 4, 3, 4, 3, 5, 3, 5, 3, 5, 3, 
+	5, 3, 5, 3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 5, 6, 64, 10, 6, 3, 7, 3, 7, 3, 
+	7, 3, 7, 3, 7, 3, 7, 3, 7, 3, 7, 3, 7, 5, 7, 75, 10, 7, 3, 7, 3, 7, 3, 
+	7, 3, 7, 7, 7, 81, 10, 7, 12, 7, 14, 7, 84, 11, 7, 3, 8, 3, 8, 3, 9, 3, 
+	9, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 5, 10, 98, 10, 
+	10, 3, 11, 3, 11, 3, 11, 3, 12, 3, 12, 3, 12, 3, 12, 7, 12, 107, 10, 12, 
+	12, 12, 14, 12, 110, 11, 12, 3, 13, 3, 13, 3, 13, 3, 13, 6, 13, 116, 10, 
+	13, 13, 13, 14, 13, 117, 3, 14, 3, 14, 3, 14, 3, 14, 5, 14, 124, 10, 14, 
+	3, 14, 3, 14, 3, 14, 3, 14, 5, 14, 130, 10, 14, 7, 14, 132, 10, 14, 12, 
+	14, 14, 14, 135, 11, 14, 3, 14, 3, 14, 3, 14, 3, 15, 3, 15, 5, 15, 142, 
+	10, 15, 3, 15, 3, 15, 3, 15, 3, 15, 3, 16, 3, 16, 5, 16, 150, 10, 16, 3, 
+	16, 3, 16, 3, 17, 3, 17, 3, 17, 3, 18, 3, 18, 3, 18, 3, 19, 3, 19, 3, 19, 
+	3, 20, 3, 20, 3, 20, 7, 20, 166, 10, 20, 12, 20, 14, 20, 169, 11, 20, 3, 
+	20, 2, 3, 12, 21, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 
+	32, 34, 36, 38, 2, 7, 3, 2, 19, 34, 4, 2, 44, 46, 52, 53, 3, 2, 17, 18, 
+	3, 2, 74, 75, 3, 2, 55, 56, 2, 173, 2, 40, 3, 2, 2, 2, 4, 43, 3, 2, 2, 
+	2, 6, 51, 3, 2, 2, 2, 8, 53, 3, 2, 2, 2, 10, 63, 3, 2, 2, 2, 12, 74, 3, 
+	2, 2, 2, 14, 85, 3, 2, 2, 2, 16, 87, 3, 2, 2, 2, 18, 97, 3, 2, 2, 2, 20, 
+	99, 3, 2, 2, 2, 22, 102, 3, 2, 2, 2, 24, 111, 3, 2, 2, 2, 26, 119, 3, 2, 
+	2, 2, 28, 139, 3, 2, 2, 2, 30, 147, 3, 2, 2, 2, 32, 153, 3, 2, 2, 2, 34, 
+	156, 3, 2, 2, 2, 36, 159, 3, 2, 2, 2, 38, 162, 3, 2, 2, 2, 40, 41, 5, 38, 
+	20, 2, 41, 42, 7, 2, 2, 3, 42, 3, 3, 2, 2, 2, 43, 48, 7, 75, 2, 2, 44, 
+	45, 7, 42, 2, 2, 45, 47, 7, 75, 2, 2, 46, 44, 3, 2, 2, 2, 47, 50, 3, 2, 
+	2, 2, 48, 46, 3, 2, 2, 2, 48, 49, 3, 2, 2, 2, 49, 5, 3, 2, 2, 2, 50, 48, 
+	3, 2, 2, 2, 51, 52, 9, 2, 2, 2, 52, 7, 3, 2, 2, 2, 53, 54, 5, 6, 4, 2, 
+	54, 55, 7, 35, 2, 2, 55, 56, 7, 75, 2, 2, 56, 57, 7, 36, 2, 2, 57, 9, 3, 
+	2, 2, 2, 58, 64, 7, 72, 2, 2, 59, 64, 7, 63, 2, 2, 60, 64, 7, 68, 2, 2, 
+	61, 64, 7, 70, 2, 2, 62, 64, 7, 75, 2, 2, 63, 58, 3, 2, 2, 2, 63, 59, 3, 
+	2, 2, 2, 63, 60, 3, 2, 2, 2, 63, 61, 3, 2, 2, 2, 63, 62, 3, 2, 2, 2, 64, 
+	11, 3, 2, 2, 2, 65, 66, 8, 7, 1, 2, 66, 67, 7, 35, 2, 2, 67, 68, 5, 12, 
+	7, 2, 68, 69, 7, 36, 2, 2, 69, 75, 3, 2, 2, 2, 70, 71, 5, 10, 6, 2, 71, 
+	72, 5, 14, 8, 2, 72, 73, 5, 10, 6, 2, 73, 75, 3, 2, 2, 2, 74, 65, 3, 2, 
+	2, 2, 74, 70, 3, 2, 2, 2, 75, 82, 3, 2, 2, 2, 76, 77, 12, 3, 2, 2, 77, 
+	78, 5, 16, 9, 2, 78, 79, 5, 12, 7, 4, 79, 81, 3, 2, 2, 2, 80, 76, 3, 2, 
+	2, 2, 81, 84, 3, 2, 2, 2, 82, 80, 3, 2, 2, 2, 82, 83, 3, 2, 2, 2, 83, 13, 
+	3, 2, 2, 2, 84, 82, 3, 2, 2, 2, 85, 86, 9, 3, 2, 2, 86, 15, 3, 2, 2, 2, 
+	87, 88, 9, 4, 2, 2, 88, 17, 3, 2, 2, 2, 89, 98, 5, 20, 11, 2, 90, 98, 5, 
+	24, 13, 2, 91, 98, 5, 26, 14, 2, 92, 98, 5, 30, 16, 2, 93, 98, 5, 32, 17, 
+	2, 94, 98, 5, 34, 18, 2, 95, 98, 5, 36, 19, 2, 96, 98, 5, 28, 15, 2, 97, 
+	89, 3, 2, 2, 2, 97, 90, 3, 2, 2, 2, 97, 91, 3, 2, 2, 2, 97, 92, 3, 2, 2, 
+	2, 97, 93, 3, 2, 2, 2, 97, 94, 3, 2, 2, 2, 97, 95, 3, 2, 2, 2, 97, 96, 
+	3, 2, 2, 2, 98, 19, 3, 2, 2, 2, 99, 100, 7, 7, 2, 2, 100, 101, 5, 12, 7, 
+	2, 101, 21, 3, 2, 2, 2, 102, 103, 7, 3, 2, 2, 103, 104, 7, 44, 2, 2, 104, 
+	108, 7, 75, 2, 2, 105, 107, 5, 12, 7, 2, 106, 105, 3, 2, 2, 2, 107, 110, 
+	3, 2, 2, 2, 108, 106, 3, 2, 2, 2, 108, 109, 3, 2, 2, 2, 109, 23, 3, 2, 
+	2, 2, 110, 108, 3, 2, 2, 2, 111, 115, 7, 4, 2, 2, 112, 113, 7, 75, 2, 2, 
+	113, 114, 7, 15, 2, 2, 114, 116, 7, 75, 2, 2, 115, 112, 3, 2, 2, 2, 116, 
+	117, 3, 2, 2, 2, 117, 115, 3, 2, 2, 2, 117, 118, 3, 2, 2, 2, 118, 25, 3, 
+	2, 2, 2, 119, 120, 7, 14, 2, 2, 120, 123, 5, 8, 5, 2, 121, 122, 7, 15, 
+	2, 2, 122, 124, 7, 75, 2, 2, 123, 121, 3, 2, 2, 2, 123, 124, 3, 2, 2, 2, 
+	124, 133, 3, 2, 2, 2, 125, 126, 7, 42, 2, 2, 126, 129, 5, 8, 5, 2, 127, 
+	128, 7, 15, 2, 2, 128, 130, 7, 75, 2, 2, 129, 127, 3, 2, 2, 2, 129, 130, 
+	3, 2, 2, 2, 130, 132, 3, 2, 2, 2, 131, 125, 3, 2, 2, 2, 132, 135, 3, 2, 
+	2, 2, 133, 131, 3, 2, 2, 2, 133, 134, 3, 2, 2, 2, 134, 136, 3, 2, 2, 2, 
+	135, 133, 3, 2, 2, 2, 136, 137, 7, 16, 2, 2, 137, 138, 7, 75, 2, 2, 138, 
+	27, 3, 2, 2, 2, 139, 141, 7, 11, 2, 2, 140, 142, 9, 5, 2, 2, 141, 140, 
+	3, 2, 2, 2, 141, 142, 3, 2, 2, 2, 142, 143, 3, 2, 2, 2, 143, 144, 7, 12, 
+	2, 2, 144, 145, 7, 44, 2, 2, 145, 146, 7, 67, 2, 2, 146, 29, 3, 2, 2, 2, 
+	147, 149, 7, 13, 2, 2, 148, 150, 9, 6, 2, 2, 149, 148, 3, 2, 2, 2, 149, 
+	150, 3, 2, 2, 2, 150, 151, 3, 2, 2, 2, 151, 152, 5, 4, 3, 2, 152, 31, 3, 
+	2, 2, 2, 153, 154, 7, 6, 2, 2, 154, 155, 5, 4, 3, 2, 155, 33, 3, 2, 2, 
+	2, 156, 157, 7, 8, 2, 2, 157, 158, 5, 4, 3, 2, 158, 35, 3, 2, 2, 2, 159, 
+	160, 7, 9, 2, 2, 160, 161, 7, 63, 2, 2, 161, 37, 3, 2, 2, 2, 162, 167, 
+	5, 22, 12, 2, 163, 164, 7, 60, 2, 2, 164, 166, 5, 18, 10, 2, 165, 163, 
+	3, 2, 2, 2, 166, 169, 3, 2, 2, 2, 167, 165, 3, 2, 2, 2, 167, 168, 3, 2, 
+	2, 2, 168, 39, 3, 2, 2, 2, 169, 167, 3, 2, 2, 2, 15, 48, 63, 74, 82, 97, 
 	108, 117, 123, 129, 133, 141, 149, 167,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
-	"", "'sourcetype'", "'rename'", "'seach'", "'dedup'", "'where'", "'sort'",
-	"'head'", "'top'", "'bin'", "'span'", "'fields'", "'stats'", "'as'", "'by'",
-	"'and'", "'or'", "'avg'", "'count'", "'distinct_count'", "'estdc'", "'estdc_error'",
-	"'max'", "'median'", "'min'", "'mode'", "'range'", "'stdev'", "'stdevp'",
-	"'sum'", "'sumsq'", "'var'", "'varp'", "'('", "')'", "'{'", "'}'", "'['",
-	"']'", "';'", "','", "'.'", "'='", "'>'", "'<'", "'!'", "'~'", "'?'", "':'",
-	"'=='", "'<='", "'>='", "'!='", "'+'", "'-'", "'*'", "'/'", "'&'", "'|'",
+	"", "'indexname'", "'rename'", "'seach'", "'dedup'", "'where'", "'sort'", 
+	"'head'", "'top'", "'bin'", "'span'", "'fields'", "'stats'", "'as'", "'by'", 
+	"'and'", "'or'", "'avg'", "'count'", "'distinct_count'", "'estdc'", "'estdc_error'", 
+	"'max'", "'median'", "'min'", "'mode'", "'range'", "'stdev'", "'stdevp'", 
+	"'sum'", "'sumsq'", "'var'", "'varp'", "'('", "')'", "'{'", "'}'", "'['", 
+	"']'", "';'", "','", "'.'", "'='", "'>'", "'<'", "'!'", "'~'", "'?'", "':'", 
+	"'=='", "'<='", "'>='", "'!='", "'+'", "'-'", "'*'", "'/'", "'&'", "'|'", 
 	"'^'", "'%'", "", "", "", "", "", "", "", "", "", "", "'null'", "'_time'",
 }
 var symbolicNames = []string{
-	"", "SOURCE_TYPE", "RENAME", "SEARCH", "DEDUP", "WHERE", "SORT", "HEAD",
-	"TOP", "BIN", "BIN_SPAN", "FIELDS", "STATS", "AS", "BY", "AND", "OR", "AVG",
-	"COUNT", "DISTINCT_COUNT", "ESTDC", "ESTDC_ERROR", "MAX", "MEDIAN", "MIN",
-	"MODE", "RANGE", "STDEV", "STDEVP", "SUM", "SUMSQ", "VAR", "VARP", "LPAREN",
-	"RPAREN", "LBRACE", "RBRACE", "LBRACK", "RBRACK", "SEMI", "COMMA", "DOT",
-	"ASSIGN", "GT", "LT", "BANG", "TILDE", "QUESTION", "COLON", "EQUAL", "LE",
-	"GE", "NOTEQUAL", "ADD", "SUB", "MUL", "DIV", "BITAND", "BITOR", "CARET",
-	"MOD", "DECIMAL_LITERAL", "HEX_LITERAL", "OCT_LITERAL", "BINARY_LITERAL",
-	"TIME_LITERAL", "FLOAT_LITERAL", "HEX_FLOAT_LITERAL", "BOOL_LITERAL", "CHAR_LITERAL",
-	"STRING_LITERAL", "NULL_LITERAL", "TIME_FIELD", "IDENTIFIER", "WS", "COMMENT",
+	"", "INDEX_NAME", "RENAME", "SEARCH", "DEDUP", "WHERE", "SORT", "HEAD", 
+	"TOP", "BIN", "BIN_SPAN", "FIELDS", "STATS", "AS", "BY", "AND", "OR", "AVG", 
+	"COUNT", "DISTINCT_COUNT", "ESTDC", "ESTDC_ERROR", "MAX", "MEDIAN", "MIN", 
+	"MODE", "RANGE", "STDEV", "STDEVP", "SUM", "SUMSQ", "VAR", "VARP", "LPAREN", 
+	"RPAREN", "LBRACE", "RBRACE", "LBRACK", "RBRACK", "SEMI", "COMMA", "DOT", 
+	"ASSIGN", "GT", "LT", "BANG", "TILDE", "QUESTION", "COLON", "EQUAL", "LE", 
+	"GE", "NOTEQUAL", "ADD", "SUB", "MUL", "DIV", "BITAND", "BITOR", "CARET", 
+	"MOD", "DECIMAL_LITERAL", "HEX_LITERAL", "OCT_LITERAL", "BINARY_LITERAL", 
+	"TIME_LITERAL", "FLOAT_LITERAL", "HEX_FLOAT_LITERAL", "BOOL_LITERAL", "CHAR_LITERAL", 
+	"STRING_LITERAL", "NULL_LITERAL", "TIME_FIELD", "IDENTIFIER", "WS", "COMMENT", 
 	"LINE_COMMENT",
 }
 
 var ruleNames = []string{
-	"start", "identifierList", "agrupTypes", "agrupCall", "literal", "expression",
-	"comparator", "binary", "commands", "whereCommand", "selectCommand", "renameCommand",
-	"statCommand", "binCommand", "fieldCommand", "dedupCommand", "sortCommand",
+	"start", "identifierList", "agrupTypes", "agrupCall", "literal", "expression", 
+	"comparator", "binary", "commands", "whereCommand", "selectCommand", "renameCommand", 
+	"statCommand", "binCommand", "fieldCommand", "dedupCommand", "sortCommand", 
 	"headCommand", "completeCommand",
 }
 var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
@@ -149,105 +150,105 @@ func NewMqlParser(input antlr.TokenStream) *MqlParser {
 
 // MqlParser tokens.
 const (
-	MqlParserEOF               = antlr.TokenEOF
-	MqlParserSOURCE_TYPE       = 1
-	MqlParserRENAME            = 2
-	MqlParserSEARCH            = 3
-	MqlParserDEDUP             = 4
-	MqlParserWHERE             = 5
-	MqlParserSORT              = 6
-	MqlParserHEAD              = 7
-	MqlParserTOP               = 8
-	MqlParserBIN               = 9
-	MqlParserBIN_SPAN          = 10
-	MqlParserFIELDS            = 11
-	MqlParserSTATS             = 12
-	MqlParserAS                = 13
-	MqlParserBY                = 14
-	MqlParserAND               = 15
-	MqlParserOR                = 16
-	MqlParserAVG               = 17
-	MqlParserCOUNT             = 18
-	MqlParserDISTINCT_COUNT    = 19
-	MqlParserESTDC             = 20
-	MqlParserESTDC_ERROR       = 21
-	MqlParserMAX               = 22
-	MqlParserMEDIAN            = 23
-	MqlParserMIN               = 24
-	MqlParserMODE              = 25
-	MqlParserRANGE             = 26
-	MqlParserSTDEV             = 27
-	MqlParserSTDEVP            = 28
-	MqlParserSUM               = 29
-	MqlParserSUMSQ             = 30
-	MqlParserVAR               = 31
-	MqlParserVARP              = 32
-	MqlParserLPAREN            = 33
-	MqlParserRPAREN            = 34
-	MqlParserLBRACE            = 35
-	MqlParserRBRACE            = 36
-	MqlParserLBRACK            = 37
-	MqlParserRBRACK            = 38
-	MqlParserSEMI              = 39
-	MqlParserCOMMA             = 40
-	MqlParserDOT               = 41
-	MqlParserASSIGN            = 42
-	MqlParserGT                = 43
-	MqlParserLT                = 44
-	MqlParserBANG              = 45
-	MqlParserTILDE             = 46
-	MqlParserQUESTION          = 47
-	MqlParserCOLON             = 48
-	MqlParserEQUAL             = 49
-	MqlParserLE                = 50
-	MqlParserGE                = 51
-	MqlParserNOTEQUAL          = 52
-	MqlParserADD               = 53
-	MqlParserSUB               = 54
-	MqlParserMUL               = 55
-	MqlParserDIV               = 56
-	MqlParserBITAND            = 57
-	MqlParserBITOR             = 58
-	MqlParserCARET             = 59
-	MqlParserMOD               = 60
-	MqlParserDECIMAL_LITERAL   = 61
-	MqlParserHEX_LITERAL       = 62
-	MqlParserOCT_LITERAL       = 63
-	MqlParserBINARY_LITERAL    = 64
-	MqlParserTIME_LITERAL      = 65
-	MqlParserFLOAT_LITERAL     = 66
+	MqlParserEOF = antlr.TokenEOF
+	MqlParserINDEX_NAME = 1
+	MqlParserRENAME = 2
+	MqlParserSEARCH = 3
+	MqlParserDEDUP = 4
+	MqlParserWHERE = 5
+	MqlParserSORT = 6
+	MqlParserHEAD = 7
+	MqlParserTOP = 8
+	MqlParserBIN = 9
+	MqlParserBIN_SPAN = 10
+	MqlParserFIELDS = 11
+	MqlParserSTATS = 12
+	MqlParserAS = 13
+	MqlParserBY = 14
+	MqlParserAND = 15
+	MqlParserOR = 16
+	MqlParserAVG = 17
+	MqlParserCOUNT = 18
+	MqlParserDISTINCT_COUNT = 19
+	MqlParserESTDC = 20
+	MqlParserESTDC_ERROR = 21
+	MqlParserMAX = 22
+	MqlParserMEDIAN = 23
+	MqlParserMIN = 24
+	MqlParserMODE = 25
+	MqlParserRANGE = 26
+	MqlParserSTDEV = 27
+	MqlParserSTDEVP = 28
+	MqlParserSUM = 29
+	MqlParserSUMSQ = 30
+	MqlParserVAR = 31
+	MqlParserVARP = 32
+	MqlParserLPAREN = 33
+	MqlParserRPAREN = 34
+	MqlParserLBRACE = 35
+	MqlParserRBRACE = 36
+	MqlParserLBRACK = 37
+	MqlParserRBRACK = 38
+	MqlParserSEMI = 39
+	MqlParserCOMMA = 40
+	MqlParserDOT = 41
+	MqlParserASSIGN = 42
+	MqlParserGT = 43
+	MqlParserLT = 44
+	MqlParserBANG = 45
+	MqlParserTILDE = 46
+	MqlParserQUESTION = 47
+	MqlParserCOLON = 48
+	MqlParserEQUAL = 49
+	MqlParserLE = 50
+	MqlParserGE = 51
+	MqlParserNOTEQUAL = 52
+	MqlParserADD = 53
+	MqlParserSUB = 54
+	MqlParserMUL = 55
+	MqlParserDIV = 56
+	MqlParserBITAND = 57
+	MqlParserBITOR = 58
+	MqlParserCARET = 59
+	MqlParserMOD = 60
+	MqlParserDECIMAL_LITERAL = 61
+	MqlParserHEX_LITERAL = 62
+	MqlParserOCT_LITERAL = 63
+	MqlParserBINARY_LITERAL = 64
+	MqlParserTIME_LITERAL = 65
+	MqlParserFLOAT_LITERAL = 66
 	MqlParserHEX_FLOAT_LITERAL = 67
-	MqlParserBOOL_LITERAL      = 68
-	MqlParserCHAR_LITERAL      = 69
-	MqlParserSTRING_LITERAL    = 70
-	MqlParserNULL_LITERAL      = 71
-	MqlParserTIME_FIELD        = 72
-	MqlParserIDENTIFIER        = 73
-	MqlParserWS                = 74
-	MqlParserCOMMENT           = 75
-	MqlParserLINE_COMMENT      = 76
+	MqlParserBOOL_LITERAL = 68
+	MqlParserCHAR_LITERAL = 69
+	MqlParserSTRING_LITERAL = 70
+	MqlParserNULL_LITERAL = 71
+	MqlParserTIME_FIELD = 72
+	MqlParserIDENTIFIER = 73
+	MqlParserWS = 74
+	MqlParserCOMMENT = 75
+	MqlParserLINE_COMMENT = 76
 )
 
 // MqlParser rules.
 const (
-	MqlParserRULE_start           = 0
-	MqlParserRULE_identifierList  = 1
-	MqlParserRULE_agrupTypes      = 2
-	MqlParserRULE_agrupCall       = 3
-	MqlParserRULE_literal         = 4
-	MqlParserRULE_expression      = 5
-	MqlParserRULE_comparator      = 6
-	MqlParserRULE_binary          = 7
-	MqlParserRULE_commands        = 8
-	MqlParserRULE_whereCommand    = 9
-	MqlParserRULE_selectCommand   = 10
-	MqlParserRULE_renameCommand   = 11
-	MqlParserRULE_statCommand     = 12
-	MqlParserRULE_binCommand      = 13
-	MqlParserRULE_fieldCommand    = 14
-	MqlParserRULE_dedupCommand    = 15
-	MqlParserRULE_sortCommand     = 16
-	MqlParserRULE_headCommand     = 17
+	MqlParserRULE_start = 0
+	MqlParserRULE_identifierList = 1
+	MqlParserRULE_agrupTypes = 2
+	MqlParserRULE_agrupCall = 3
+	MqlParserRULE_literal = 4
+	MqlParserRULE_expression = 5
+	MqlParserRULE_comparator = 6
+	MqlParserRULE_binary = 7
+	MqlParserRULE_commands = 8
+	MqlParserRULE_whereCommand = 9
+	MqlParserRULE_selectCommand = 10
+	MqlParserRULE_renameCommand = 11
+	MqlParserRULE_statCommand = 12
+	MqlParserRULE_binCommand = 13
+	MqlParserRULE_fieldCommand = 14
+	MqlParserRULE_dedupCommand = 15
+	MqlParserRULE_sortCommand = 16
+	MqlParserRULE_headCommand = 17
 	MqlParserRULE_completeCommand = 18
 )
 
@@ -311,6 +312,7 @@ func (s *StartContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) 
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *StartContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterStart(s)
@@ -323,15 +325,8 @@ func (s *StartContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *StartContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitStart(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) Start() (localctx IStartContext) {
 	localctx = NewStartContext(p, p.GetParserRuleContext(), p.GetState())
@@ -363,8 +358,11 @@ func (p *MqlParser) Start() (localctx IStartContext) {
 		p.Match(MqlParserEOF)
 	}
 
+
+
 	return localctx
 }
+
 
 // IIdentifierListContext is an interface to support dynamic dispatch.
 type IIdentifierListContext interface {
@@ -428,6 +426,7 @@ func (s *IdentifierListContext) ToStringTree(ruleNames []string, recog antlr.Rec
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *IdentifierListContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterIdentifierList(s)
@@ -440,20 +439,14 @@ func (s *IdentifierListContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *IdentifierListContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitIdentifierList(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) IdentifierList() (localctx IIdentifierListContext) {
 	localctx = NewIdentifierListContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 2, MqlParserRULE_identifierList)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -480,6 +473,7 @@ func (p *MqlParser) IdentifierList() (localctx IIdentifierListContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	for _la == MqlParserCOMMA {
 		{
 			p.SetState(42)
@@ -490,13 +484,17 @@ func (p *MqlParser) IdentifierList() (localctx IIdentifierListContext) {
 			p.Match(MqlParserIDENTIFIER)
 		}
 
+
 		p.SetState(48)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
 
+
+
 	return localctx
 }
+
 
 // IAgrupTypesContext is an interface to support dynamic dispatch.
 type IAgrupTypesContext interface {
@@ -608,6 +606,7 @@ func (s *AgrupTypesContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *AgrupTypesContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterAgrupTypes(s)
@@ -620,20 +619,14 @@ func (s *AgrupTypesContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *AgrupTypesContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitAgrupTypes(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) AgrupTypes() (localctx IAgrupTypesContext) {
 	localctx = NewAgrupTypesContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 4, MqlParserRULE_agrupTypes)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -656,7 +649,7 @@ func (p *MqlParser) AgrupTypes() (localctx IAgrupTypesContext) {
 		p.SetState(49)
 		_la = p.GetTokenStream().LA(1)
 
-		if !(((_la-17)&-(0x1f+1)) == 0 && ((1<<uint((_la-17)))&((1<<(MqlParserAVG-17))|(1<<(MqlParserCOUNT-17))|(1<<(MqlParserDISTINCT_COUNT-17))|(1<<(MqlParserESTDC-17))|(1<<(MqlParserESTDC_ERROR-17))|(1<<(MqlParserMAX-17))|(1<<(MqlParserMEDIAN-17))|(1<<(MqlParserMIN-17))|(1<<(MqlParserMODE-17))|(1<<(MqlParserRANGE-17))|(1<<(MqlParserSTDEV-17))|(1<<(MqlParserSTDEVP-17))|(1<<(MqlParserSUM-17))|(1<<(MqlParserSUMSQ-17))|(1<<(MqlParserVAR-17))|(1<<(MqlParserVARP-17)))) != 0) {
+		if !(((((_la - 17)) & -(0x1f+1)) == 0 && ((1 << uint((_la - 17))) & ((1 << (MqlParserAVG - 17)) | (1 << (MqlParserCOUNT - 17)) | (1 << (MqlParserDISTINCT_COUNT - 17)) | (1 << (MqlParserESTDC - 17)) | (1 << (MqlParserESTDC_ERROR - 17)) | (1 << (MqlParserMAX - 17)) | (1 << (MqlParserMEDIAN - 17)) | (1 << (MqlParserMIN - 17)) | (1 << (MqlParserMODE - 17)) | (1 << (MqlParserRANGE - 17)) | (1 << (MqlParserSTDEV - 17)) | (1 << (MqlParserSTDEVP - 17)) | (1 << (MqlParserSUM - 17)) | (1 << (MqlParserSUMSQ - 17)) | (1 << (MqlParserVAR - 17)) | (1 << (MqlParserVARP - 17)))) != 0)) {
 			p.GetErrorHandler().RecoverInline(p)
 		} else {
 			p.GetErrorHandler().ReportMatch(p)
@@ -664,8 +657,11 @@ func (p *MqlParser) AgrupTypes() (localctx IAgrupTypesContext) {
 		}
 	}
 
+
+
 	return localctx
 }
+
 
 // IAgrupCallContext is an interface to support dynamic dispatch.
 type IAgrupCallContext interface {
@@ -735,6 +731,7 @@ func (s *AgrupCallContext) ToStringTree(ruleNames []string, recog antlr.Recogniz
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *AgrupCallContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterAgrupCall(s)
@@ -747,15 +744,8 @@ func (s *AgrupCallContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *AgrupCallContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitAgrupCall(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) AgrupCall() (localctx IAgrupCallContext) {
 	localctx = NewAgrupCallContext(p, p.GetParserRuleContext(), p.GetState())
@@ -795,8 +785,11 @@ func (p *MqlParser) AgrupCall() (localctx IAgrupCallContext) {
 		p.Match(MqlParserRPAREN)
 	}
 
+
+
 	return localctx
 }
+
 
 // ILiteralContext is an interface to support dynamic dispatch.
 type ILiteralContext interface {
@@ -848,6 +841,9 @@ func (s *LiteralContext) ToStringTree(ruleNames []string, recog antlr.Recognizer
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
+
+
 type DecimalLiteralContext struct {
 	*LiteralContext
 }
@@ -870,6 +866,7 @@ func (s *DecimalLiteralContext) DECIMAL_LITERAL() antlr.TerminalNode {
 	return s.GetToken(MqlParserDECIMAL_LITERAL, 0)
 }
 
+
 func (s *DecimalLiteralContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterDecimalLiteral(s)
@@ -882,15 +879,6 @@ func (s *DecimalLiteralContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *DecimalLiteralContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitDecimalLiteral(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type IdentifierContext struct {
 	*LiteralContext
@@ -914,6 +902,7 @@ func (s *IdentifierContext) IDENTIFIER() antlr.TerminalNode {
 	return s.GetToken(MqlParserIDENTIFIER, 0)
 }
 
+
 func (s *IdentifierContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterIdentifier(s)
@@ -926,15 +915,6 @@ func (s *IdentifierContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *IdentifierContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitIdentifier(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type StringLiteralContext struct {
 	*LiteralContext
@@ -958,6 +938,7 @@ func (s *StringLiteralContext) STRING_LITERAL() antlr.TerminalNode {
 	return s.GetToken(MqlParserSTRING_LITERAL, 0)
 }
 
+
 func (s *StringLiteralContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterStringLiteral(s)
@@ -970,15 +951,6 @@ func (s *StringLiteralContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *StringLiteralContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitStringLiteral(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type FloatLiteralContext struct {
 	*LiteralContext
@@ -1002,6 +974,7 @@ func (s *FloatLiteralContext) FLOAT_LITERAL() antlr.TerminalNode {
 	return s.GetToken(MqlParserFLOAT_LITERAL, 0)
 }
 
+
 func (s *FloatLiteralContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterFloatLiteral(s)
@@ -1014,15 +987,6 @@ func (s *FloatLiteralContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *FloatLiteralContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitFloatLiteral(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type BoolLiteralContext struct {
 	*LiteralContext
@@ -1046,6 +1010,7 @@ func (s *BoolLiteralContext) BOOL_LITERAL() antlr.TerminalNode {
 	return s.GetToken(MqlParserBOOL_LITERAL, 0)
 }
 
+
 func (s *BoolLiteralContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterBoolLiteral(s)
@@ -1058,15 +1023,7 @@ func (s *BoolLiteralContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *BoolLiteralContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitBoolLiteral(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 func (p *MqlParser) Literal() (localctx ILiteralContext) {
 	localctx = NewLiteralContext(p, p.GetParserRuleContext(), p.GetState())
@@ -1100,6 +1057,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 			p.Match(MqlParserSTRING_LITERAL)
 		}
 
+
 	case MqlParserDECIMAL_LITERAL:
 		localctx = NewDecimalLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 2)
@@ -1107,6 +1065,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 			p.SetState(57)
 			p.Match(MqlParserDECIMAL_LITERAL)
 		}
+
 
 	case MqlParserFLOAT_LITERAL:
 		localctx = NewFloatLiteralContext(p, localctx)
@@ -1116,6 +1075,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 			p.Match(MqlParserFLOAT_LITERAL)
 		}
 
+
 	case MqlParserBOOL_LITERAL:
 		localctx = NewBoolLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 4)
@@ -1123,6 +1083,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 			p.SetState(59)
 			p.Match(MqlParserBOOL_LITERAL)
 		}
+
 
 	case MqlParserIDENTIFIER:
 		localctx = NewIdentifierContext(p, localctx)
@@ -1132,12 +1093,16 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 			p.Match(MqlParserIDENTIFIER)
 		}
 
+
+
 	default:
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 
+
 	return localctx
 }
+
 
 // IExpressionContext is an interface to support dynamic dispatch.
 type IExpressionContext interface {
@@ -1189,11 +1154,15 @@ func (s *ExpressionContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
+
+
+
 type BinaryExpressionContext struct {
 	*ExpressionContext
-	left  IExpressionContext
-	op    IBinaryContext
-	right IExpressionContext
+	left IExpressionContext 
+	op IBinaryContext 
+	right IExpressionContext 
 }
 
 func NewBinaryExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *BinaryExpressionContext {
@@ -1206,11 +1175,13 @@ func NewBinaryExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext
 	return p
 }
 
+
 func (s *BinaryExpressionContext) GetLeft() IExpressionContext { return s.left }
 
 func (s *BinaryExpressionContext) GetOp() IBinaryContext { return s.op }
 
 func (s *BinaryExpressionContext) GetRight() IExpressionContext { return s.right }
+
 
 func (s *BinaryExpressionContext) SetLeft(v IExpressionContext) { s.left = v }
 
@@ -1255,6 +1226,7 @@ func (s *BinaryExpressionContext) Binary() IBinaryContext {
 	return t.(IBinaryContext)
 }
 
+
 func (s *BinaryExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterBinaryExpression(s)
@@ -1267,15 +1239,6 @@ func (s *BinaryExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *BinaryExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitBinaryExpression(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type ParenExpressionContext struct {
 	*ExpressionContext
@@ -1313,6 +1276,7 @@ func (s *ParenExpressionContext) RPAREN() antlr.TerminalNode {
 	return s.GetToken(MqlParserRPAREN, 0)
 }
 
+
 func (s *ParenExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterParenExpression(s)
@@ -1325,21 +1289,12 @@ func (s *ParenExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *ParenExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitParenExpression(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 type ComparatorExpressionContext struct {
 	*ExpressionContext
-	left  antlr.Token
-	op    IComparatorContext
-	right ILiteralContext
+	left ILiteralContext 
+	op IComparatorContext 
+	right ILiteralContext 
 }
 
 func NewComparatorExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ComparatorExpressionContext {
@@ -1352,13 +1307,15 @@ func NewComparatorExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleCon
 	return p
 }
 
-func (s *ComparatorExpressionContext) GetLeft() antlr.Token { return s.left }
 
-func (s *ComparatorExpressionContext) SetLeft(v antlr.Token) { s.left = v }
+func (s *ComparatorExpressionContext) GetLeft() ILiteralContext { return s.left }
 
 func (s *ComparatorExpressionContext) GetOp() IComparatorContext { return s.op }
 
 func (s *ComparatorExpressionContext) GetRight() ILiteralContext { return s.right }
+
+
+func (s *ComparatorExpressionContext) SetLeft(v ILiteralContext) { s.left = v }
 
 func (s *ComparatorExpressionContext) SetOp(v IComparatorContext) { s.op = v }
 
@@ -1368,8 +1325,27 @@ func (s *ComparatorExpressionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *ComparatorExpressionContext) IDENTIFIER() antlr.TerminalNode {
-	return s.GetToken(MqlParserIDENTIFIER, 0)
+func (s *ComparatorExpressionContext) AllLiteral() []ILiteralContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*ILiteralContext)(nil)).Elem())
+	var tst = make([]ILiteralContext, len(ts))
+
+	for i, t := range ts {
+		if t != nil {
+			tst[i] = t.(ILiteralContext)
+		}
+	}
+
+	return tst
+}
+
+func (s *ComparatorExpressionContext) Literal(i int) ILiteralContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ILiteralContext)(nil)).Elem(), i)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ILiteralContext)
 }
 
 func (s *ComparatorExpressionContext) Comparator() IComparatorContext {
@@ -1382,15 +1358,6 @@ func (s *ComparatorExpressionContext) Comparator() IComparatorContext {
 	return t.(IComparatorContext)
 }
 
-func (s *ComparatorExpressionContext) Literal() ILiteralContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ILiteralContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ILiteralContext)
-}
 
 func (s *ComparatorExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
@@ -1404,15 +1371,7 @@ func (s *ComparatorExpressionContext) ExitRule(listener antlr.ParseTreeListener)
 	}
 }
 
-func (s *ComparatorExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitComparatorExpression(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
 
 func (p *MqlParser) Expression() (localctx IExpressionContext) {
 	return p.expression(0)
@@ -1468,21 +1427,24 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 			p.Match(MqlParserRPAREN)
 		}
 
-	case MqlParserIDENTIFIER:
+
+	case MqlParserDECIMAL_LITERAL, MqlParserFLOAT_LITERAL, MqlParserBOOL_LITERAL, MqlParserSTRING_LITERAL, MqlParserIDENTIFIER:
 		localctx = NewComparatorExpressionContext(p, localctx)
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
 			p.SetState(68)
 
-			var _m = p.Match(MqlParserIDENTIFIER)
+			var _x = p.Literal()
 
-			localctx.(*ComparatorExpressionContext).left = _m
+
+			localctx.(*ComparatorExpressionContext).left = _x
 		}
 		{
 			p.SetState(69)
 
 			var _x = p.Comparator()
+
 
 			localctx.(*ComparatorExpressionContext).op = _x
 		}
@@ -1491,8 +1453,11 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 
 			var _x = p.Literal()
 
+
 			localctx.(*ComparatorExpressionContext).right = _x
 		}
+
+
 
 	default:
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
@@ -1511,6 +1476,7 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 			localctx = NewBinaryExpressionContext(p, NewExpressionContext(p, _parentctx, _parentState))
 			localctx.(*BinaryExpressionContext).left = _prevctx
 
+
 			p.PushNewRecursionContext(localctx, _startState, MqlParserRULE_expression)
 			p.SetState(74)
 
@@ -1522,6 +1488,7 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 
 				var _x = p.Binary()
 
+
 				localctx.(*BinaryExpressionContext).op = _x
 			}
 			{
@@ -1532,14 +1499,18 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 				localctx.(*BinaryExpressionContext).right = _x
 			}
 
+
 		}
 		p.SetState(82)
 		p.GetErrorHandler().Sync(p)
 		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 3, p.GetParserRuleContext())
 	}
 
+
+
 	return localctx
 }
+
 
 // IComparatorContext is an interface to support dynamic dispatch.
 type IComparatorContext interface {
@@ -1607,6 +1578,7 @@ func (s *ComparatorContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *ComparatorContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterComparator(s)
@@ -1619,20 +1591,14 @@ func (s *ComparatorContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *ComparatorContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitComparator(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) Comparator() (localctx IComparatorContext) {
 	localctx = NewComparatorContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 12, MqlParserRULE_comparator)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -1655,7 +1621,7 @@ func (p *MqlParser) Comparator() (localctx IComparatorContext) {
 		p.SetState(83)
 		_la = p.GetTokenStream().LA(1)
 
-		if !(((_la-42)&-(0x1f+1)) == 0 && ((1<<uint((_la-42)))&((1<<(MqlParserASSIGN-42))|(1<<(MqlParserGT-42))|(1<<(MqlParserLT-42))|(1<<(MqlParserLE-42))|(1<<(MqlParserGE-42)))) != 0) {
+		if !(((((_la - 42)) & -(0x1f+1)) == 0 && ((1 << uint((_la - 42))) & ((1 << (MqlParserASSIGN - 42)) | (1 << (MqlParserGT - 42)) | (1 << (MqlParserLT - 42)) | (1 << (MqlParserLE - 42)) | (1 << (MqlParserGE - 42)))) != 0)) {
 			p.GetErrorHandler().RecoverInline(p)
 		} else {
 			p.GetErrorHandler().ReportMatch(p)
@@ -1663,8 +1629,11 @@ func (p *MqlParser) Comparator() (localctx IComparatorContext) {
 		}
 	}
 
+
+
 	return localctx
 }
+
 
 // IBinaryContext is an interface to support dynamic dispatch.
 type IBinaryContext interface {
@@ -1720,6 +1689,7 @@ func (s *BinaryContext) ToStringTree(ruleNames []string, recog antlr.Recognizer)
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *BinaryContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterBinary(s)
@@ -1732,20 +1702,14 @@ func (s *BinaryContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *BinaryContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitBinary(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) Binary() (localctx IBinaryContext) {
 	localctx = NewBinaryContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 14, MqlParserRULE_binary)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -1776,8 +1740,11 @@ func (p *MqlParser) Binary() (localctx IBinaryContext) {
 		}
 	}
 
+
+
 	return localctx
 }
+
 
 // ICommandsContext is an interface to support dynamic dispatch.
 type ICommandsContext interface {
@@ -1905,6 +1872,7 @@ func (s *CommandsContext) ToStringTree(ruleNames []string, recog antlr.Recognize
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *CommandsContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterCommands(s)
@@ -1917,15 +1885,8 @@ func (s *CommandsContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *CommandsContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitCommands(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) Commands() (localctx ICommandsContext) {
 	localctx = NewCommandsContext(p, p.GetParserRuleContext(), p.GetState())
@@ -1958,12 +1919,14 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 			p.WhereCommand()
 		}
 
+
 	case MqlParserRENAME:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(88)
 			p.RenameCommand()
 		}
+
 
 	case MqlParserSTATS:
 		p.EnterOuterAlt(localctx, 3)
@@ -1972,12 +1935,14 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 			p.StatCommand()
 		}
 
+
 	case MqlParserFIELDS:
 		p.EnterOuterAlt(localctx, 4)
 		{
 			p.SetState(90)
 			p.FieldCommand()
 		}
+
 
 	case MqlParserDEDUP:
 		p.EnterOuterAlt(localctx, 5)
@@ -1986,12 +1951,14 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 			p.DedupCommand()
 		}
 
+
 	case MqlParserSORT:
 		p.EnterOuterAlt(localctx, 6)
 		{
 			p.SetState(92)
 			p.SortCommand()
 		}
+
 
 	case MqlParserHEAD:
 		p.EnterOuterAlt(localctx, 7)
@@ -2000,6 +1967,7 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 			p.HeadCommand()
 		}
 
+
 	case MqlParserBIN:
 		p.EnterOuterAlt(localctx, 8)
 		{
@@ -2007,12 +1975,16 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 			p.BinCommand()
 		}
 
+
+
 	default:
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 
+
 	return localctx
 }
+
 
 // IWhereCommandContext is an interface to support dynamic dispatch.
 type IWhereCommandContext interface {
@@ -2074,6 +2046,7 @@ func (s *WhereCommandContext) ToStringTree(ruleNames []string, recog antlr.Recog
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *WhereCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterWhereCommand(s)
@@ -2086,15 +2059,8 @@ func (s *WhereCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *WhereCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitWhereCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) WhereCommand() (localctx IWhereCommandContext) {
 	localctx = NewWhereCommandContext(p, p.GetParserRuleContext(), p.GetState())
@@ -2126,8 +2092,11 @@ func (p *MqlParser) WhereCommand() (localctx IWhereCommandContext) {
 		p.expression(0)
 	}
 
+
+
 	return localctx
 }
+
 
 // ISelectCommandContext is an interface to support dynamic dispatch.
 type ISelectCommandContext interface {
@@ -2167,8 +2136,8 @@ func NewSelectCommandContext(parser antlr.Parser, parent antlr.ParserRuleContext
 
 func (s *SelectCommandContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *SelectCommandContext) SOURCE_TYPE() antlr.TerminalNode {
-	return s.GetToken(MqlParserSOURCE_TYPE, 0)
+func (s *SelectCommandContext) INDEX_NAME() antlr.TerminalNode {
+	return s.GetToken(MqlParserINDEX_NAME, 0)
 }
 
 func (s *SelectCommandContext) ASSIGN() antlr.TerminalNode {
@@ -2210,6 +2179,7 @@ func (s *SelectCommandContext) ToStringTree(ruleNames []string, recog antlr.Reco
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *SelectCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterSelectCommand(s)
@@ -2222,20 +2192,14 @@ func (s *SelectCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *SelectCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitSelectCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 	localctx = NewSelectCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 20, MqlParserRULE_selectCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -2256,7 +2220,7 @@ func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(100)
-		p.Match(MqlParserSOURCE_TYPE)
+		p.Match(MqlParserINDEX_NAME)
 	}
 	{
 		p.SetState(101)
@@ -2270,19 +2234,24 @@ func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
-	for _la == MqlParserLPAREN || _la == MqlParserIDENTIFIER {
+
+	for _la == MqlParserLPAREN || _la == MqlParserDECIMAL_LITERAL || ((((_la - 66)) & -(0x1f+1)) == 0 && ((1 << uint((_la - 66))) & ((1 << (MqlParserFLOAT_LITERAL - 66)) | (1 << (MqlParserBOOL_LITERAL - 66)) | (1 << (MqlParserSTRING_LITERAL - 66)) | (1 << (MqlParserIDENTIFIER - 66)))) != 0) {
 		{
 			p.SetState(103)
 			p.expression(0)
 		}
+
 
 		p.SetState(108)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
 
+
+
 	return localctx
 }
+
 
 // IRenameCommandContext is an interface to support dynamic dispatch.
 type IRenameCommandContext interface {
@@ -2350,6 +2319,7 @@ func (s *RenameCommandContext) ToStringTree(ruleNames []string, recog antlr.Reco
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *RenameCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterRenameCommand(s)
@@ -2362,20 +2332,14 @@ func (s *RenameCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *RenameCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitRenameCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) RenameCommand() (localctx IRenameCommandContext) {
 	localctx = NewRenameCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 22, MqlParserRULE_renameCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -2402,6 +2366,7 @@ func (p *MqlParser) RenameCommand() (localctx IRenameCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	for ok := true; ok; ok = _la == MqlParserIDENTIFIER {
 		{
 			p.SetState(110)
@@ -2416,13 +2381,17 @@ func (p *MqlParser) RenameCommand() (localctx IRenameCommandContext) {
 			p.Match(MqlParserIDENTIFIER)
 		}
 
+
 		p.SetState(115)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
 
+
+
 	return localctx
 }
+
 
 // IStatCommandContext is an interface to support dynamic dispatch.
 type IStatCommandContext interface {
@@ -2525,6 +2494,7 @@ func (s *StatCommandContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *StatCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterStatCommand(s)
@@ -2537,20 +2507,14 @@ func (s *StatCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *StatCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitStatCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 	localctx = NewStatCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 24, MqlParserRULE_statCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -2581,6 +2545,7 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	if _la == MqlParserAS {
 		{
 			p.SetState(119)
@@ -2596,6 +2561,7 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	for _la == MqlParserCOMMA {
 		{
 			p.SetState(123)
@@ -2609,6 +2575,7 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
+
 		if _la == MqlParserAS {
 			{
 				p.SetState(125)
@@ -2620,6 +2587,7 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 			}
 
 		}
+
 
 		p.SetState(133)
 		p.GetErrorHandler().Sync(p)
@@ -2634,8 +2602,11 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 		p.Match(MqlParserIDENTIFIER)
 	}
 
+
+
 	return localctx
 }
+
 
 // IBinCommandContext is an interface to support dynamic dispatch.
 type IBinCommandContext interface {
@@ -2707,6 +2678,7 @@ func (s *BinCommandContext) ToStringTree(ruleNames []string, recog antlr.Recogni
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *BinCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterBinCommand(s)
@@ -2719,20 +2691,14 @@ func (s *BinCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *BinCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitBinCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) BinCommand() (localctx IBinCommandContext) {
 	localctx = NewBinCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 26, MqlParserRULE_binCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -2758,6 +2724,7 @@ func (p *MqlParser) BinCommand() (localctx IBinCommandContext) {
 	p.SetState(139)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
+
 
 	if _la == MqlParserTIME_FIELD || _la == MqlParserIDENTIFIER {
 		{
@@ -2786,8 +2753,11 @@ func (p *MqlParser) BinCommand() (localctx IBinCommandContext) {
 		p.Match(MqlParserTIME_LITERAL)
 	}
 
+
+
 	return localctx
 }
+
 
 // IFieldCommandContext is an interface to support dynamic dispatch.
 type IFieldCommandContext interface {
@@ -2857,6 +2827,7 @@ func (s *FieldCommandContext) ToStringTree(ruleNames []string, recog antlr.Recog
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *FieldCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterFieldCommand(s)
@@ -2869,20 +2840,14 @@ func (s *FieldCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *FieldCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitFieldCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) FieldCommand() (localctx IFieldCommandContext) {
 	localctx = NewFieldCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 28, MqlParserRULE_fieldCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -2909,6 +2874,7 @@ func (p *MqlParser) FieldCommand() (localctx IFieldCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	if _la == MqlParserADD || _la == MqlParserSUB {
 		{
 			p.SetState(146)
@@ -2928,8 +2894,11 @@ func (p *MqlParser) FieldCommand() (localctx IFieldCommandContext) {
 		p.IdentifierList()
 	}
 
+
+
 	return localctx
 }
+
 
 // IDedupCommandContext is an interface to support dynamic dispatch.
 type IDedupCommandContext interface {
@@ -2991,6 +2960,7 @@ func (s *DedupCommandContext) ToStringTree(ruleNames []string, recog antlr.Recog
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *DedupCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterDedupCommand(s)
@@ -3003,15 +2973,8 @@ func (s *DedupCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *DedupCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitDedupCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) DedupCommand() (localctx IDedupCommandContext) {
 	localctx = NewDedupCommandContext(p, p.GetParserRuleContext(), p.GetState())
@@ -3043,8 +3006,11 @@ func (p *MqlParser) DedupCommand() (localctx IDedupCommandContext) {
 		p.IdentifierList()
 	}
 
+
+
 	return localctx
 }
+
 
 // ISortCommandContext is an interface to support dynamic dispatch.
 type ISortCommandContext interface {
@@ -3106,6 +3072,7 @@ func (s *SortCommandContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *SortCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterSortCommand(s)
@@ -3118,15 +3085,8 @@ func (s *SortCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *SortCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitSortCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) SortCommand() (localctx ISortCommandContext) {
 	localctx = NewSortCommandContext(p, p.GetParserRuleContext(), p.GetState())
@@ -3158,8 +3118,11 @@ func (p *MqlParser) SortCommand() (localctx ISortCommandContext) {
 		p.IdentifierList()
 	}
 
+
+
 	return localctx
 }
+
 
 // IHeadCommandContext is an interface to support dynamic dispatch.
 type IHeadCommandContext interface {
@@ -3215,6 +3178,7 @@ func (s *HeadCommandContext) ToStringTree(ruleNames []string, recog antlr.Recogn
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *HeadCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterHeadCommand(s)
@@ -3227,15 +3191,8 @@ func (s *HeadCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *HeadCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitHeadCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) HeadCommand() (localctx IHeadCommandContext) {
 	localctx = NewHeadCommandContext(p, p.GetParserRuleContext(), p.GetState())
@@ -3267,8 +3224,11 @@ func (p *MqlParser) HeadCommand() (localctx IHeadCommandContext) {
 		p.Match(MqlParserDECIMAL_LITERAL)
 	}
 
+
+
 	return localctx
 }
+
 
 // ICompleteCommandContext is an interface to support dynamic dispatch.
 type ICompleteCommandContext interface {
@@ -3357,6 +3317,7 @@ func (s *CompleteCommandContext) ToStringTree(ruleNames []string, recog antlr.Re
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
+
 func (s *CompleteCommandContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(MqlParserListener); ok {
 		listenerT.EnterCompleteCommand(s)
@@ -3369,20 +3330,14 @@ func (s *CompleteCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (s *CompleteCommandContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case MqlParserVisitor:
-		return t.VisitCompleteCommand(s)
 
-	default:
-		return t.VisitChildren(s)
-	}
-}
+
 
 func (p *MqlParser) CompleteCommand() (localctx ICompleteCommandContext) {
 	localctx = NewCompleteCommandContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 36, MqlParserRULE_completeCommand)
 	var _la int
+
 
 	defer func() {
 		p.ExitRule()
@@ -3409,6 +3364,7 @@ func (p *MqlParser) CompleteCommand() (localctx ICompleteCommandContext) {
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
+
 	for _la == MqlParserBITOR {
 		{
 			p.SetState(161)
@@ -3419,22 +3375,25 @@ func (p *MqlParser) CompleteCommand() (localctx ICompleteCommandContext) {
 			p.Commands()
 		}
 
+
 		p.SetState(167)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
 
+
+
 	return localctx
 }
+
 
 func (p *MqlParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int) bool {
 	switch ruleIndex {
 	case 5:
-		var t *ExpressionContext = nil
-		if localctx != nil {
-			t = localctx.(*ExpressionContext)
-		}
-		return p.Expression_Sempred(t, predIndex)
+			var t *ExpressionContext = nil
+			if localctx != nil { t = localctx.(*ExpressionContext) }
+			return p.Expression_Sempred(t, predIndex)
+
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(ruleIndex))
@@ -3444,9 +3403,10 @@ func (p *MqlParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int
 func (p *MqlParser) Expression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 0:
-		return p.Precpred(p.GetParserRuleContext(), 1)
+			return p.Precpred(p.GetParserRuleContext(), 1)
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(predIndex))
 	}
 }
+

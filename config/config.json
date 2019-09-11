@@ -2,6 +2,6 @@
   "logLevel": "debug",
   "prettyLog": "true",
   "seeds": "",
-  "dbPath": "/var/meerkat",
+  "dbPath": "/tmp",
   "gossipPort": -1
 }

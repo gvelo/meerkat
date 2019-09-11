@@ -6,22 +6,36 @@ import (
 	"meerkat/internal/query/mql_parser"
 )
 
-func ProcessQuery(q string) *ParsedTree {
+type Parser interface {
+	Parse(q string) *ParsedTree
+}
+
+type MqlParser struct {
+}
+
+func NewMqlParser() *MqlParser {
+	return &MqlParser{}
+}
+
+func (*MqlParser) Parse(q string) *ParsedTree {
 
 	fmt.Println("Query ", q)
+
 	is := antlr.NewInputStream(q)
 
 	// Create the Lexer
 	lexer := mql_parser.NewMqlLexer(is)
+
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	// Create the Parser
 	p := mql_parser.NewMqlParser(stream)
 
-	l := NewListener()
+	l := NewListener(lexer)
+
 	// Finally parse the expression
 	antlr.ParseTreeWalkerDefault.Walk(l, p.Start())
 
-	return l.builder.Build()
+	return l.GetTree()
 
 }
