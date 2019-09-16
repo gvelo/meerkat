@@ -67,8 +67,10 @@ func (cr *connRegistry) addConnection(m serf.Member) error {
 		return nil
 	}
 
-	//TODO(gvelo): add transport security.
-	c, err := grpc.Dial(m.Addr.String(), grpc.WithInsecure())
+	// TODO(gvelo): add transport security.
+	// TODO(gvelo): externalize grpc port
+	addr := m.Addr.String() + ":9191"
+	c, err := grpc.Dial(addr, grpc.WithInsecure())
 
 	if err != nil {
 		return err
@@ -107,7 +109,7 @@ func (cr *connRegistry) removeConnections(members []serf.Member) {
 func (cr *connRegistry) updateConn() {
 
 	// TODO: review this logic when member readiness status
-	// be added to signal that the bootstrap has ended.
+	//       be added to signal that the bootstrap has ended.
 
 	for e := range cr.chUpdates {
 
@@ -123,7 +125,8 @@ func (cr *connRegistry) updateConn() {
 		case serf.EventMemberLeave:
 			cr.removeConnections(mEvent.Members)
 		case serf.EventMemberUpdate:
-			cr.addConnections(mEvent.Members)
+			// TODO(gvelo): should we handle EventMemberUpdate ?
+			//cr.addConnections(mEvent.Members)
 		case serf.EventMemberReap:
 			cr.removeConnections(mEvent.Members)
 		default:

@@ -20,6 +20,8 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
+	"meerkat/internal/rest"
+	"meerkat/internal/schema"
 	"net"
 	"os"
 	"strings"
@@ -81,11 +83,25 @@ func Start(c config.Config) {
 		return
 	}
 
-	_, err = cluster.NewCatalog(grpcServer, c.DBPath, cl, catalogRPC)
+	catalog, err := cluster.NewCatalog(grpcServer, c.DBPath, cl, catalogRPC)
 
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot create catalog")
 	}
+
+	s, err := schema.NewSchema(catalog)
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot create schema")
+	}
+
+	restApi, err := rest.NewRest(s)
+
+	if err != nil {
+		log.Panic().Err(err).Msg("cannot create rest server")
+	}
+
+	restApi.Start()
 
 	go func() {
 		err = grpcServer.Serve(lis)

@@ -30,6 +30,10 @@ import (
 	"time"
 )
 
+const (
+	catalogTagName = "catalog"
+)
+
 type Catalog interface {
 	Set(entry Entry) bool
 	SetAll(entries []Entry) []Entry
@@ -47,7 +51,7 @@ type catalog struct {
 	mu            sync.Mutex
 	log           zerolog.Logger
 	maps          map[string]map[string]Entry
-	replicaChan   chan []Entry
+	replicaChan   chan []Entry // TODO(gvelo): dispatch like an event.
 	hash          string
 	eventHandlers map[string]chan []Entry
 	replicator    *catalogReplicator
@@ -365,17 +369,20 @@ func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, catalogRPC C
 		return nil, err
 	}
 
-	err = cluster.SetTag("catalog", c.Hash())
-
-	if err != nil {
-		return nil, err
-	}
+	deltaCh := make(chan []Entry, 64)
+	c.AddEventHandler("replicator-handler", deltaCh)
 
 	cs := createCatalogServer(c)
 
 	RegisterCatalogServer(grpcSrv, cs)
 
-	c.replicator = createCatalogReplicator(cluster, c, c.replicaChan, catalogRPC)
+	err = cluster.SetTag(catalogTagName, c.Hash())
+
+	if err != nil {
+		return nil, err
+	}
+
+	c.replicator = createCatalogReplicator(cluster, c, c.replicaChan, deltaCh, catalogRPC)
 
 	c.replicator.start()
 
@@ -409,10 +416,17 @@ func createCatalog(dbPath string) (*catalog, error) {
 	return c, nil
 }
 
-func createCatalogReplicator(cluster Cluster, catalog Catalog, deltaCh chan []Entry, catalogRPC CatalogRPC) *catalogReplicator {
+func createCatalogReplicator(
+	cluster Cluster,
+	catalog Catalog,
+	replicaCh chan []Entry,
+	deltaCh chan []Entry,
+	catalogRPC CatalogRPC) *catalogReplicator {
+
 	return &catalogReplicator{
 		cluster:    cluster,
 		catalog:    catalog,
+		replicaCh:  replicaCh,
 		deltaCh:    deltaCh,
 		catalogRPC: catalogRPC,
 		log:        log.With().Str("component", "catalogReplicator").Logger(),
@@ -423,6 +437,7 @@ func createCatalogReplicator(cluster Cluster, catalog Catalog, deltaCh chan []En
 type catalogReplicator struct {
 	cluster    Cluster
 	catalog    Catalog
+	replicaCh  chan []Entry
 	deltaCh    chan []Entry
 	catalogRPC CatalogRPC
 	log        zerolog.Logger
@@ -433,17 +448,29 @@ func (cr *catalogReplicator) start() {
 	// TODO(gvelo): stop gracefully.
 	ticker := time.NewTicker(10 * time.Second)
 	go cr.broacast()
+	go cr.updateCatalogVersion()
 	go func() {
-		for _ = range ticker.C {
+		for range ticker.C {
 			cr.sync()
 		}
 	}()
 }
 
 func (cr *catalogReplicator) broacast() {
-	for delta := range cr.deltaCh {
+	for delta := range cr.replicaCh {
 		cr.log.Debug().Msg("broadcasting catalog delta")
 		cr.catalogRPC.SendDelta(context.TODO(), delta)
+	}
+}
+
+func (cr *catalogReplicator) updateCatalogVersion() {
+	for range cr.deltaCh {
+		hash := cr.catalog.Hash()
+		cr.log.Debug().Msgf("updating catalog version tag to [%v]", hash)
+		err := cr.cluster.SetTag(catalogTagName, hash)
+		if err != nil {
+			cr.log.Error().Err(err).Msg("error setting catalog version tag")
+		}
 	}
 }
 
@@ -458,9 +485,9 @@ func (cr *catalogReplicator) sync() {
 
 	for _, m := range members {
 
-		cr.log.Debug().Msgf("processing member %v", m.Name)
+		cr.log.Debug().Msgf("processing member [%v] with catalog version [%v]", m.Name, m.Tags[catalogTagName])
 
-		catalogVersion, ok := m.Tags["catalog"]
+		catalogVersion, ok := m.Tags[catalogTagName]
 
 		if !ok {
 			continue
@@ -473,6 +500,7 @@ func (cr *catalogReplicator) sync() {
 	}
 
 	if len(diff) == 0 {
+		cr.log.Debug().Msg("all catalog version match")
 		return
 	}
 
@@ -482,18 +510,20 @@ func (cr *catalogReplicator) sync() {
 		diffMembers = append(diffMembers, m)
 	}
 
+	cr.log.Debug().Msgf("retrieving catalog snapshot from %v", diffMembers)
+
 	snapshots := cr.catalogRPC.GetSnapShot(context.TODO(), diffMembers)
 
 	for _, snapshot := range snapshots {
 
 		if snapshot.err != nil {
-			cr.log.Error().Err(snapshot.err).Msgf("Error retriving snapshot from node %v", snapshot.member)
+			cr.log.Error().Err(snapshot.err).Msgf("Error retrieving snapshot from node %v", snapshot.member)
 			continue
 		}
 		cr.catalog.MergeSnapshot(snapshot.Snapshot)
 	}
 
-	err := cr.cluster.SetTag("catalog", cr.catalog.Hash())
+	err := cr.cluster.SetTag(catalogTagName, cr.catalog.Hash())
 
 	if err != nil {
 		cr.log.Error().Err(err).Msg("error setting catalog version tag")
