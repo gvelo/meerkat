@@ -42,6 +42,7 @@ func NewRest(schema schema.Schema) (*ApiServer, error) {
 	server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteIndex)
 
 	server.router.POST("/index/:indexID/alloc", server.updateAlloc)
+	server.router.GET("/index/:indexID/alloc", server.getAlloc)
 
 	server.schema = schema
 
@@ -200,7 +201,7 @@ func (s *ApiServer) updateField(c *gin.Context) {
 
 	field := schema.Field{}
 
-	err = c.ShouldBindJSON(field)
+	err = c.ShouldBindJSON(&field)
 
 	if err != nil {
 		bindError("cannot update field", c, err)
@@ -234,7 +235,7 @@ func (s *ApiServer) updateAlloc(c *gin.Context) {
 
 	alloc := schema.PartitionAlloc{}
 
-	err = c.ShouldBindJSON(alloc)
+	err = c.ShouldBindJSON(&alloc)
 
 	if err != nil {
 		bindError("cannot update alloc", c, err)
@@ -245,6 +246,21 @@ func (s *ApiServer) updateAlloc(c *gin.Context) {
 
 	if err != nil {
 		appError("cannot update alloc", c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, alloc)
+
+}
+
+func (s *ApiServer) getAlloc(c *gin.Context) {
+
+	id := c.Param(indexIDParam)
+
+	alloc, err := s.schema.Alloc(id)
+
+	if err != nil {
+		appError("cannot retrieve alloc", c, err)
 		return
 	}
 
