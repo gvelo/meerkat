@@ -1,16 +1,15 @@
 package plan
 
 import (
-	"meerkat/internal/query/rel"
+	"meerkat/internal/query/logical"
+	"meerkat/internal/query/mql_parser"
 	"testing"
 )
 
-func buildIndex() *rel.ParsedTree {
+func buildIndex() *logical.Projection {
 
-	parser := rel.NewMqlParser()
 	sql := "indexname=name  c1=1 and  ( c2>2  or c3=3 ) "
-
-	return parser.Parse(sql)
+	return mql_parser.Parse(sql)
 
 }
 

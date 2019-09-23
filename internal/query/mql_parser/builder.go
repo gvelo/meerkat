@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rel
+package mql_parser
 
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/query/logical"
 	"meerkat/internal/tools"
 )
 
@@ -25,18 +25,18 @@ type Builder interface {
 	Project(e ...interface{}) Builder
 	Aggregate(groupKey string, aggCall ...interface{}) Builder
 	Distinct() Builder
-	Sort(exp ...interface{}) Builder
+	Sort(exp ...string) Builder
 	Limit(offset int) Builder
+	Build() *logical.Projection
+
+	// Not used yet
 	SemiJoin(expr interface{}) Builder
 	AntiJoin(expr interface{}) Builder
 	Union(expr interface{}) Builder
 	Intersect(expr interface{}) Builder
 	Minus(expr interface{}) Builder
 	Match(regex string) Builder
-	And(a interface{}) Builder
-	Or(o interface{}) Builder
-	CreateExpresion(e interface{}) *Exp
-	Build() *ParsedTree
+	CreateExpresion(e interface{}) *logical.Exp
 }
 
 func NewRelBuilder() Builder {
@@ -64,22 +64,14 @@ func (r *relationalAlgBuilder) pop() interface{} {
 }
 
 func (r *relationalAlgBuilder) Scan(name string) Builder {
-	ts := NewIndexScan(name)
+	ts := logical.NewProjection(name)
 	r.push(ts)
 	return r
 }
 
-func (r *relationalAlgBuilder) And(a interface{}) Builder {
-	return r
-}
-
-func (r *relationalAlgBuilder) Or(o interface{}) Builder {
-	return r
-}
-
 func (r *relationalAlgBuilder) Filter(f interface{}) Builder {
-	is := r.peek().(*IndexScan)
-	is.SetFilter(f.(*Filter))
+	is := r.peek().(*logical.Projection)
+	is.AddChild(f.(logical.Node))
 	return r
 }
 
@@ -95,11 +87,33 @@ func (r *relationalAlgBuilder) Distinct() Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Sort(exp ...interface{}) Builder {
+func (r *relationalAlgBuilder) Sort(exp ...string) Builder {
+	p := r.queue[0].(*logical.Projection) //projection
+	p.Order = make([]*logical.Order, 0)
+
+	for i := 0; i < len(exp); i++ {
+
+		isOrder := exp[i] == "asc" || exp[i] == "desc"
+		nextIsOrder := i+1 < len(exp) && (exp[i+1] == "asc" || exp[i+1] == "desc")
+		if isOrder {
+			continue
+		} else {
+			o := new(logical.Order)
+			o.Field = exp[i]
+			if nextIsOrder {
+				o.Direction = exp[i+1]
+			}
+			p.Order = append(p.Order, o)
+		}
+
+	}
+
 	return r
 }
 
-func (r *relationalAlgBuilder) Limit(offset int) Builder {
+func (r *relationalAlgBuilder) Limit(limit int) Builder {
+	p := r.queue[0].(*logical.Projection) //projection
+	p.Limit = limit
 	return r
 }
 
@@ -133,43 +147,43 @@ func (r *relationalAlgBuilder) Match(regex string) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Build() *ParsedTree {
-	return &ParsedTree{IndexScan: r.peek().(*IndexScan)}
+func (r *relationalAlgBuilder) Build() *logical.Projection {
+	return r.peek().(*logical.Projection)
 }
 
-func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *Exp {
+func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
 
-	var e *Exp
-	switch  l.(type) {
-	case *mql_parser.DecimalLiteralContext:
-		e = &Exp{
-			ExpType: DECIMAL,
-			Value:   l.(*mql_parser.DecimalLiteralContext).GetText(),
+	var e *logical.Exp
+	switch l.(type) {
+	case *DecimalLiteralContext:
+		e = &logical.Exp{
+			ExpType: logical.DECIMAL,
+			Value:   l.(*DecimalLiteralContext).GetText(),
 		}
-	case *mql_parser.FloatLiteralContext:
-		e = &Exp{
-			ExpType: FLOAT,
-			Value:   l.(*mql_parser.FloatLiteralContext).GetText(),
+	case *FloatLiteralContext:
+		e = &logical.Exp{
+			ExpType: logical.FLOAT,
+			Value:   l.(*FloatLiteralContext).GetText(),
 		}
-	case *mql_parser.BoolLiteralContext:
-		e = &Exp{
-			ExpType: BOOL,
-			Value:   l.(*mql_parser.BoolLiteralContext).GetText(),
+	case *BoolLiteralContext:
+		e = &logical.Exp{
+			ExpType: logical.BOOL,
+			Value:   l.(*BoolLiteralContext).GetText(),
 		}
-	case *mql_parser.IdentifierContext:
-		e = &Exp{
-			ExpType: IDENTIFIER,
-			Value:   l.(*mql_parser.IdentifierContext).GetText(),
+	case *IdentifierContext:
+		e = &logical.Exp{
+			ExpType: logical.IDENTIFIER,
+			Value:   l.(*IdentifierContext).GetText(),
 		}
 	case *antlr.CommonToken: // string
-		e = &Exp{
-			ExpType: STRING,
+		e = &logical.Exp{
+			ExpType: logical.STRING,
 			Value:   l.(*antlr.CommonToken).GetText(),
 		}
 	default:
-		tools.Logf("Could not create expresion %s ", e.Value )
+		tools.Logf("Could not create expresion %s ", e.Value)
 	}
 
-	tools.Logf(" %s ", e.Value )
+	tools.Logf(" %s ", e.Value)
 	return e
 }

@@ -14,8 +14,7 @@
 package plan
 
 import (
-	"fmt"
-	"meerkat/internal/query/rel"
+	"meerkat/internal/query/logical"
 	"meerkat/internal/storage/readers"
 	"meerkat/internal/storage/segment/ondsk"
 	"meerkat/internal/tools"
@@ -23,7 +22,8 @@ import (
 )
 
 type Optimizer interface {
-	OptimizeQuery(t *rel.ParsedTree) *rel.ParsedTree
+	// TODO:(sebad) execution
+	OptimizeQuery(t *logical.Projection) *logical.Projection
 }
 
 type MeerkatOptimizer struct {
@@ -34,17 +34,10 @@ func NewMeerkatOptimizer() *MeerkatOptimizer {
 	return &MeerkatOptimizer{}
 }
 
-func (o *MeerkatOptimizer) OptimizeQuery(t *rel.ParsedTree) *rel.ParsedTree {
-
-	f := t.IndexScan.GetFilter()
-	if f != nil {
-		o.optimizeFilters(f)
-	}
+func (o *MeerkatOptimizer) OptimizeQuery(t *logical.Projection) *logical.Projection {
 
 	return t
 }
-
-
 
 //TODO(sebad): DO OPTIMIZE should send indexed Filters first bottom left ?
 func (o *MeerkatOptimizer) optimizeFilters(f interface{}) interface{} {
@@ -53,13 +46,13 @@ func (o *MeerkatOptimizer) optimizeFilters(f interface{}) interface{} {
 }
 
 // TODO(sebad): get data from Schema not Segment.
-func (o *MeerkatOptimizer) getMetadata(i *rel.IndexScan) *ondsk.Segment {
+func (o *MeerkatOptimizer) getMetadata(i *logical.Projection) *ondsk.Segment {
 
-	file := filepath.Join(o.path, i.GetIndexName())
+	var file = filepath.Join(o.path, i.String())
 
 	s, err := readers.ReadSegment(file)
 	if err != nil {
-		panic(fmt.Sprintf(" %v does not exist ", i.GetIndexName()))
+		// panic(fmt.Sprintf(" %v does not exist ", i .GetIndexName()))
 	}
 
 	return s

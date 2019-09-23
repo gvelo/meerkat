@@ -19,8 +19,6 @@ options { tokenVocab=MqlLexer; }
 // Rules
 start : completeCommand EOF ;
 
-identifierList: IDENTIFIER (',' IDENTIFIER )* ;
-
 // stats expresion
 agrupTypes
     : AVG
@@ -51,6 +49,12 @@ literal
  | IDENTIFIER                                     #identifier
  ;
 
+identifierList: IDENTIFIER (',' IDENTIFIER )* ;
+
+sort: field=IDENTIFIER direction=(ASC|DESC)*;
+
+sortList:  sort (',' sort* )* ;
+
 expression
  : LPAREN expression RPAREN                             #parenExpression
  | left=literal op=comparator right=literal             #comparatorExpression
@@ -72,7 +76,7 @@ commands
     | fieldCommand
     | dedupCommand
     | sortCommand
-    | headCommand
+    | topCommand
     | binCommand
     ;
 
@@ -98,9 +102,9 @@ fieldCommand: FIELDS (ADD|SUB)? identifierList;
 dedupCommand: DEDUP identifierList;
 
 // sort expresion
-sortCommand: SORT identifierList;
+sortCommand: SORT sList=sortList;
 
 // head expresion
-headCommand: HEAD DECIMAL_LITERAL;
+topCommand: TOP limit=DECIMAL_LITERAL;
 
 completeCommand: selectCommand ( BITOR commands )* ;

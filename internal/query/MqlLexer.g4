@@ -22,7 +22,6 @@ SEARCH: 'seach';
 DEDUP: 'dedup';
 WHERE: 'where';
 SORT: 'sort';
-HEAD: 'head';
 TOP: 'top';
 BIN: 'bin';
 BIN_SPAN: 'span';
@@ -32,6 +31,9 @@ AS: 'as';
 BY: 'by';
 AND: 'and';
 OR:   'or';
+
+ASC:   'asc';
+DESC:   'desc';
 
 // Aggregate functions
 

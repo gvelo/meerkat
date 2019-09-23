@@ -15,14 +15,14 @@ package plan
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/query/rel"
+	"meerkat/internal/query/logical"
 	"meerkat/internal/tools"
 	"sync"
 	"time"
 )
 
 type Executor interface {
-	ExecuteQuery(t *rel.ParsedTree) *ResultSet
+	ExecuteQuery(t *logical.Projection) *ResultSet
 }
 
 type MeerkatExecutor struct {
@@ -32,9 +32,9 @@ func NewMeerkatExecutor() *MeerkatExecutor {
 	return &MeerkatExecutor{}
 }
 
-func (e *MeerkatExecutor) ExecuteQuery(t *rel.ParsedTree) *ResultSet {
+func (e *MeerkatExecutor) ExecuteQuery(t *logical.Projection) *ResultSet {
 
-	e.exe(t.IndexScan.GetFilter())
+	//e.exe(t.IndexScan.GetFilter())
 
 	return nil
 }
@@ -68,18 +68,18 @@ func worker(i int, wg *sync.WaitGroup, in <-chan interface{}) {
 		time.Sleep(time.Millisecond * 500)
 
 		switch v := exp.(type) {
-		case *rel.Filter:
+		case *logical.Filter:
 			tools.Logf(" %s ", v)
 			// its a comp, need to execute
 
-		case *rel.Exp:
+		case *logical.Exp:
 			// tools.Logf("Exp %s ", v.Value)
 		}
 
 		//tools.Logf("WNode %d ", exp.(rel.Node).String())
 
-		if exp.(rel.Node).GetParent() != nil {
-			tools.Logf("GetParent %d ", exp.(rel.Node).GetParent().String())
+		if exp.(logical.Node).GetParent() != nil {
+			tools.Logf("GetParent %d ", exp.(logical.Node).GetParent().String())
 		} else {
 			tools.Log("GetParent nil ")
 		}
@@ -94,17 +94,17 @@ func (e *MeerkatExecutor) executeFilters(jobQueue chan interface{}, f interface{
 	}
 
 	switch v := f.(type) {
-	case *rel.Filter:
+	case *logical.Filter:
 		// its a comp, need to execute
-		e.executeFilters(jobQueue, f.(*rel.Filter).Left)
-		e.executeFilters(jobQueue, f.(*rel.Filter).Right)
+		e.executeFilters(jobQueue, f.(*logical.Filter).Left)
+		e.executeFilters(jobQueue, f.(*logical.Filter).Right)
 
-		f.(*rel.Filter).Left.(rel.Node).SetParent(f.(rel.Node))
-		f.(*rel.Filter).Right.(rel.Node).SetParent(f.(rel.Node))
+		f.(*logical.Filter).Left.(logical.Node).SetParent(f.(logical.Node))
+		f.(*logical.Filter).Right.(logical.Node).SetParent(f.(logical.Node))
 
 		jobQueue <- v
 
-	case *rel.Exp:
+	case *logical.Exp:
 		// tools.Logf("Exp %s ", v.Value)
 	}
 	return nil

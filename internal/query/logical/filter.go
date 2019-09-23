@@ -14,7 +14,7 @@
 //go:generate stringer -type=Operator
 //go:generate stringer -type=ExpType
 
-package rel
+package logical
 
 import (
 	"fmt"
@@ -83,15 +83,11 @@ func (f *Filter) String() string {
 func NewFilter(l Node, operator Operator, r Node) *Filter {
 
 	f := &Filter{
-		Left:     l,
-		Op:       operator,
-		Right:    r,
-		Group:    false,
-		children: make([]Node, 0),
+		Left:  l,
+		Op:    operator,
+		Right: r,
+		Group: false,
 	}
-
-	f.AddChild(l)
-	f.AddChild(r)
 
 	return f
 }

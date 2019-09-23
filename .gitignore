@@ -3,3 +3,5 @@
 .vscode
 meerkat
 
+/internal/query/logical/exptype_string.go
+/internal/query/logical/operator_string.go

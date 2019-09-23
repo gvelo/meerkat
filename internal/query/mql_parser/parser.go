@@ -1,37 +1,27 @@
-package rel
+package mql_parser
 
 import (
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/query/logical"
 )
 
-type Parser interface {
-	Parse(q string) *ParsedTree
-}
-
-type MqlParser struct {
-}
-
-func NewMqlParser() *MqlParser {
-	return &MqlParser{}
-}
-
-func (*MqlParser) Parse(q string) *ParsedTree {
+//TODO:(sebad) revisar multithreading safe
+func Parse(q string) *logical.Projection {
 
 	fmt.Println("Query ", q)
 
 	is := antlr.NewInputStream(q)
 
 	// Create the Lexer
-	lexer := mql_parser.NewMqlLexer(is)
+	lexer := NewMqlLexer(is)
 
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	// Create the Parser
-	p := mql_parser.NewMqlParser(stream)
+	p := NewMqlParser(stream)
 
-	l := NewListener(lexer)
+	l := newListener(lexer)
 
 	// Finally parse the expression
 	antlr.ParseTreeWalkerDefault.Walk(l, p.Start())

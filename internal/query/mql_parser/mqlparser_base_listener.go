@@ -26,12 +26,6 @@ func (s *BaseMqlParserListener) EnterStart(ctx *StartContext) {}
 // ExitStart is called when production start is exited.
 func (s *BaseMqlParserListener) ExitStart(ctx *StartContext) {}
 
-// EnterIdentifierList is called when production identifierList is entered.
-func (s *BaseMqlParserListener) EnterIdentifierList(ctx *IdentifierListContext) {}
-
-// ExitIdentifierList is called when production identifierList is exited.
-func (s *BaseMqlParserListener) ExitIdentifierList(ctx *IdentifierListContext) {}
-
 // EnterAgrupTypes is called when production agrupTypes is entered.
 func (s *BaseMqlParserListener) EnterAgrupTypes(ctx *AgrupTypesContext) {}
 
@@ -73,6 +67,24 @@ func (s *BaseMqlParserListener) EnterIdentifier(ctx *IdentifierContext) {}
 
 // ExitIdentifier is called when production identifier is exited.
 func (s *BaseMqlParserListener) ExitIdentifier(ctx *IdentifierContext) {}
+
+// EnterIdentifierList is called when production identifierList is entered.
+func (s *BaseMqlParserListener) EnterIdentifierList(ctx *IdentifierListContext) {}
+
+// ExitIdentifierList is called when production identifierList is exited.
+func (s *BaseMqlParserListener) ExitIdentifierList(ctx *IdentifierListContext) {}
+
+// EnterSort is called when production sort is entered.
+func (s *BaseMqlParserListener) EnterSort(ctx *SortContext) {}
+
+// ExitSort is called when production sort is exited.
+func (s *BaseMqlParserListener) ExitSort(ctx *SortContext) {}
+
+// EnterSortList is called when production sortList is entered.
+func (s *BaseMqlParserListener) EnterSortList(ctx *SortListContext) {}
+
+// ExitSortList is called when production sortList is exited.
+func (s *BaseMqlParserListener) ExitSortList(ctx *SortListContext) {}
 
 // EnterBinaryExpression is called when production binaryExpression is entered.
 func (s *BaseMqlParserListener) EnterBinaryExpression(ctx *BinaryExpressionContext) {}
@@ -158,11 +170,11 @@ func (s *BaseMqlParserListener) EnterSortCommand(ctx *SortCommandContext) {}
 // ExitSortCommand is called when production sortCommand is exited.
 func (s *BaseMqlParserListener) ExitSortCommand(ctx *SortCommandContext) {}
 
-// EnterHeadCommand is called when production headCommand is entered.
-func (s *BaseMqlParserListener) EnterHeadCommand(ctx *HeadCommandContext) {}
+// EnterTopCommand is called when production topCommand is entered.
+func (s *BaseMqlParserListener) EnterTopCommand(ctx *TopCommandContext) {}
 
-// ExitHeadCommand is called when production headCommand is exited.
-func (s *BaseMqlParserListener) ExitHeadCommand(ctx *HeadCommandContext) {}
+// ExitTopCommand is called when production topCommand is exited.
+func (s *BaseMqlParserListener) ExitTopCommand(ctx *TopCommandContext) {}
 
 // EnterCompleteCommand is called when production completeCommand is entered.
 func (s *BaseMqlParserListener) EnterCompleteCommand(ctx *CompleteCommandContext) {}

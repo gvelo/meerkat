@@ -1,4 +1,4 @@
-package rel
+package logical
 
 type Node interface {
 	GetParent() Node

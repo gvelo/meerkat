@@ -10,9 +10,6 @@ type MqlParserListener interface {
 	// EnterStart is called when entering the start production.
 	EnterStart(c *StartContext)
 
-	// EnterIdentifierList is called when entering the identifierList production.
-	EnterIdentifierList(c *IdentifierListContext)
-
 	// EnterAgrupTypes is called when entering the agrupTypes production.
 	EnterAgrupTypes(c *AgrupTypesContext)
 
@@ -33,6 +30,15 @@ type MqlParserListener interface {
 
 	// EnterIdentifier is called when entering the identifier production.
 	EnterIdentifier(c *IdentifierContext)
+
+	// EnterIdentifierList is called when entering the identifierList production.
+	EnterIdentifierList(c *IdentifierListContext)
+
+	// EnterSort is called when entering the sort production.
+	EnterSort(c *SortContext)
+
+	// EnterSortList is called when entering the sortList production.
+	EnterSortList(c *SortListContext)
 
 	// EnterBinaryExpression is called when entering the binaryExpression production.
 	EnterBinaryExpression(c *BinaryExpressionContext)
@@ -76,17 +82,14 @@ type MqlParserListener interface {
 	// EnterSortCommand is called when entering the sortCommand production.
 	EnterSortCommand(c *SortCommandContext)
 
-	// EnterHeadCommand is called when entering the headCommand production.
-	EnterHeadCommand(c *HeadCommandContext)
+	// EnterTopCommand is called when entering the topCommand production.
+	EnterTopCommand(c *TopCommandContext)
 
 	// EnterCompleteCommand is called when entering the completeCommand production.
 	EnterCompleteCommand(c *CompleteCommandContext)
 
 	// ExitStart is called when exiting the start production.
 	ExitStart(c *StartContext)
-
-	// ExitIdentifierList is called when exiting the identifierList production.
-	ExitIdentifierList(c *IdentifierListContext)
 
 	// ExitAgrupTypes is called when exiting the agrupTypes production.
 	ExitAgrupTypes(c *AgrupTypesContext)
@@ -108,6 +111,15 @@ type MqlParserListener interface {
 
 	// ExitIdentifier is called when exiting the identifier production.
 	ExitIdentifier(c *IdentifierContext)
+
+	// ExitIdentifierList is called when exiting the identifierList production.
+	ExitIdentifierList(c *IdentifierListContext)
+
+	// ExitSort is called when exiting the sort production.
+	ExitSort(c *SortContext)
+
+	// ExitSortList is called when exiting the sortList production.
+	ExitSortList(c *SortListContext)
 
 	// ExitBinaryExpression is called when exiting the binaryExpression production.
 	ExitBinaryExpression(c *BinaryExpressionContext)
@@ -151,8 +163,8 @@ type MqlParserListener interface {
 	// ExitSortCommand is called when exiting the sortCommand production.
 	ExitSortCommand(c *SortCommandContext)
 
-	// ExitHeadCommand is called when exiting the headCommand production.
-	ExitHeadCommand(c *HeadCommandContext)
+	// ExitTopCommand is called when exiting the topCommand production.
+	ExitTopCommand(c *TopCommandContext)
 
 	// ExitCompleteCommand is called when exiting the completeCommand production.
 	ExitCompleteCommand(c *CompleteCommandContext)

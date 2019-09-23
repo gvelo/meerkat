@@ -1,12 +1,11 @@
 package plan
 
 import (
-	"meerkat/internal/query/rel"
+	"meerkat/internal/query/mql_parser"
 )
 
 type QueryManager struct {
 	dbPath    string
-	parser    rel.Parser
 	optimizer Optimizer
 	executor  Executor
 }
@@ -15,14 +14,13 @@ type QueryManager struct {
 type ResultSet struct {
 	rowAffected int
 	rowScanned  int
-	colsName    [] string
+	colsName    []string
 	cols        []interface{}
 }
 
-func NewQueryManager(path string, p rel.Parser, o Optimizer, e Executor) *QueryManager {
+func NewQueryManager(path string, o Optimizer, e Executor) *QueryManager {
 
 	return &QueryManager{dbPath: path,
-		parser:    p,
 		executor:  e,
 		optimizer: o,
 	}
@@ -31,7 +29,7 @@ func NewQueryManager(path string, p rel.Parser, o Optimizer, e Executor) *QueryM
 
 func (qm *QueryManager) Query(q string) *ResultSet {
 
-	t := qm.parser.Parse(q)
+	t := mql_parser.Parse(q)
 
 	p := qm.optimizer.OptimizeQuery(t)
 

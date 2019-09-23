@@ -14,30 +14,18 @@
 package plan
 
 import (
-	"meerkat/internal/query/rel"
+	"meerkat/internal/query/logical"
+	"meerkat/internal/query/mql_parser"
 	"testing"
 )
 
-func buildIndexScan() *rel.ParsedTree {
+func buildIndexScan() *logical.Projection {
 
-	parser := rel.NewMqlParser()
 	sql := "indexname=name  campo1=12 and  ( campo2>12  or campo1=2) "
-
-	return parser.Parse(sql)
+	return mql_parser.Parse(sql)
 
 }
 
 func TestMeerkatOptimizer_OptimizeQuery(t *testing.T) {
-
-	p := buildIndexScan()
-
-	o := NewMeerkatOptimizer()
-
-	o.optimizeFilters(p.IndexScan.GetFilter())
-
-
-
-
-
 
 }
