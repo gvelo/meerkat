@@ -14,6 +14,7 @@
 package server
 
 import (
+	"context"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -25,9 +26,25 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
-func Start(c config.Config) {
+var (
+	mu            sync.Mutex
+	listener      net.Listener
+	grpcServer    *grpc.Server
+	cl            cluster.Cluster
+	connRegistry  cluster.ConnRegistry
+	schemaService schema.Schema
+	apiServer     *rest.ApiServer
+	catalog       cluster.Catalog
+	l             zerolog.Logger
+)
+
+func Start(ctx context.Context, c config.Config) {
+
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Default level is info
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -45,16 +62,21 @@ func Start(c config.Config) {
 
 	log.Logger = log.With().Caller().Logger()
 
-	log.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
+	l = log.With().Str("src", "server").Logger()
+
+	l.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
+
 	// start components
 
-	lis, err := net.Listen("tcp", ":9191")
+	var err error
+
+	listener, err = net.Listen("tcp", ":9191")
 
 	if err != nil {
-		log.Panic().Err(err).Msg("failed to listen: 9191")
+		l.Panic().Err(err).Msg("failed to listen: 9191")
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer = grpc.NewServer()
 
 	var seeds []string
 	if c.Seeds == "" {
@@ -63,54 +85,84 @@ func Start(c config.Config) {
 		seeds = strings.Split(c.Seeds, ",")
 	}
 
-	cl, err := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
+	cl, err = cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create cluster")
-		return
+		l.Panic().Err(err).Msg("cannot create cluster")
 	}
 
-	connRegistry, err := cluster.NewConnRegistry(cl)
+	connRegistry, err = cluster.NewConnRegistry(cl)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create catalogRPC")
+		l.Panic().Err(err).Msg("cannot create catalogRPC")
 		return
 	}
 
 	catalogRPC, err := cluster.NewCatalogRPC(connRegistry)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create catalogRPC")
+		l.Panic().Err(err).Msg("cannot create catalogRPC")
 		return
 	}
 
-	catalog, err := cluster.NewCatalog(grpcServer, c.DBPath, cl, catalogRPC)
+	catalog, err = cluster.NewCatalog(grpcServer, c.DBPath, cl, catalogRPC)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create catalog")
+		l.Panic().Err(err).Msg("cannot create catalog")
 	}
 
-	s, err := schema.NewSchema(catalog)
+	schemaService, err = schema.NewSchema(catalog)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create schema")
+		l.Panic().Err(err).Msg("cannot create schema")
 	}
 
-	restApi, err := rest.NewRest(s)
+	apiServer, err = rest.NewRest(schemaService)
 
 	if err != nil {
-		log.Panic().Err(err).Msg("cannot create rest server")
+		l.Panic().Err(err).Msg("cannot create rest server")
 	}
 
-	restApi.Start()
+	apiServer.Start()
 
 	go func() {
-		err = grpcServer.Serve(lis)
+		err = grpcServer.Serve(listener)
 		if err != nil {
-			log.Panic().Err(err).Msg("cannot create grpc server")
+			l.Error().Err(err).Msg("error serving grpc connections")
 			return
 		}
+		l.Info().Msg("grpc server stopped")
 	}()
 
 	cl.Join()
+
+	l.Info().Msg("server started")
+
+}
+
+func Shutdown(ctx context.Context) {
+
+	l.Info().Msg("stopping server")
+
+	cl.Shutdown()
+
+	err := apiServer.Shutdown(ctx)
+
+	if err != nil {
+		l.Error().Err(err).Msg("error stopping api server")
+	}
+
+	grpcServer.GracefulStop()
+
+	schemaService.Shutdown()
+
+	err = catalog.Shutdown()
+
+	if err != nil {
+		l.Error().Err(err).Msg("error stopping catalog")
+	}
+
+	connRegistry.Shutdown()
+
+	l.Info().Msg("server stopped")
 
 }

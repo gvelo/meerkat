@@ -1,14 +1,21 @@
 package rest
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/schema"
 	"net/http"
+	"sync"
 )
 
 type ApiServer struct {
 	schema schema.Schema
 	router *gin.Engine
+	server *http.Server
+	log    zerolog.Logger
+	mu     sync.Mutex
 }
 
 type ApiError struct {
@@ -28,7 +35,10 @@ func NewRest(schema schema.Schema) (*ApiServer, error) {
 	// TODO(gvelo) set gin to production mode
 	server := &ApiServer{
 		router: gin.Default(),
+		log:    log.With().Str("src", "rest-api").Logger(),
 	}
+
+	server.log.Info().Msg("creating rest api")
 
 	server.router.GET("/index", server.getAllIndex)
 	server.router.POST("/index", server.createIndex)
@@ -51,12 +61,35 @@ func NewRest(schema schema.Schema) (*ApiServer, error) {
 }
 
 func (s *ApiServer) Start() {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	log.Info().Msg("starting rest api server")
+
+	s.server = &http.Server{
+		Addr:    ":9090",
+		Handler: s.router,
+	}
+
 	go func() {
-		err := s.router.Run(":9090")
-		if err != nil {
-			panic(err)
+		err := s.server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("error listening for connections")
 		}
 	}()
+
+}
+
+func (s *ApiServer) Shutdown(ctx context.Context) error {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.log.Info().Msg("stopping rest api server")
+
+	return s.server.Shutdown(ctx)
+
 }
 
 func (s *ApiServer) getAllIndex(c *gin.Context) {

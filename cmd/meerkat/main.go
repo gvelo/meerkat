@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var rootCmd *cobra.Command
@@ -113,16 +115,40 @@ func Start(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	server.Start(conf)
+	ctx := serverCtx()
 
-	handleSignals()
+	server.Start(ctx, conf)
+
+	<-ctx.Done()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+
+	defer cancel()
+
+	server.Shutdown(ctx)
 
 }
 
-//TODO(gvelo): implement properly
-func handleSignals() {
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+func serverCtx() context.Context {
 
-	_ = <-signalCh
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-signalCh:
+			return
+		}
+
+	}()
+
+	return ctx
+
 }

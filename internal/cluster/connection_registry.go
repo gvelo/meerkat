@@ -24,12 +24,15 @@ import (
 type ConnRegistry interface {
 	Range(f func(member string, conn *grpc.ClientConn) bool)
 	RangeWithFilter(members []string, fn func(member string, conn *grpc.ClientConn, ok bool) bool)
+	Shutdown()
 }
 
 type connRegistry struct {
 	log         zerolog.Logger
 	connections sync.Map
 	chUpdates   chan serf.Event
+	cluster     Cluster
+	done        chan struct{}
 }
 
 func NewConnRegistry(cluster Cluster) (ConnRegistry, error) {
@@ -37,6 +40,8 @@ func NewConnRegistry(cluster Cluster) (ConnRegistry, error) {
 	cc := &connRegistry{
 		log:       log.With().Str("component", "connRegistry").Logger(),
 		chUpdates: make(chan serf.Event, 1024),
+		done:      make(chan struct{}),
+		cluster:   cluster,
 	}
 
 	cc.log.Info().Msg("creating connection registry")
@@ -54,6 +59,11 @@ func NewConnRegistry(cluster Cluster) (ConnRegistry, error) {
 
 	return cc, nil
 
+}
+
+func (cr *connRegistry) Shutdown() {
+	cr.cluster.RemoveEventChan(cr.chUpdates)
+	close(cr.done)
 }
 
 func (cr *connRegistry) addConnection(m serf.Member) error {
@@ -111,29 +121,42 @@ func (cr *connRegistry) updateConn() {
 	// TODO: review this logic when member readiness status
 	//       be added to signal that the bootstrap has ended.
 
-	for e := range cr.chUpdates {
+	cr.log.Info().Msg("starting connection registry")
 
-		mEvent, ok := e.(serf.MemberEvent)
-
-		if !ok {
-			continue
+	for {
+		select {
+		case e := <-cr.chUpdates:
+			cr.processMemberEvent(e)
+		case <-cr.done:
+			cr.log.Info().Msg("connection registry stopped")
+			return
 		}
-
-		switch mEvent.EventType() {
-		case serf.EventMemberJoin:
-			cr.addConnections(mEvent.Members)
-		case serf.EventMemberLeave:
-			cr.removeConnections(mEvent.Members)
-		case serf.EventMemberUpdate:
-			// TODO(gvelo): should we handle EventMemberUpdate ?
-			//cr.addConnections(mEvent.Members)
-		case serf.EventMemberReap:
-			cr.removeConnections(mEvent.Members)
-		default:
-			cr.log.Error().Msgf("Unknown serf event %v", e.EventType())
-		}
-
 	}
+
+}
+
+func (cr *connRegistry) processMemberEvent(e serf.Event) {
+
+	mEvent, ok := e.(serf.MemberEvent)
+
+	if !ok {
+		return
+	}
+
+	switch mEvent.EventType() {
+	case serf.EventMemberJoin:
+		cr.addConnections(mEvent.Members)
+	case serf.EventMemberLeave:
+		cr.removeConnections(mEvent.Members)
+	case serf.EventMemberUpdate:
+		// TODO(gvelo): should we handle EventMemberUpdate ?
+		//cr.addConnections(mEvent.Members)
+	case serf.EventMemberReap:
+		cr.removeConnections(mEvent.Members)
+	default:
+		cr.log.Error().Msgf("Unknown serf event %v", e.EventType())
+	}
+
 }
 
 func (cr *connRegistry) Range(f func(member string, conn *grpc.ClientConn) bool) {

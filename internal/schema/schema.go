@@ -166,6 +166,8 @@ type Schema interface {
 
 	Alloc(id string) (PartitionAlloc, error)
 	UpdateAlloc(id string, parAlloc PartitionAlloc) error
+
+	Shutdown()
 }
 
 type schema struct {
@@ -177,6 +179,7 @@ type schema struct {
 	log         zerolog.Logger
 	catalogCh   chan []cluster.Entry
 	mu          sync.Mutex
+	done        chan struct{}
 }
 
 func (s *schema) AllIndex() []IndexInfo {
@@ -661,6 +664,9 @@ func (s *schema) DeleteField(id string) error {
 
 func (s *schema) CreateFields(id string, field Field) (Field, error) {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	i, ok := s.indexCache[id]
 
 	if !ok {
@@ -784,6 +790,7 @@ func NewSchema(catalog cluster.Catalog) (Schema, error) {
 		indexByName: make(map[string]IndexInfo),
 		log:         log.With().Str("component", "schema").Logger(),
 		catalogCh:   make(chan []cluster.Entry),
+		done:        make(chan struct{}),
 	}
 
 	catalog.AddEventHandler(eventHandlerID, s.catalogCh)
@@ -795,11 +802,15 @@ func NewSchema(catalog cluster.Catalog) (Schema, error) {
 		return nil, err
 	}
 
-	// TODO: stop gracefully.
 	go s.sync()
 
 	return s, nil
 
+}
+
+func (s *schema) Shutdown() {
+	s.catalog.RemoveEventHandler(eventHandlerID)
+	close(s.done)
 }
 
 func (s *schema) load() error {
@@ -866,7 +877,24 @@ func (s *schema) load() error {
 
 func (s *schema) sync() {
 
-	s.log.Info().Msg("starting schema synchronization gorutine")
+	s.log.Info().Msg("starting schema synchronization")
+
+	for {
+		select {
+		case <-s.done:
+			s.log.Info().Msg("stopping schema synchronization")
+			return
+		case delta := <-s.catalogCh:
+			s.syncDelta(delta)
+		}
+	}
+
+}
+
+func (s *schema) syncDelta(delta []cluster.Entry) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for delta := range s.catalogCh {
 
