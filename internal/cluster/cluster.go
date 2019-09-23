@@ -53,7 +53,7 @@ type Cluster interface {
 	Join()
 
 	// Shutdow first leave the cluster gracefully and then shuts down
-	// the Serf instance, stopping all networkvactivity and background
+	// the Serf instance, stopping all network activity and background
 	// maintenance associated with the instance.
 	Shutdown()
 
@@ -80,7 +80,7 @@ func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
 		port:      port,
 		confPath:  path.Join(dbPath, confFile),
 		seeds:     seeds,
-		log:       log.With().Str("component", "cluster").Logger(),
+		log:       log.With().Str("src", "cluster").Logger(),
 		tags:      make(map[string]string),
 		eventChan: make(map[chan serf.Event]chan serf.Event),
 	}
@@ -135,7 +135,7 @@ func (c *cluster) SetTag(name string, value string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.log.Info().Msgf("set node tag [%v]=%v", name, value)
+	c.log.Info().Msgf("setting node tag [%v]=%v", name, value)
 
 	if c.tags[name] == value {
 		return nil
@@ -211,7 +211,7 @@ func (c *cluster) Join() {
 
 func (c *cluster) Shutdown() {
 
-	c.log.Info().Msg("shuttingdown cluster")
+	c.log.Info().Msg("stopping cluster")
 
 	err := c.serf.Leave()
 
@@ -340,7 +340,7 @@ func (c *cluster) saveConfig() error {
 
 func (c *cluster) dispatchEvents() {
 
-	c.log.Info().Msg("start dispatching serf events")
+	c.log.Info().Msg("starting serf event dispatcher")
 
 	for e := range c.serfChan {
 

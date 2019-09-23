@@ -44,6 +44,7 @@ type Catalog interface {
 	Hash() string
 	AddEventHandler(id string, h chan []Entry)
 	RemoveEventHandler(id string)
+	Shutdown() error
 }
 
 type catalog struct {
@@ -331,7 +332,8 @@ func (c *catalog) emit(entries []Entry) {
 	}
 }
 
-func (c *catalog) Close() error {
+func (c *catalog) Shutdown() error {
+	c.replicator.shutdown()
 	return c.db.Close()
 }
 
@@ -429,6 +431,7 @@ func createCatalogReplicator(
 		replicaCh:  replicaCh,
 		deltaCh:    deltaCh,
 		catalogRPC: catalogRPC,
+		done:       make(chan struct{}),
 		log:        log.With().Str("component", "catalogReplicator").Logger(),
 	}
 }
@@ -440,38 +443,78 @@ type catalogReplicator struct {
 	replicaCh  chan []Entry
 	deltaCh    chan []Entry
 	catalogRPC CatalogRPC
+	done       chan struct{}
 	log        zerolog.Logger
 }
 
 func (cr *catalogReplicator) start() {
 	cr.log.Info().Msg("starting catalog replicator")
-	// TODO(gvelo): stop gracefully.
-	ticker := time.NewTicker(10 * time.Second)
 	go cr.broacast()
 	go cr.updateCatalogVersion()
-	go func() {
-		for range ticker.C {
+	go cr.antiEntropy()
+
+}
+
+func (cr *catalogReplicator) shutdown() {
+	cr.log.Info().Msg("stopping catalog replicator")
+	close(cr.done)
+}
+
+func (cr *catalogReplicator) antiEntropy() {
+
+	cr.log.Info().Msg("starting catalog antientropy")
+
+	//TODO(gvelo): make sync frecuency configurable.
+	ticker := time.NewTicker(10 * time.Second)
+
+	for {
+		select {
+		case <-ticker.C:
 			cr.sync()
+		case <-cr.done:
+			cr.log.Info().Msg("catalog antientropy stopped")
+			return
 		}
-	}()
+	}
 }
 
 func (cr *catalogReplicator) broacast() {
-	for delta := range cr.replicaCh {
-		cr.log.Debug().Msg("broadcasting catalog delta")
-		cr.catalogRPC.SendDelta(context.TODO(), delta)
+
+	cr.log.Info().Msg("starting catalog changes broadcaster")
+
+	for {
+		select {
+		case delta := <-cr.replicaCh:
+			cr.log.Debug().Msg("broadcasting catalog delta")
+			cr.catalogRPC.SendDelta(context.TODO(), delta)
+		case <-cr.done:
+			cr.log.Info().Msg("catalog changes broadcaster stopped")
+			return
+		}
 	}
+
 }
 
 func (cr *catalogReplicator) updateCatalogVersion() {
-	for range cr.deltaCh {
-		hash := cr.catalog.Hash()
-		cr.log.Debug().Msgf("updating catalog version tag to [%v]", hash)
-		err := cr.cluster.SetTag(catalogTagName, hash)
-		if err != nil {
-			cr.log.Error().Err(err).Msg("error setting catalog version tag")
+
+	cr.log.Info().Msg("starting catalog version updater")
+
+	for {
+		select {
+		case <-cr.deltaCh:
+			hash := cr.catalog.Hash()
+			cr.log.Debug().Msgf("updating catalog version tag to [%v]", hash)
+			err := cr.cluster.SetTag(catalogTagName, hash)
+			if err != nil {
+				cr.log.Error().Err(err).Msg("error setting catalog version tag")
+			}
+		case <-cr.done:
+			cr.log.Info().Msg("catalog version updater stopped")
+			return
+
 		}
 	}
+
 }
 
 func (cr *catalogReplicator) sync() {
