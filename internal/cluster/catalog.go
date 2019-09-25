@@ -566,8 +566,4 @@ func (cr *catalogReplicator) sync() {
 		cr.catalog.MergeSnapshot(snapshot.Snapshot)
 	}
 
-	if err != nil {
-		cr.log.Error().Err(err).Msg("error setting catalog version tag")
-	}
-
 }
