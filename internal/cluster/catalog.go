@@ -159,7 +159,7 @@ func (c *catalog) mergeAll(tx *bolt.Tx, entries []Entry) []Entry {
 		}
 	}
 
-	if len(delta) != 0 {
+	if len(delta) > 0 {
 		c.hashCatalog(tx)
 		c.emit(delta)
 	}
@@ -372,7 +372,7 @@ func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, catalogRPC C
 	}
 
 	deltaCh := make(chan []Entry, 64)
-	c.AddEventHandler("replicator-handler", deltaCh)
+	c.AddEventHandler("catalog-version-updater", deltaCh)
 
 	cs := createCatalogServer(c)
 
@@ -528,7 +528,7 @@ func (cr *catalogReplicator) sync() {
 
 	for _, m := range members {
 
-		cr.log.Debug().Msgf("processing member [%v] with catalog version [%v]", m.Name, m.Tags[catalogTagName])
+		cr.log.Debug().Msgf("processing member [%v] %v with catalog version [%v]", m.Name, m.Addr, m.Tags[catalogTagName])
 
 		catalogVersion, ok := m.Tags[catalogTagName]
 
@@ -565,8 +565,6 @@ func (cr *catalogReplicator) sync() {
 		}
 		cr.catalog.MergeSnapshot(snapshot.Snapshot)
 	}
-
-	err := cr.cluster.SetTag(catalogTagName, cr.catalog.Hash())
 
 	if err != nil {
 		cr.log.Error().Err(err).Msg("error setting catalog version tag")

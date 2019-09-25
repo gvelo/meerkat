@@ -896,25 +896,23 @@ func (s *schema) syncDelta(delta []cluster.Entry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for delta := range s.catalogCh {
-
-		// update all fields and Pallocs.
-		for _, e := range delta {
-			switch e.MapName {
-			case fieldsMapName:
-				s.updateField(e)
-			case pAllocMapName:
-				s.updatePAlloc(e)
-			}
-		}
-
-		// update all index.
-		for _, e := range delta {
-			if e.MapName == indexMapName {
-				s.updateIndex(e)
-			}
+	// update all fields and Pallocs.
+	for _, e := range delta {
+		switch e.MapName {
+		case fieldsMapName:
+			s.updateField(e)
+		case pAllocMapName:
+			s.updatePAlloc(e)
 		}
 	}
+
+	// update all index.
+	for _, e := range delta {
+		if e.MapName == indexMapName {
+			s.updateIndex(e)
+		}
+	}
+
 }
 
 func (s *schema) updateField(e cluster.Entry) {

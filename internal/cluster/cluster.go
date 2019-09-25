@@ -362,8 +362,14 @@ func (c *cluster) dispatchEvents() {
 
 		c.log.Debug().Msgf("dispatching serf event %v", e)
 
-		for c := range c.eventChan {
-			c <- e
+		for ch := range c.eventChan {
+			select {
+			case ch <- e:
+				c.log.Debug().Msgf("event dispated to %v", ch)
+			default:
+				c.log.Error().Msgf("dispatcher blocks on event handler channel [%v]", ch)
+				ch <- e
+			}
 		}
 
 	}

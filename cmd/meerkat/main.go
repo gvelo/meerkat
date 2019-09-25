@@ -115,9 +115,11 @@ func Start(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
+	meerkat := &server.Meerkat{Conf: conf}
+
 	ctx := serverCtx()
 
-	server.Start(ctx, conf)
+	meerkat.Start(ctx)
 
 	<-ctx.Done()
 
@@ -125,7 +127,7 @@ func Start(cmd *cobra.Command, args []string) {
 
 	defer cancel()
 
-	server.Shutdown(ctx)
+	meerkat.Shutdown(ctx)
 
 }
 
