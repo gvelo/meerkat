@@ -40,9 +40,6 @@ type MqlParserListener interface {
 	// EnterSortList is called when entering the sortList production.
 	EnterSortList(c *SortListContext)
 
-	// EnterTimeExpression is called when entering the timeExpression production.
-	EnterTimeExpression(c *TimeExpressionContext)
-
 	// EnterIndexExpression is called when entering the indexExpression production.
 	EnterIndexExpression(c *IndexExpressionContext)
 
@@ -54,6 +51,9 @@ type MqlParserListener interface {
 
 	// EnterComparatorExpression is called when entering the comparatorExpression production.
 	EnterComparatorExpression(c *ComparatorExpressionContext)
+
+	// EnterTimeExpression is called when entering the timeExpression production.
+	EnterTimeExpression(c *TimeExpressionContext)
 
 	// EnterComparator is called when entering the comparator production.
 	EnterComparator(c *ComparatorContext)
@@ -127,9 +127,6 @@ type MqlParserListener interface {
 	// ExitSortList is called when exiting the sortList production.
 	ExitSortList(c *SortListContext)
 
-	// ExitTimeExpression is called when exiting the timeExpression production.
-	ExitTimeExpression(c *TimeExpressionContext)
-
 	// ExitIndexExpression is called when exiting the indexExpression production.
 	ExitIndexExpression(c *IndexExpressionContext)
 
@@ -141,6 +138,9 @@ type MqlParserListener interface {
 
 	// ExitComparatorExpression is called when exiting the comparatorExpression production.
 	ExitComparatorExpression(c *ComparatorExpressionContext)
+
+	// ExitTimeExpression is called when exiting the timeExpression production.
+	ExitTimeExpression(c *TimeExpressionContext)
 
 	// ExitComparator is called when exiting the comparator production.
 	ExitComparator(c *ComparatorContext)

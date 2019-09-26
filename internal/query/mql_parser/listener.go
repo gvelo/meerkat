@@ -283,12 +283,6 @@ func (l *MQLListener) ExitSelectCommand(c *SelectCommandContext) {
 			continue
 		}
 
-		if c.GetTime() == ctx {
-			// time
-			f = append(f, ctx)
-			continue
-		}
-
 		f = append(f, ctx)
 
 	}
@@ -328,6 +322,21 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 		rightFilter := l.buildFilters(rg)
 
 		f := logical.NewFilter(leftFilter, parseOperator(op.GetText()), rightFilter)
+
+		return f
+
+	case *TimeExpressionContext:
+
+		rg := ctx.(*TimeExpressionContext).GetRight()
+
+		op := ctx.(*TimeExpressionContext).GetOp()
+
+		tools.Logf("Time exp %v", op.GetText())
+		e := &logical.Exp{
+			ExpType: logical.STRING,
+			Value:   "_time",
+		}
+		f := logical.NewFilter(e, parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
 
 		return f
 
