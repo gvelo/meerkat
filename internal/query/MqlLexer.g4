@@ -16,7 +16,7 @@ lexer grammar MqlLexer;
 
 // Keywords
 
-INDEX_NAME: 'indexname';
+INDEX: 'index';
 RENAME: 'rename';
 SEARCH: 'seach';
 DEDUP: 'dedup';
@@ -31,6 +31,7 @@ AS: 'as';
 BY: 'by';
 AND: 'and';
 OR:   'or';
+EARLIER:   'earlier';
 
 ASC:   'asc';
 DESC:   'desc';

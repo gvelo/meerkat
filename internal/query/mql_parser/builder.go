@@ -41,37 +41,21 @@ type Builder interface {
 
 func NewRelBuilder() Builder {
 	b := new(relationalAlgBuilder)
-	b.queue = make([]interface{}, 0)
+	b.projection = &logical.Projection{}
 	return b
 }
 
 type relationalAlgBuilder struct {
-	queue []interface{}
-}
-
-func (r *relationalAlgBuilder) push(n interface{}) {
-	r.queue = append(r.queue, n)
-}
-
-func (r *relationalAlgBuilder) peek() interface{} {
-	return r.queue[0]
-}
-
-func (r *relationalAlgBuilder) pop() interface{} {
-	e := r.queue[0]
-	r.queue = r.queue[1:]
-	return e
+	projection *logical.Projection
 }
 
 func (r *relationalAlgBuilder) Scan(name string) Builder {
-	ts := logical.NewProjection(name)
-	r.push(ts)
+	r.projection.IndexName = name
 	return r
 }
 
 func (r *relationalAlgBuilder) Filter(f interface{}) Builder {
-	is := r.peek().(*logical.Projection)
-	is.AddChild(f.(logical.Node))
+	r.projection.AddChild(f.(logical.Node))
 	return r
 }
 
@@ -88,7 +72,7 @@ func (r *relationalAlgBuilder) Distinct() Builder {
 }
 
 func (r *relationalAlgBuilder) Sort(exp ...string) Builder {
-	p := r.queue[0].(*logical.Projection) //projection
+	p := r.projection
 	p.Order = make([]*logical.Order, 0)
 
 	for i := 0; i < len(exp); i++ {
@@ -112,7 +96,7 @@ func (r *relationalAlgBuilder) Sort(exp ...string) Builder {
 }
 
 func (r *relationalAlgBuilder) Limit(limit int) Builder {
-	p := r.queue[0].(*logical.Projection) //projection
+	p := r.projection
 	p.Limit = limit
 	return r
 }
@@ -148,7 +132,7 @@ func (r *relationalAlgBuilder) Match(regex string) Builder {
 }
 
 func (r *relationalAlgBuilder) Build() *logical.Projection {
-	return r.peek().(*logical.Projection)
+	return r.projection
 }
 
 func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
@@ -180,8 +164,13 @@ func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
 			ExpType: logical.STRING,
 			Value:   l.(*antlr.CommonToken).GetText(),
 		}
+	case *StringLiteralContext: // string
+		e = &logical.Exp{
+			ExpType: logical.STRING,
+			Value:   l.(*StringLiteralContext).GetText(),
+		}
 	default:
-		tools.Logf("Could not create expresion %s ", e.Value)
+		tools.Logf("Could not create expresion %s ", e)
 	}
 
 	tools.Logf(" %s ", e.Value)

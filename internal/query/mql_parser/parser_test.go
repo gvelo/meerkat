@@ -23,7 +23,8 @@ func TestParseQuery(t *testing.T) {
 
 	a := assert.New(t)
 
-	str := "indexname=Index campo1=100 and ( campo2=we or campo3=s123 )"
+	// str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
+	str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
 
 	projection := Parse(str)
 
@@ -66,7 +67,7 @@ func TestParseQuery2(t *testing.T) {
 
 	a := assert.New(t)
 
-	str := "indexname=Index campo1=100 | top 10 | sort campo1 desc, campo3"
+	str := "index=Index campo1=100 | top 10 | sort campo1 desc, campo3"
 
 	p := Parse(str)
 
@@ -80,5 +81,28 @@ func TestParseQuery2(t *testing.T) {
 
 	a.Equal("campo3", p.Order[1].Field)
 	a.Equal("asc", p.Order[1].Direction)
+
+}
+
+func TestParseQuery3(t *testing.T) {
+
+	a := assert.New(t)
+
+	// TODO: implentar el earlier como un filtro mas asi entra en el optimizador
+	str := "earlier=-1d request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" "
+
+	p := Parse(str)
+
+	a.Equal("", p.IndexName)
+
+	a.Equal(1, len(p.GetChildren()))
+
+	str = "request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" earlier=-1d  "
+
+	p = Parse(str)
+
+	a.Equal("", p.IndexName)
+
+	a.Equal(1, len(p.GetChildren()))
 
 }

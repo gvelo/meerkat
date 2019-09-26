@@ -53,12 +53,15 @@ identifierList: IDENTIFIER (',' IDENTIFIER )* ;
 
 sort: field=IDENTIFIER direction=(ASC|DESC)*;
 
-sortList:  sort (',' sort* )* ;
+sortList:  sort (COMMA sort* )* ;
+
+indexExpression: INDEX ASSIGN name=IDENTIFIER;
 
 expression
- : LPAREN expression RPAREN                             #parenExpression
- | left=literal op=comparator right=literal             #comparatorExpression
- | left=expression op=binary right=expression           #binaryExpression
+ : LPAREN expression RPAREN                              #parenExpression
+ | left=literal op=comparator right=literal              #comparatorExpression
+ | left=expression op=binary right=expression            #binaryExpression
+ | left=EARLIER op=ASSIGN right=(ADD|SUB)* TIME_LITERAL  #timeExpression
  ;
 
 comparator
@@ -84,7 +87,7 @@ commands
 whereCommand : WHERE expression;
 
 // select expresion
-selectCommand: INDEX_NAME ASSIGN IDENTIFIER expression*;
+selectCommand: (index=indexExpression)? expression*;
 
 // rename expresion
 renameCommand: RENAME (IDENTIFIER AS IDENTIFIER)+;

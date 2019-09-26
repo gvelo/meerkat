@@ -68,10 +68,12 @@ func (f *Filter) GetParent() Node {
 func (f *Filter) SetParent(n Node) {
 	f.p = n
 }
+
 func (f *Filter) AddChild(n Node) {
 	f.children = append(f.children, n)
 	n.SetParent(f)
 }
+
 func (f *Filter) GetChildren() []Node {
 	return f.children
 }

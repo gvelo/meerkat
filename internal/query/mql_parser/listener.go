@@ -14,7 +14,6 @@
 package mql_parser
 
 import (
-	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/tools"
@@ -25,6 +24,21 @@ type MQLListener struct {
 	*antlr.BaseParseTreeListener
 	builder Builder
 	lexer   *MqlLexer
+}
+
+func (l *MQLListener) EnterIndexExpression(c *IndexExpressionContext) {
+
+}
+
+func (l *MQLListener) ExitIndexExpression(c *IndexExpressionContext) {
+
+}
+
+func (l *MQLListener) EnterTimeExpression(c *TimeExpressionContext) {
+}
+
+func (l *MQLListener) ExitTimeExpression(c *TimeExpressionContext) {
+
 }
 
 func (l *MQLListener) EnterSort(c *SortContext) {
@@ -260,13 +274,38 @@ func (l *MQLListener) ExitTopCommand(c *TopCommandContext) {
 }
 
 func (l *MQLListener) ExitSelectCommand(c *SelectCommandContext) {
-	i := c.GetChildren()[2]
-	l.builder.Scan(fmt.Sprintf("%v", i))
-	es := c.GetChildren()[3]
-	if es != nil {
-		f := l.buildFilters(es.(antlr.ParserRuleContext))
-		l.builder.Filter(f)
+
+	f := make([]interface{}, 0)
+	for _, ctx := range c.GetChildren() {
+
+		if c.GetIndex() == ctx {
+			l.builder.Scan(c.GetIndex().GetName().GetText())
+			continue
+		}
+
+		if c.GetTime() == ctx {
+			// time
+			f = append(f, ctx)
+			continue
+		}
+
+		f = append(f, ctx)
+
 	}
+
+	if len(f) > 1 {
+		rf := &logical.Filter{} // root filter
+		for i := 0; i < len(f); i++ {
+			f := l.buildFilters(f[i].(antlr.ParserRuleContext))
+			rf.AddChild(f)
+		}
+		l.builder.Filter(rf)
+		return
+	} else {
+		i := l.buildFilters(f[0].(antlr.ParserRuleContext))
+		l.builder.Filter(i)
+	}
+
 }
 
 func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter {

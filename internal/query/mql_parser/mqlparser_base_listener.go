@@ -86,6 +86,18 @@ func (s *BaseMqlParserListener) EnterSortList(ctx *SortListContext) {}
 // ExitSortList is called when production sortList is exited.
 func (s *BaseMqlParserListener) ExitSortList(ctx *SortListContext) {}
 
+// EnterTimeExpression is called when production timeExpression is entered.
+func (s *BaseMqlParserListener) EnterTimeExpression(ctx *TimeExpressionContext) {}
+
+// ExitTimeExpression is called when production timeExpression is exited.
+func (s *BaseMqlParserListener) ExitTimeExpression(ctx *TimeExpressionContext) {}
+
+// EnterIndexExpression is called when production indexExpression is entered.
+func (s *BaseMqlParserListener) EnterIndexExpression(ctx *IndexExpressionContext) {}
+
+// ExitIndexExpression is called when production indexExpression is exited.
+func (s *BaseMqlParserListener) ExitIndexExpression(ctx *IndexExpressionContext) {}
+
 // EnterBinaryExpression is called when production binaryExpression is entered.
 func (s *BaseMqlParserListener) EnterBinaryExpression(ctx *BinaryExpressionContext) {}
 
