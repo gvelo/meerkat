@@ -13,35 +13,15 @@
 
 package logical
 
-// Si le pongo el nombre projection el ide explota  ¯\_(ツ)_/¯
-
-type Order struct {
-	Direction string
-	Field     string
-}
-
 // a logical projection.
-type Projection struct {
-	IndexName string   // index to search
-	Fields    []string // fields names to show
-	Limit     int      // limit the results
-
-	Order []*Order // order
-
-	parent   Node
-	children []Node
-
-	RexField *RexField // field created by regex
-	Span     *Exp
+type RexField struct {
+	Rex   string // regular expression
+	Field string // new field
 }
 
-func NewProjection(name string) *Projection {
-	s := &Projection{
-		IndexName: name,
+func NewRexField(field string, rex string) *RexField {
+	return &RexField{
+		Rex:   field,
+		Field: rex,
 	}
-	return s
-}
-
-func (p *Projection) String() string {
-	return "projection"
 }

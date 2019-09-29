@@ -19,12 +19,13 @@ lexer grammar MqlLexer;
 INDEX: 'index';
 RENAME: 'rename';
 SEARCH: 'seach';
+REX: 'rex';
 DEDUP: 'dedup';
 WHERE: 'where';
 SORT: 'sort';
 TOP: 'top';
-BIN: 'bin';
-BIN_SPAN: 'span';
+BUCKET: 'bucket';
+SPAN: 'span';
 FIELDS: 'fields';
 STATS: 'stats';
 AS: 'as';
@@ -32,6 +33,7 @@ BY: 'by';
 AND: 'and';
 OR:   'or';
 EARLIER:   'earlier';
+FIELD:   'field';
 
 ASC:   'asc';
 DESC:   'desc';
@@ -109,13 +111,15 @@ BOOL_LITERAL:       'true'
 CHAR_LITERAL:       '\'' (~['\\\r\n] | EscapeSequence) '\'';
 
 STRING_LITERAL:     '"' (~["\\\r\n] | EscapeSequence)* '"';
+
 NULL_LITERAL:       'null';
+
+REGEX       : '"' (.*?) '"';
 
 
 TIME_FIELD: '_time';
 
 // Fragment rules
-
 fragment Miliseconds
     : 'ms'
     ;

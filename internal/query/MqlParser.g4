@@ -51,9 +51,9 @@ literal
 
 identifierList: IDENTIFIER (',' IDENTIFIER )* ;
 
-sort: field=IDENTIFIER direction=(ASC|DESC)*;
+sort: field=IDENTIFIER direction=(ASC|DESC)?;
 
-sortList:  sort (COMMA sort* )* ;
+sortList:  sort (COMMA sort )* ;
 
 indexExpression: INDEX ASSIGN name=IDENTIFIER;
 
@@ -61,7 +61,7 @@ expression
  : LPAREN expression RPAREN                              #parenExpression
  | left=literal op=comparator right=literal              #comparatorExpression
  | left=expression op=binary right=expression            #binaryExpression
- | left=EARLIER op=ASSIGN right=(ADD|SUB)* TIME_LITERAL  #timeExpression
+ | left=EARLIER op=ASSIGN right=(ADD|SUB)? TIME_LITERAL  #timeExpression
  ;
 
 comparator
@@ -80,29 +80,33 @@ commands
     | dedupCommand
     | sortCommand
     | topCommand
-    | binCommand
+    | bucketCommand
+    | rexCommand
     ;
 
 // where command
 whereCommand : WHERE expression;
 
 // select expresion
-selectCommand: (index=indexExpression)? expression*;
+selectCommand: expression* (index=indexExpression)? expression* ;
 
 // rename expresion
 renameCommand: RENAME (IDENTIFIER AS IDENTIFIER)+;
 
 // stats expresion
-statCommand : STATS agrupCall (AS IDENTIFIER)? (COMMA agrupCall (AS IDENTIFIER)? )*  BY IDENTIFIER;
+statCommand : STATS f=agrupTypes BY field= IDENTIFIER (COMMA  IDENTIFIER)*   ;
 
-// bin expresion
-binCommand : BIN (IDENTIFIER | TIME_FIELD)? BIN_SPAN ASSIGN TIME_LITERAL;
+// bucket expresion
+bucketCommand : BUCKET SPAN ASSIGN span=TIME_LITERAL;
 
 // fields expresion
 fieldCommand: FIELDS (ADD|SUB)? identifierList;
 
 // dedup expresion
 dedupCommand: DEDUP identifierList;
+
+// rex expresion
+rexCommand: REX (FIELD ASSIGN rexfield=IDENTIFIER)? regex=REGEX;
 
 // sort expresion
 sortCommand: SORT sList=sortList;

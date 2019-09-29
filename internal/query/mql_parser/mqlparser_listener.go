@@ -76,14 +76,17 @@ type MqlParserListener interface {
 	// EnterStatCommand is called when entering the statCommand production.
 	EnterStatCommand(c *StatCommandContext)
 
-	// EnterBinCommand is called when entering the binCommand production.
-	EnterBinCommand(c *BinCommandContext)
+	// EnterBucketCommand is called when entering the bucketCommand production.
+	EnterBucketCommand(c *BucketCommandContext)
 
 	// EnterFieldCommand is called when entering the fieldCommand production.
 	EnterFieldCommand(c *FieldCommandContext)
 
 	// EnterDedupCommand is called when entering the dedupCommand production.
 	EnterDedupCommand(c *DedupCommandContext)
+
+	// EnterRexCommand is called when entering the rexCommand production.
+	EnterRexCommand(c *RexCommandContext)
 
 	// EnterSortCommand is called when entering the sortCommand production.
 	EnterSortCommand(c *SortCommandContext)
@@ -163,14 +166,17 @@ type MqlParserListener interface {
 	// ExitStatCommand is called when exiting the statCommand production.
 	ExitStatCommand(c *StatCommandContext)
 
-	// ExitBinCommand is called when exiting the binCommand production.
-	ExitBinCommand(c *BinCommandContext)
+	// ExitBucketCommand is called when exiting the bucketCommand production.
+	ExitBucketCommand(c *BucketCommandContext)
 
 	// ExitFieldCommand is called when exiting the fieldCommand production.
 	ExitFieldCommand(c *FieldCommandContext)
 
 	// ExitDedupCommand is called when exiting the dedupCommand production.
 	ExitDedupCommand(c *DedupCommandContext)
+
+	// ExitRexCommand is called when exiting the rexCommand production.
+	ExitRexCommand(c *RexCommandContext)
 
 	// ExitSortCommand is called when exiting the sortCommand production.
 	ExitSortCommand(c *SortCommandContext)

@@ -21,13 +21,15 @@ import (
 
 type Builder interface {
 	Scan(name string) Builder
-	Filter(filter interface{}) Builder
+	Filter(filter logical.Node) Builder
 	Project(e ...interface{}) Builder
-	Aggregate(groupKey string, aggCall ...interface{}) Builder
+	Aggregate(function string, byFields []string) Builder
+	Span(t *logical.Exp) Builder
 	Distinct() Builder
 	Sort(exp ...string) Builder
 	Limit(offset int) Builder
-	Build() *logical.Projection
+	Regex(field string, rex string) Builder
+	Build() []logical.Node
 
 	// Not used yet
 	SemiJoin(expr interface{}) Builder
@@ -41,12 +43,25 @@ type Builder interface {
 
 func NewRelBuilder() Builder {
 	b := new(relationalAlgBuilder)
-	b.projection = &logical.Projection{}
+	b.projection = logical.NewProjection("_ALL")
+	b.steps = make([]logical.Node, 0)
+	b.steps = append(b.steps, b.projection)
 	return b
 }
 
 type relationalAlgBuilder struct {
+	steps      []logical.Node
 	projection *logical.Projection
+}
+
+func (r *relationalAlgBuilder) Span(t *logical.Exp) Builder {
+	r.projection.Span = t
+	return r
+}
+
+func (r *relationalAlgBuilder) Regex(field string, rex string) Builder {
+	r.projection.RexField = logical.NewRexField(field, rex)
+	return r
 }
 
 func (r *relationalAlgBuilder) Scan(name string) Builder {
@@ -54,8 +69,8 @@ func (r *relationalAlgBuilder) Scan(name string) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Filter(f interface{}) Builder {
-	r.projection.AddChild(f.(logical.Node))
+func (r *relationalAlgBuilder) Filter(f logical.Node) Builder {
+	r.steps = append(r.steps, f)
 	return r
 }
 
@@ -63,7 +78,9 @@ func (r *relationalAlgBuilder) Project(e ...interface{}) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Aggregate(groupKey string, aggCall ...interface{}) Builder {
+func (r *relationalAlgBuilder) Aggregate(f string, b []string) Builder {
+	a := logical.NewAggregation(f, b)
+	r.steps = append(r.steps, a)
 	return r
 }
 
@@ -131,8 +148,8 @@ func (r *relationalAlgBuilder) Match(regex string) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Build() *logical.Projection {
-	return r.projection
+func (r *relationalAlgBuilder) Build() []logical.Node {
+	return r.steps
 }
 
 func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
@@ -168,6 +185,11 @@ func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
 		e = &logical.Exp{
 			ExpType: logical.STRING,
 			Value:   l.(*StringLiteralContext).GetText(),
+		}
+	case *AgrupTypesContext:
+		e = &logical.Exp{
+			ExpType: logical.FUNCTION,
+			Value:   l.(*AgrupTypesContext).GetText(),
 		}
 	default:
 		tools.Logf("Could not create expresion %s ", e)

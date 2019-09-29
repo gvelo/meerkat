@@ -41,7 +41,16 @@ const (
 	BOOL
 	STRING
 	IDENTIFIER
+	FUNCTION
 )
+
+type RootFilter struct {
+	RootFilter *Filter
+}
+
+func (f *RootFilter) String() string {
+	return fmt.Sprintf("Root Filter")
+}
 
 type Filter struct {
 	// field / value / var or filter
@@ -53,29 +62,7 @@ type Filter struct {
 	// field / value / var or filter
 	Right interface{}
 
-	// parent
-	p Node
-
-	children []Node
-
 	Group bool
-}
-
-func (f *Filter) GetParent() Node {
-	return f.p
-}
-
-func (f *Filter) SetParent(n Node) {
-	f.p = n
-}
-
-func (f *Filter) AddChild(n Node) {
-	f.children = append(f.children, n)
-	n.SetParent(f)
-}
-
-func (f *Filter) GetChildren() []Node {
-	return f.children
 }
 
 func (f *Filter) String() string {
@@ -94,7 +81,6 @@ func NewFilter(l Node, operator Operator, r Node) *Filter {
 	return f
 }
 
-//TODO(sebad): Set the index, if exists
 type Exp struct {
 	ExpType  ExpType
 	Value    string

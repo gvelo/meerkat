@@ -7,7 +7,7 @@ import (
 )
 
 //TODO:(sebad) revisar multithreading safe
-func Parse(q string) *logical.Projection {
+func Parse(q string) []logical.Node {
 
 	fmt.Println("Query ", q)
 

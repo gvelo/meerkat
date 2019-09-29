@@ -158,11 +158,11 @@ func (s *BaseMqlParserListener) EnterStatCommand(ctx *StatCommandContext) {}
 // ExitStatCommand is called when production statCommand is exited.
 func (s *BaseMqlParserListener) ExitStatCommand(ctx *StatCommandContext) {}
 
-// EnterBinCommand is called when production binCommand is entered.
-func (s *BaseMqlParserListener) EnterBinCommand(ctx *BinCommandContext) {}
+// EnterBucketCommand is called when production bucketCommand is entered.
+func (s *BaseMqlParserListener) EnterBucketCommand(ctx *BucketCommandContext) {}
 
-// ExitBinCommand is called when production binCommand is exited.
-func (s *BaseMqlParserListener) ExitBinCommand(ctx *BinCommandContext) {}
+// ExitBucketCommand is called when production bucketCommand is exited.
+func (s *BaseMqlParserListener) ExitBucketCommand(ctx *BucketCommandContext) {}
 
 // EnterFieldCommand is called when production fieldCommand is entered.
 func (s *BaseMqlParserListener) EnterFieldCommand(ctx *FieldCommandContext) {}
@@ -175,6 +175,12 @@ func (s *BaseMqlParserListener) EnterDedupCommand(ctx *DedupCommandContext) {}
 
 // ExitDedupCommand is called when production dedupCommand is exited.
 func (s *BaseMqlParserListener) ExitDedupCommand(ctx *DedupCommandContext) {}
+
+// EnterRexCommand is called when production rexCommand is entered.
+func (s *BaseMqlParserListener) EnterRexCommand(ctx *RexCommandContext) {}
+
+// ExitRexCommand is called when production rexCommand is exited.
+func (s *BaseMqlParserListener) ExitRexCommand(ctx *RexCommandContext) {}
 
 // EnterSortCommand is called when production sortCommand is entered.
 func (s *BaseMqlParserListener) EnterSortCommand(ctx *SortCommandContext) {}
