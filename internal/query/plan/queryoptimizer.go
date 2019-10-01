@@ -14,16 +14,15 @@
 package plan
 
 import (
+	"meerkat/internal/query/exec"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/storage/readers"
 	"meerkat/internal/storage/segment/ondsk"
-	"meerkat/internal/tools"
 	"path/filepath"
 )
 
 type Optimizer interface {
-	// TODO:(sebad) execution
-	OptimizeQuery(t *logical.Projection) *logical.Projection
+	OptimizeQuery(t []logical.Node) []exec.OpNode
 }
 
 type MeerkatOptimizer struct {
@@ -34,14 +33,37 @@ func NewMeerkatOptimizer() *MeerkatOptimizer {
 	return &MeerkatOptimizer{}
 }
 
-func (o *MeerkatOptimizer) OptimizeQuery(t *logical.Projection) *logical.Projection {
+// This method should take the logical steps and transform in execution steps,
+// returning an optimized execution steps list
+func (o *MeerkatOptimizer) OptimizeQuery(l []logical.Node) []exec.OpNode {
 
-	return t
+	exec := make([]exec.OpNode, 0)
+	for _, n := range l {
+		switch t := n.(type) {
+		case *logical.Projection:
+			o.transformProjection(t)
+		case *logical.RootFilter:
+			o.transformRootFilter(t)
+		case *logical.Aggregation:
+			o.transformAggregation(t)
+		}
+	}
+
+	return exec
 }
 
-//TODO(sebad): DO OPTIMIZE should send indexed Filters first bottom left ?
-func (o *MeerkatOptimizer) optimizeFilters(f interface{}) interface{} {
-	tools.Log("Optimize filters!")
+func (o *MeerkatOptimizer) transformProjection(p *logical.Projection) []exec.OpNode {
+
+	return nil
+}
+
+func (o *MeerkatOptimizer) transformRootFilter(r *logical.RootFilter) []exec.OpNode {
+
+	return nil
+}
+
+func (o *MeerkatOptimizer) transformAggregation(a *logical.Aggregation) []exec.OpNode {
+
 	return nil
 }
 

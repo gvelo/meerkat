@@ -11,24 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logical
+package exec
 
-// logical aggregation be implemented by all functions
-type Aggregation struct {
-	Function string   // function to apply to fields
-	Fields   []string // fields to apply
-
-	parent   Node
-	children []Node
+type Projection struct {
 }
 
-func NewAggregation(f string, fields []string) *Aggregation {
-	return &Aggregation{
-		Function: f,
-		Fields:   fields,
-	}
+func (p *Projection) Execute() error {
+	return nil
 }
 
-func (p *Aggregation) String() string {
-	return "Aggregation"
+func (p *Projection) String() string {
+	return ""
 }
