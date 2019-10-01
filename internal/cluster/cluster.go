@@ -53,7 +53,7 @@ type Cluster interface {
 	Join()
 
 	// Shutdow first leave the cluster gracefully and then shuts down
-	// the Serf instance, stopping all networkvactivity and background
+	// the Serf instance, stopping all network activity and background
 	// maintenance associated with the instance.
 	Shutdown()
 
@@ -80,7 +80,7 @@ func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
 		port:      port,
 		confPath:  path.Join(dbPath, confFile),
 		seeds:     seeds,
-		log:       log.With().Str("component", "cluster").Logger(),
+		log:       log.With().Str("src", "cluster").Logger(),
 		tags:      make(map[string]string),
 		eventChan: make(map[chan serf.Event]chan serf.Event),
 	}
@@ -135,7 +135,11 @@ func (c *cluster) SetTag(name string, value string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.log.Info().Msgf("set node tag [%v]=%v", name, value)
+	c.log.Info().Msgf("setting node tag [%v]=%v", name, value)
+
+	if c.tags[name] == value {
+		return nil
+	}
 
 	c.tags[name] = value
 
@@ -145,7 +149,18 @@ func (c *cluster) SetTag(name string, value string) error {
 }
 
 func (c *cluster) Members() []serf.Member {
-	return c.serf.Members()
+	members := c.serf.Members()
+
+	others := members[:0]
+
+	for _, m := range members {
+		if m.Name != c.conf.Name {
+			others = append(others, m)
+		}
+	}
+
+	return others
+
 }
 
 func (c *cluster) LiveMembers() []serf.Member {
@@ -155,7 +170,7 @@ func (c *cluster) LiveMembers() []serf.Member {
 	live := members[:0]
 
 	for _, m := range members {
-		if m.Status == serf.StatusAlive {
+		if m.Status == serf.StatusAlive && m.Name != c.conf.Name {
 			live = append(live, m)
 		}
 	}
@@ -196,7 +211,7 @@ func (c *cluster) Join() {
 
 func (c *cluster) Shutdown() {
 
-	c.log.Info().Msg("shuttingdown cluster")
+	c.log.Info().Msg("stopping cluster")
 
 	err := c.serf.Leave()
 
@@ -325,7 +340,7 @@ func (c *cluster) saveConfig() error {
 
 func (c *cluster) dispatchEvents() {
 
-	c.log.Info().Msg("start dispatching serf events")
+	c.log.Info().Msg("starting serf event dispatcher")
 
 	for e := range c.serfChan {
 
@@ -347,8 +362,14 @@ func (c *cluster) dispatchEvents() {
 
 		c.log.Debug().Msgf("dispatching serf event %v", e)
 
-		for c := range c.eventChan {
-			c <- e
+		for ch := range c.eventChan {
+			select {
+			case ch <- e:
+				c.log.Debug().Msgf("event dispated to %v", ch)
+			default:
+				c.log.Error().Msgf("dispatcher blocks on event handler channel [%v]", ch)
+				ch <- e
+			}
 		}
 
 	}

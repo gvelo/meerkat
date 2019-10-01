@@ -14,52 +14,167 @@
 package server
 
 import (
+	"context"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
+	"meerkat/internal/rest"
+	"meerkat/internal/schema"
+	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
-func Start(c config.Config) {
+type Meerkat struct {
+	mu           sync.Mutex
+	listener     net.Listener
+	grpcServer   *grpc.Server
+	cluster      cluster.Cluster
+	connRegistry cluster.ConnRegistry
+	schema       schema.Schema
+	apiServer    *rest.ApiServer
+	catalog      cluster.Catalog
+	Conf         config.Config
+	log          zerolog.Logger
+}
+
+func (m *Meerkat) Start(ctx context.Context) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.initLogger()
+
+	m.log.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
+
+	// start components
+
+	var err error
+
+	//TODO(gvelo):make port configurable.
+	m.listener, err = net.Listen("tcp", ":9191")
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("failed to listen: 9191")
+	}
+
+	m.grpcServer = grpc.NewServer()
+
+	var seeds []string
+	if m.Conf.Seeds == "" {
+		seeds = make([]string, 0)
+	} else {
+		seeds = strings.Split(m.Conf.Seeds, ",")
+	}
+
+	m.cluster, err = cluster.NewCluster(m.Conf.GossipPort, seeds, m.Conf.DBPath)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create cluster")
+	}
+
+	m.connRegistry, err = cluster.NewConnRegistry(m.cluster)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create catalogRPC")
+		return
+	}
+
+	catalogRPC, err := cluster.NewCatalogRPC(m.connRegistry)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create catalogRPC")
+		return
+	}
+
+	m.catalog, err = cluster.NewCatalog(m.grpcServer, m.Conf.DBPath, m.cluster, catalogRPC)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create catalog")
+	}
+
+	m.schema, err = schema.NewSchema(m.catalog)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create schema")
+	}
+
+	m.apiServer, err = rest.NewRest(m.schema)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create rest server")
+	}
+
+	m.apiServer.Start()
+
+	go func() {
+		err = m.grpcServer.Serve(m.listener)
+		if err != nil {
+			m.log.Error().Err(err).Msg("error serving grpc connections")
+			return
+		}
+		m.log.Info().Msg("grpc server stopped")
+	}()
+
+	m.cluster.Join()
+
+	m.log.Info().Msg("meerkat server started")
+
+}
+
+func (m *Meerkat) Shutdown(ctx context.Context) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.log.Info().Msg("stopping meerkar server")
+
+	m.cluster.Shutdown()
+
+	err := m.apiServer.Shutdown(ctx)
+
+	if err != nil {
+		m.log.Error().Err(err).Msg("error stopping api server")
+	}
+
+	m.grpcServer.GracefulStop()
+
+	m.schema.Shutdown()
+
+	err = m.catalog.Shutdown()
+
+	if err != nil {
+		m.log.Error().Err(err).Msg("error stopping catalog")
+	}
+
+	m.connRegistry.Shutdown()
+
+	m.log.Info().Msg("meerkat server stopped")
+
+}
+
+func (m *Meerkat) initLogger() {
 
 	// Default level is info
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if c.LogLevel != "" {
-		l, err := zerolog.ParseLevel(c.LogLevel)
+	if m.Conf.LogLevel != "" {
+		l, err := zerolog.ParseLevel(m.Conf.LogLevel)
 		if err != nil {
 			panic(err)
 		}
 		zerolog.SetGlobalLevel(l)
 	}
 
-	if c.PrettyLog {
+	if m.Conf.PrettyLog {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	}
 
 	log.Logger = log.With().Caller().Logger()
 
-	log.Info().Msgf("starting meerkat %v (%v)", build.Version, build.Commit)
-
-	// start components
-
-	var seeds []string
-
-	if c.Seeds == "" {
-		seeds = make([]string, 0)
-	} else {
-		seeds = strings.Split(c.Seeds, ",")
-	}
-
-	cl, err := cluster.NewCluster(c.GossipPort, seeds, c.DBPath)
-
-	if err != nil {
-		log.Panic().Err(err).Msg("cannot create cluster")
-		return
-	}
-
-	cl.Join()
+	m.log = log.With().Str("src", "server").Logger()
 
 }
