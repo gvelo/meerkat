@@ -42,6 +42,6 @@ func NewProjection(name string) *Projection {
 	return s
 }
 
-func (p *Projection) String() string {
+func (p *Projection) ResultString() string {
 	return "projection"
 }

@@ -2,15 +2,15 @@ package plan
 
 import (
 	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/schema"
 )
 
 type QueryManager struct {
-	dbPath    string
+	schema    schema.Schema
 	optimizer Optimizer
 	executor  Executor
 }
 
-//TODO(sebad): pagination ?
 type ResultSet struct {
 	rowAffected int
 	rowScanned  int
@@ -18,20 +18,19 @@ type ResultSet struct {
 	cols        []interface{}
 }
 
-func NewQueryManager(path string, o Optimizer, e Executor) *QueryManager {
+func NewQueryManager(schema schema.Schema) (*QueryManager, error) {
 
-	return &QueryManager{dbPath: path,
-		executor:  e,
-		optimizer: o,
-	}
+	return &QueryManager{schema: schema}, nil
 
 }
 
-func (qm *QueryManager) Query(q string) *ResultSet {
+func (qm *QueryManager) Query(q string) (*ResultSet, error) {
 
-	t := mql_parser.Parse(q)
+	_, err := mql_parser.Parse(qm.schema, q)
 
-	p := qm.optimizer.OptimizeQuery(t)
+	if err != nil {
+		return nil, err
+	}
 
-	return qm.executor.ExecuteQuery(p)
+	return nil, nil
 }

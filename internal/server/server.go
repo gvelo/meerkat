@@ -21,6 +21,7 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
+	"meerkat/internal/query/plan"
 	"meerkat/internal/rest"
 	"meerkat/internal/schema"
 	"net"
@@ -37,6 +38,7 @@ type Meerkat struct {
 	connRegistry cluster.ConnRegistry
 	schema       schema.Schema
 	apiServer    *rest.ApiServer
+	qm           *plan.QueryManager
 	catalog      cluster.Catalog
 	Conf         config.Config
 	log          zerolog.Logger
@@ -101,6 +103,12 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create schema")
+	}
+
+	m.qm, err = plan.NewQueryManager(m.schema)
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create query manager")
 	}
 
 	m.apiServer, err = rest.NewRest(m.schema)

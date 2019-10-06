@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"meerkat/internal/query/logical"
+	"meerkat/internal/schema"
 )
 
-//TODO:(sebad) revisar multithreading safe
-func Parse(q string) []logical.Node {
+type ParseError struct {
+	Err string
+}
+
+func (pe *ParseError) Error() string {
+	return pe.Err
+}
+
+//TODO:(sebad) revisar multithreading safe, mover a parser
+func Parse(s schema.Schema, q string) ([]logical.Node, error) {
 
 	fmt.Println("Query ", q)
 
@@ -21,7 +30,9 @@ func Parse(q string) []logical.Node {
 	// Create the Parser
 	p := NewMqlParser(stream)
 
-	l := newListener(lexer)
+	b := NewRelBuilder(s)
+
+	l := newListener(b, lexer)
 
 	// Finally parse the expression
 	antlr.ParseTreeWalkerDefault.Walk(l, p.Start())

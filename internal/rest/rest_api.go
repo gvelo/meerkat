@@ -5,17 +5,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"meerkat/internal/query/mql_parser"
+	"meerkat/internal/query/plan"
 	"meerkat/internal/schema"
 	"net/http"
 	"sync"
 )
 
 type ApiServer struct {
-	schema schema.Schema
-	router *gin.Engine
-	server *http.Server
-	log    zerolog.Logger
-	mu     sync.Mutex
+	schema  schema.Schema
+	router  *gin.Engine
+	server  *http.Server
+	manager plan.QueryManager
+	log     zerolog.Logger
+	mu      sync.Mutex
 }
 
 type ApiError struct {
@@ -23,6 +26,13 @@ type ApiError struct {
 	Status    string      `json:"status"`
 	ErrorText string      `json:"error-text"`
 	Error     interface{} `json:"error,omitempty"`
+}
+
+//TODO(sebad): Define the final interface
+type Query struct {
+	Query    string `json:"q"`
+	DateTo   string `json:"date_to"`
+	DateFrom string `json:"date_from"`
 }
 
 const (
@@ -50,6 +60,8 @@ func NewRest(schema schema.Schema) (*ApiServer, error) {
 	server.router.POST("/index/:indexID/fields", server.createFields)
 	server.router.POST("/index/:indexID/fields/:fieldID", server.updateField)
 	server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteIndex)
+
+	server.router.POST("/query", server.query)
 
 	server.router.POST("/index/:indexID/alloc", server.updateAlloc)
 	server.router.GET("/index/:indexID/alloc", server.getAlloc)
@@ -301,8 +313,31 @@ func (s *ApiServer) getAlloc(c *gin.Context) {
 
 }
 
+func (s *ApiServer) query(c *gin.Context) {
+
+	q := Query{}
+	err := c.ShouldBindJSON(&q)
+
+	if err != nil {
+		bindError("cannot retrieve query", c, err)
+		return
+	}
+
+	rs, err := s.manager.Query(q.Query)
+
+	c.JSON(http.StatusOK, rs)
+
+}
+
 func appError(status string, c *gin.Context, err error) {
 	switch err.(type) {
+	case *mql_parser.ParseError:
+		sendError(c, &ApiError{
+			Code:      http.StatusBadRequest,
+			Status:    status,
+			ErrorText: err.Error(),
+			Error:     err,
+		})
 	case *schema.ValidationError:
 		sendError(c, &ApiError{
 			Code:      http.StatusBadRequest,

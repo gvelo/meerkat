@@ -160,6 +160,7 @@ type Schema interface {
 
 	AllFields(id string) ([]Field, error)
 	Field(id string) (Field, error)
+	FieldByName(name string) (Field, error)
 	UpdateField(field Field) error
 	DeleteField(id string) error
 	CreateFields(id string, fields Field) (Field, error)
@@ -174,6 +175,7 @@ type schema struct {
 	catalog     cluster.Catalog
 	indexCache  map[string]IndexInfo
 	fieldCache  map[string]Field
+	fieldByName map[string]Field
 	pAllocCache map[string]PartitionAlloc
 	indexByName map[string]IndexInfo
 	log         zerolog.Logger
@@ -279,6 +281,7 @@ func (s *schema) addToCache(indexInfo IndexInfo) {
 	s.indexByName[indexInfo.Name] = indexInfo
 	for _, f := range indexInfo.Fields {
 		s.fieldCache[f.Id] = f
+		s.fieldByName[f.Name] = f
 	}
 }
 
@@ -312,7 +315,7 @@ func (s *schema) UpdateIndex(index IndexInfo) (IndexInfo, error) {
 
 	if indexInfo.PartitionAlloc.NumOfPartitions != index.PartitionAlloc.NumOfPartitions {
 		return IndexInfo{}, &ValidationError{
-			Err:   fmt.Sprintf("NumOfPartitions cannot be updated", index.Name),
+			Err:   fmt.Sprintf("NumOfPartitions cannot be updated in index %s", index.Name),
 			Field: "PartitionAlloc.NumOfPartitions",
 		}
 	}
@@ -542,6 +545,21 @@ func (s *schema) AllFields(id string) ([]Field, error) {
 
 	return r, nil
 
+}
+
+func (s *schema) FieldByName(name string) (Field, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	f, ok := s.fieldByName[name]
+
+	if !ok {
+		return Field{}, &NotFoundError{
+			Err: fmt.Sprintf("field %v doesnt exist", name),
+		}
+	}
+
+	return f, nil
 }
 
 func (s *schema) Field(id string) (Field, error) {

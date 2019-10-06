@@ -16,6 +16,7 @@ package mql_parser
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"meerkat/internal/query/logical"
+	"meerkat/internal/schema"
 	"meerkat/internal/tools"
 )
 
@@ -29,7 +30,8 @@ type Builder interface {
 	Sort(exp ...string) Builder
 	Limit(offset int) Builder
 	Regex(field string, rex string) Builder
-	Build() []logical.Node
+	CreateExpresion(e interface{}) *logical.Exp
+	Build() ([]logical.Node, error)
 
 	// Not used yet
 	SemiJoin(expr interface{}) Builder
@@ -38,12 +40,12 @@ type Builder interface {
 	Intersect(expr interface{}) Builder
 	Minus(expr interface{}) Builder
 	Match(regex string) Builder
-	CreateExpresion(e interface{}) *logical.Exp
 }
 
-func NewRelBuilder() Builder {
+func NewRelBuilder(s schema.Schema) Builder {
 	b := new(relationalAlgBuilder)
 	b.projection = logical.NewProjection("_ALL")
+	b.schema = s
 	b.steps = make([]logical.Node, 0)
 	b.steps = append(b.steps, b.projection)
 	return b
@@ -52,6 +54,8 @@ func NewRelBuilder() Builder {
 type relationalAlgBuilder struct {
 	steps      []logical.Node
 	projection *logical.Projection
+	schema     schema.Schema
+	err        error
 }
 
 func (r *relationalAlgBuilder) Span(t *logical.Exp) Builder {
@@ -148,53 +152,42 @@ func (r *relationalAlgBuilder) Match(regex string) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Build() []logical.Node {
-	return r.steps
+func (r *relationalAlgBuilder) Build() ([]logical.Node, error) {
+	return r.steps, r.err
 }
 
 func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
 
-	var e *logical.Exp
+	var e logical.Expression
 	switch l.(type) {
 	case *DecimalLiteralContext:
-		e = &logical.Exp{
-			ExpType: logical.DECIMAL,
-			Value:   l.(*DecimalLiteralContext).GetText(),
-		}
+		e = logical.NewExp(logical.DECIMAL, l.(*DecimalLiteralContext).GetText())
 	case *FloatLiteralContext:
-		e = &logical.Exp{
-			ExpType: logical.FLOAT,
-			Value:   l.(*FloatLiteralContext).GetText(),
-		}
+		e = logical.NewExp(logical.FLOAT, l.(*FloatLiteralContext).GetText())
 	case *BoolLiteralContext:
-		e = &logical.Exp{
-			ExpType: logical.BOOL,
-			Value:   l.(*BoolLiteralContext).GetText(),
-		}
+		e = logical.NewExp(logical.BOOL, l.(*BoolLiteralContext).GetText())
 	case *IdentifierContext:
-		e = &logical.Exp{
-			ExpType: logical.IDENTIFIER,
+		if f, err :=  r.schema.FieldByName(); err !
+
+		e = logical.NewIdentifier(logical.BOOL, l.(*BoolLiteralContext).GetText())
+		exp := &logical.Exp{
+			ExpType: logical.BOOL,
 			Value:   l.(*IdentifierContext).GetText(),
 		}
+		e = logical.IdentifierExp{
+			Exp: exp,
+		}
+
 	case *antlr.CommonToken: // string
-		e = &logical.Exp{
-			ExpType: logical.STRING,
-			Value:   l.(*antlr.CommonToken).GetText(),
-		}
+		e = logical.NewExp(logical.STRING, l.(*CommonToken).GetText())
 	case *StringLiteralContext: // string
-		e = &logical.Exp{
-			ExpType: logical.STRING,
-			Value:   l.(*StringLiteralContext).GetText(),
-		}
+		e = logical.NewExp(logical.STRING, l.(*StringLiteralContext).GetText())
 	case *AgrupTypesContext:
-		e = &logical.Exp{
-			ExpType: logical.FUNCTION,
-			Value:   l.(*AgrupTypesContext).GetText(),
-		}
+		e = logical.NewExp(logical.FUNCTION, l.(*AgrupTypesContext).GetText())
+
 	default:
 		tools.Logf("Could not create expresion %s ", e)
 	}
 
-	tools.Logf(" %s ", e.Value)
 	return e
 }

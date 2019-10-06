@@ -26,7 +26,7 @@ func TestParseQuery(t *testing.T) {
 	// str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
 	str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
 
-	steps := Parse(str)
+	steps, _ := Parse(nil, str)
 
 	p := steps[0].(*logical.Projection)
 	a.Equal("Index", p.IndexName)
@@ -66,7 +66,7 @@ func TestParseQuery2(t *testing.T) {
 
 	str := "index=Index campo1=100 | top 10 | sort campo1 desc, campo3"
 
-	steps := Parse(str)
+	steps, _ := Parse(nil, str)
 
 	p := steps[0].(*logical.Projection)
 	a.Equal("Index", p.IndexName)
@@ -90,7 +90,7 @@ func TestParseQuery3(t *testing.T) {
 
 	str := "earlier=-1d request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" "
 
-	steps := Parse(str)
+	steps, _ := Parse(nil, str)
 	p := steps[0].(*logical.Projection)
 	a.Equal("_ALL", p.IndexName)
 
@@ -99,7 +99,7 @@ func TestParseQuery3(t *testing.T) {
 
 	str = "request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" earlier=-1d  "
 
-	steps = Parse(str)
+	steps, _ = Parse(nil, str)
 	p = steps[0].(*logical.Projection)
 
 	a.Equal("_ALL", p.IndexName)
@@ -113,7 +113,7 @@ func TestParseQuery4(t *testing.T) {
 
 	str := "earlier=-1h index=access service=hbm | bucket span=1m | stats count by _id, status"
 
-	steps := Parse(str)
+	steps, _ := Parse(nil, str)
 	p := steps[0].(*logical.Projection)
 	// pojection
 	a.Equal("access", p.IndexName)
@@ -132,7 +132,7 @@ func TestParseQuery5(t *testing.T) {
 
 	str := "earlier=-1d | rex field=raw \"(?<time_spend>\\d{3}[0-9]+)\" " // revisar como bancarse expresiones regulares
 
-	steps := Parse(str)
+	steps, _ := Parse(nil, str)
 	p := steps[0].(*logical.Projection)
 
 	// pojection

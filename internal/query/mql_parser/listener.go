@@ -26,9 +26,9 @@ type MQLListener struct {
 	lexer   *MqlLexer
 }
 
-func newListener(lexer *MqlLexer) *MQLListener {
+func newListener(b Builder, lexer *MqlLexer) *MQLListener {
 	l := new(MQLListener)
-	l.builder = NewRelBuilder()
+	l.builder = b
 	l.lexer = lexer
 	return l
 }
@@ -123,10 +123,11 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 
 		tools.Logf("Time exp %v", op.GetText())
 		e := &logical.Exp{
-			ExpType: logical.STRING,
+			ExpType: logical.IDENTIFIER,
 			Value:   "_time",
 		}
 		f := logical.NewFilter(e, parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
+		// Check if expression is Time....
 
 		return f
 
@@ -151,6 +152,8 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 		tools.Logf("Comp %v", op.GetText())
 
 		f := logical.NewFilter(l.builder.CreateExpresion(lf), parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
+		// Check if expression is ok.
+
 		return f
 
 	default:
@@ -161,7 +164,12 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 	return nil
 }
 
-func (l *MQLListener) GetTree() []logical.Node {
+func validateFilter(l *logical.Exp, ec ExpressionContext) error {
+
+	return nil
+}
+
+func (l *MQLListener) GetTree() ([]logical.Node, error) {
 	return l.builder.Build()
 }
 

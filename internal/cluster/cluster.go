@@ -36,7 +36,7 @@ const (
 // local state to other members node. It is a thin  wraper around Serf.
 type Cluster interface {
 	// SetTag is used to dynamically update the tags associated with
-	// the local node. This will propagate the change to the rest of
+	// the local node. This will propagate the change to the rest ofx
 	// the cluster. Blocks until a the message is broadcast out.
 	SetTag(name string, value string) error
 

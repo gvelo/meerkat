@@ -18,6 +18,7 @@ package logical
 
 import (
 	"fmt"
+	"meerkat/internal/schema"
 )
 
 type Operator int
@@ -48,8 +49,8 @@ type RootFilter struct {
 	RootFilter *Filter
 }
 
-func (f *RootFilter) String() string {
-	return fmt.Sprintf("Root Filter")
+func (f *RootFilter) ResultString() string {
+	return fmt.Sprintf("RF")
 }
 
 type Filter struct {
@@ -81,28 +82,44 @@ func NewFilter(l Node, operator Operator, r Node) *Filter {
 	return f
 }
 
+type Expression interface {
+	Type() ExpType
+	Value() string
+}
+
 type Exp struct {
-	ExpType  ExpType
-	Value    string
-	p        Node
-	children []Node
+	expType ExpType
+	value   string
 }
 
-func (f *Exp) String() string {
-	return fmt.Sprintf("Exp %s ", f.ExpType)
+func NewExp(t ExpType, v string) *Exp {
+	return &Exp{
+		expType: t,
+		value:   v,
+	}
 }
 
-func (f *Exp) GetParent() Node {
-	return f.p
+func (f *Exp) Value() string {
+	return f.value
 }
 
-func (f *Exp) SetParent(n Node) {
-	f.p = n
-}
-func (f *Exp) AddChild(n Node) {
-	f.children = append(f.children, n)
+func (f *Exp) Type() ExpType {
+	return f.expType
 }
 
-func (f *Exp) GetChildren() []Node {
-	return f.children
+func (f *Exp) ResultString() string {
+	return fmt.Sprintf("Expression %s value %s", f.expType, f.value)
+}
+
+type IdentifierExp struct {
+	Exp
+	Field *schema.Field
+}
+
+func NewIdentifier(t ExpType, v string, f *schema.Field) *IdentifierExp {
+	return &Exp{
+		expType: t,
+		value:   v,
+		Field:   f,
+	}
 }

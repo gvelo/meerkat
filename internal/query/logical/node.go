@@ -1,5 +1,5 @@
 package logical
 
 type Node interface {
-	String() string
+	ResultString() string
 }

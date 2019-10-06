@@ -29,6 +29,6 @@ func NewAggregation(f string, fields []string) *Aggregation {
 	}
 }
 
-func (p *Aggregation) String() string {
+func (p *Aggregation) ResultString() string {
 	return "Aggregation"
 }
