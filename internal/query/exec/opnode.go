@@ -14,6 +14,6 @@
 package exec
 
 type OpNode interface {
-	Execute() error //TODO(sebad) make interface
-	String() string
+	Execute() error
+	ResultString() string
 }

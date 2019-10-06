@@ -122,12 +122,8 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 		op := ctx.(*TimeExpressionContext).GetOp()
 
 		tools.Logf("Time exp %v", op.GetText())
-		e := &logical.Exp{
-			ExpType: logical.IDENTIFIER,
-			Value:   "_time",
-		}
+		e := logical.NewExp(logical.IDENTIFIER, "_time")
 		f := logical.NewFilter(e, parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
-		// Check if expression is Time....
 
 		return f
 
@@ -152,7 +148,6 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 		tools.Logf("Comp %v", op.GetText())
 
 		f := logical.NewFilter(l.builder.CreateExpresion(lf), parseOperator(op.GetText()), l.builder.CreateExpresion(rg))
-		// Check if expression is ok.
 
 		return f
 
@@ -160,11 +155,6 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 		tools.Logf("type %v ignored", ctx)
 
 	}
-
-	return nil
-}
-
-func validateFilter(l *logical.Exp, ec ExpressionContext) error {
 
 	return nil
 }

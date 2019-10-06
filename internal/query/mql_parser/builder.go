@@ -25,12 +25,12 @@ type Builder interface {
 	Filter(filter logical.Node) Builder
 	Project(e ...interface{}) Builder
 	Aggregate(function string, byFields []string) Builder
-	Span(t *logical.Exp) Builder
+	Span(t logical.Expression) Builder
 	Distinct() Builder
 	Sort(exp ...string) Builder
 	Limit(offset int) Builder
 	Regex(field string, rex string) Builder
-	CreateExpresion(e interface{}) *logical.Exp
+	CreateExpresion(e interface{}) logical.Expression
 	Build() ([]logical.Node, error)
 
 	// Not used yet
@@ -58,7 +58,7 @@ type relationalAlgBuilder struct {
 	err        error
 }
 
-func (r *relationalAlgBuilder) Span(t *logical.Exp) Builder {
+func (r *relationalAlgBuilder) Span(t logical.Expression) Builder {
 	r.projection.Span = t
 	return r
 }
@@ -156,7 +156,7 @@ func (r *relationalAlgBuilder) Build() ([]logical.Node, error) {
 	return r.steps, r.err
 }
 
-func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
+func (r *relationalAlgBuilder) CreateExpresion(l interface{}) logical.Expression {
 
 	var e logical.Expression
 	switch l.(type) {
@@ -167,19 +167,14 @@ func (r *relationalAlgBuilder) CreateExpresion(l interface{}) *logical.Exp {
 	case *BoolLiteralContext:
 		e = logical.NewExp(logical.BOOL, l.(*BoolLiteralContext).GetText())
 	case *IdentifierContext:
-		if f, err :=  r.schema.FieldByName(); err !
-
-		e = logical.NewIdentifier(logical.BOOL, l.(*BoolLiteralContext).GetText())
-		exp := &logical.Exp{
-			ExpType: logical.BOOL,
-			Value:   l.(*IdentifierContext).GetText(),
+		n := l.(*IdentifierContext).GetText()
+		if f, error := r.schema.FieldByName(n); error != nil {
+			r.err = error
+		} else {
+			e = logical.NewIdentifier(logical.IDENTIFIER, n, &f)
 		}
-		e = logical.IdentifierExp{
-			Exp: exp,
-		}
-
 	case *antlr.CommonToken: // string
-		e = logical.NewExp(logical.STRING, l.(*CommonToken).GetText())
+		e = logical.NewExp(logical.STRING, l.(*antlr.CommonToken).GetText())
 	case *StringLiteralContext: // string
 		e = logical.NewExp(logical.STRING, l.(*StringLiteralContext).GetText())
 	case *AgrupTypesContext:

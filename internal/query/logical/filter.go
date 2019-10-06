@@ -66,7 +66,7 @@ type Filter struct {
 	Group bool
 }
 
-func (f *Filter) String() string {
+func (f *Filter) ResultString() string {
 	return fmt.Sprintf("Filter op %s", f.Op)
 }
 
@@ -83,6 +83,7 @@ func NewFilter(l Node, operator Operator, r Node) *Filter {
 }
 
 type Expression interface {
+	ResultString() string
 	Type() ExpType
 	Value() string
 }
@@ -117,9 +118,11 @@ type IdentifierExp struct {
 }
 
 func NewIdentifier(t ExpType, v string, f *schema.Field) *IdentifierExp {
-	return &Exp{
-		expType: t,
-		value:   v,
-		Field:   f,
+	return &IdentifierExp{
+		Exp: Exp{
+			expType: t,
+			value:   v,
+		},
+		Field: f,
 	}
 }

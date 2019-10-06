@@ -32,7 +32,7 @@ type Projection struct {
 	children []Node
 
 	RexField *RexField // field created by regex
-	Span     *Exp
+	Span     Expression
 }
 
 func NewProjection(name string) *Projection {

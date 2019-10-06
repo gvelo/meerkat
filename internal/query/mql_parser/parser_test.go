@@ -14,19 +14,29 @@
 package mql_parser
 
 import (
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"meerkat/internal/query/logical"
+	"meerkat/internal/schema"
 	"testing"
 )
 
 func TestParseQuery(t *testing.T) {
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		FieldByName(gomock.Any()).
+		Return(schema.Field{}, nil).Times(3)
+
 	a := assert.New(t)
 
-	// str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
-	str := "index=Index campo1=100 and ( campo2=we or campo3=s123 )"
+	str := "index=Index campo1=100 and ( campo2=3 or campo3=\"s123\" )"
 
-	steps, _ := Parse(nil, str)
+	steps, _ := Parse(s, str)
 
 	p := steps[0].(*logical.Projection)
 	a.Equal("Index", p.IndexName)
@@ -38,13 +48,13 @@ func TestParseQuery(t *testing.T) {
 	a.Equal(logical.AND, f.Op)
 	a.Equal(false, f.Group)
 
-	a.Equal(logical.DECIMAL, f.Left.(*logical.Filter).Right.(*logical.Exp).ExpType)
-	a.Equal("100", f.Left.(*logical.Filter).Right.(*logical.Exp).Value)
+	a.Equal(logical.DECIMAL, f.Left.(*logical.Filter).Right.(logical.Expression).Type())
+	a.Equal("100", f.Left.(*logical.Filter).Right.(logical.Expression).Value())
 
 	c1comp := f.Left.(*logical.Filter)
 	a.Equal(logical.EQ, c1comp.Op)
-	a.Equal(logical.IDENTIFIER, c1comp.Left.(*logical.Exp).ExpType)
-	a.Equal("campo1", c1comp.Left.(*logical.Exp).Value)
+	a.Equal(logical.IDENTIFIER, c1comp.Left.(logical.Expression).Type())
+	a.Equal("campo1", c1comp.Left.(logical.Expression).Value())
 
 	c1c3comp := f.Right.(*logical.Filter)
 	a.Equal(logical.OR, c1c3comp.Op)
@@ -62,11 +72,20 @@ func TestParseQuery(t *testing.T) {
 
 func TestParseQuery2(t *testing.T) {
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		FieldByName(gomock.Any()).
+		Return(schema.Field{}, nil).Times(1)
+
 	a := assert.New(t)
 
 	str := "index=Index campo1=100 | top 10 | sort campo1 desc, campo3"
 
-	steps, _ := Parse(nil, str)
+	steps, _ := Parse(s, str)
 
 	p := steps[0].(*logical.Projection)
 	a.Equal("Index", p.IndexName)
@@ -86,11 +105,20 @@ func TestParseQuery2(t *testing.T) {
 
 func TestParseQuery3(t *testing.T) {
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		FieldByName(gomock.Any()).
+		Return(schema.Field{}, nil).AnyTimes()
+
 	a := assert.New(t)
 
 	str := "earlier=-1d request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" "
 
-	steps, _ := Parse(nil, str)
+	steps, _ := Parse(s, str)
 	p := steps[0].(*logical.Projection)
 	a.Equal("_ALL", p.IndexName)
 
@@ -99,7 +127,7 @@ func TestParseQuery3(t *testing.T) {
 
 	str = "request_id=\"a37cacc3-71d5-40f0-a329-a051a3949ced\" earlier=-1d  "
 
-	steps, _ = Parse(nil, str)
+	steps, _ = Parse(s, str)
 	p = steps[0].(*logical.Projection)
 
 	a.Equal("_ALL", p.IndexName)
@@ -109,11 +137,20 @@ func TestParseQuery3(t *testing.T) {
 
 func TestParseQuery4(t *testing.T) {
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		FieldByName(gomock.Any()).
+		Return(schema.Field{}, nil).AnyTimes()
+
 	a := assert.New(t)
 
 	str := "earlier=-1h index=access service=hbm | bucket span=1m | stats count by _id, status"
 
-	steps, _ := Parse(nil, str)
+	steps, _ := Parse(s, str)
 	p := steps[0].(*logical.Projection)
 	// pojection
 	a.Equal("access", p.IndexName)
@@ -128,11 +165,20 @@ func TestParseQuery4(t *testing.T) {
 
 func TestParseQuery5(t *testing.T) {
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		FieldByName(gomock.Any()).
+		Return(schema.Field{}, nil).AnyTimes()
+
 	a := assert.New(t)
 
 	str := "earlier=-1d | rex field=raw \"(?<time_spend>\\d{3}[0-9]+)\" " // revisar como bancarse expresiones regulares
 
-	steps, _ := Parse(nil, str)
+	steps, _ := Parse(s, str)
 	p := steps[0].(*logical.Projection)
 
 	// pojection

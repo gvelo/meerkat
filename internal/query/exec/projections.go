@@ -13,6 +13,7 @@
 
 package exec
 
+// Shoud return all data.
 type Projection struct {
 }
 

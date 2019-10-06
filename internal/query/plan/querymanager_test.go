@@ -26,19 +26,19 @@ func Test_Query_Fields_bad_type(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	assert := assert.New(t)
-
 	s := schema.NewMockSchema(ctrl)
 
 	s.EXPECT().
 		FieldByName(gomock.Eq("f1")).
-		Return(nil, &schema.NotFoundError{Err: "No se encontro el campo."})
+		Return(schema.Field{}, &schema.NotFoundError{Err: "No se encontro el campo."})
+
+	assert := assert.New(t)
 
 	qm, err := NewQueryManager(s)
 	assert.NoError(err)
 
 	_, err = qm.Query("earlier=1d f1=\"campo1\" ")
-	assert.Nil(err)
+	assert.NotNil(err)
 }
 
 func Test_Query_FieldsOk(t *testing.T) {
@@ -60,7 +60,7 @@ func Test_Query_FieldsOk(t *testing.T) {
 			Nullable:  false,
 			Created:   time.Time{},
 			Updated:   time.Time{},
-		}, nil)
+		}, nil).Times(2)
 
 	s.EXPECT().
 		FieldByName(gomock.Eq("f2")).
@@ -73,12 +73,11 @@ func Test_Query_FieldsOk(t *testing.T) {
 			Nullable:  false,
 			Created:   time.Time{},
 			Updated:   time.Time{},
-		}, nil)
+		}, nil).Times(2)
 
 	qm, err := NewQueryManager(s)
 	assert.NoError(err)
 
-	_, err = qm.Query("earlier=1d f1=\"campo1\" f2=12 ")
+	_, err = qm.Query("earlier=1d f1=\"campo1\" f2=12 or f1=f2 ")
 	assert.Nil(err)
-	// assert.EqualError()
 }

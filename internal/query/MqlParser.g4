@@ -49,7 +49,7 @@ literal
  | IDENTIFIER                                     #identifier
  ;
 
-identifierList: IDENTIFIER (',' IDENTIFIER )* ;
+identifierList: IDENTIFIER (COMMA IDENTIFIER )* ;
 
 sort: field=IDENTIFIER direction=(ASC|DESC)?;
 
@@ -62,6 +62,7 @@ expression
  | left=literal op=comparator right=literal              #comparatorExpression
  | left=expression op=binary right=expression            #binaryExpression
  | left=EARLIER op=ASSIGN right=(ADD|SUB)? TIME_LITERAL  #timeExpression
+ | left=expression op=ASSIGN TILDE right=expression     #regexExpression
  ;
 
 comparator

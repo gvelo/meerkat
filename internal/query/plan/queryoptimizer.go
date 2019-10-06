@@ -16,9 +16,7 @@ package plan
 import (
 	"meerkat/internal/query/exec"
 	"meerkat/internal/query/logical"
-	"meerkat/internal/storage/readers"
 	"meerkat/internal/storage/segment/ondsk"
-	"path/filepath"
 )
 
 type Optimizer interface {
@@ -70,12 +68,5 @@ func (o *MeerkatOptimizer) transformAggregation(a *logical.Aggregation) []exec.O
 // TODO(sebad): get data from Schema not Segment.
 func (o *MeerkatOptimizer) getMetadata(i *logical.Projection) *ondsk.Segment {
 
-	var file = filepath.Join(o.path, i.String())
-
-	s, err := readers.ReadSegment(file)
-	if err != nil {
-		// panic(fmt.Sprintf(" %v does not exist ", i .GetIndexName()))
-	}
-
-	return s
+	return nil
 }
