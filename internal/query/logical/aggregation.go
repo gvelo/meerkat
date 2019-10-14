@@ -11,39 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package logical
 
-import (
-	"fmt"
-)
+// logical aggregation be implemented by all functions
+type Aggregation struct {
+	Function string   // function to apply to fields
+	Fields   []string // fields to apply
 
-type OpNode interface {
-	fmt.Stringer
-	Execute(ctx Context) (Cursor, error)
-	Parent() OpNode
-	Children() []OpNode
-	AddChild(n OpNode)
-	Cancel()
+	parent   Node
+	children []Node
 }
 
-type NodeImp struct {
-	canceled bool
-	parent   OpNode
-	children []OpNode
+func NewAggregation(f string, fields []string) *Aggregation {
+	return &Aggregation{
+		Function: f,
+		Fields:   fields,
+	}
 }
 
-func (p *NodeImp) Parent() OpNode {
-	return p.parent
-}
-
-func (p *NodeImp) Children() []OpNode {
-	return p.children
-}
-
-func (p *NodeImp) AddChild(n OpNode) {
-	p.children = append(p.children, n)
-}
-
-func (p *NodeImp) Cancel() {
-	p.canceled = true
+func (p *Aggregation) String() string {
+	return "Aggregation"
 }

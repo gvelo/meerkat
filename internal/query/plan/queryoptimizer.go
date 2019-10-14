@@ -16,7 +16,7 @@ package plan
 import (
 	"meerkat/internal/query/exec"
 	"meerkat/internal/query/logical"
-	"meerkat/internal/storage/segment/ondsk"
+	"meerkat/internal/schema"
 )
 
 type Optimizer interface {
@@ -32,41 +32,42 @@ func NewMeerkatOptimizer() *MeerkatOptimizer {
 }
 
 // This method should take the logical steps and transform in execution steps,
-// returning an optimized execution steps list
-func (o *MeerkatOptimizer) OptimizeQuery(l []logical.Node) []exec.OpNode {
+// returning an optimized steps tree
+func (o *MeerkatOptimizer) OptimizeQuery(s schema.Schema, l []logical.Node) exec.OpNode {
 
 	exec := make([]exec.OpNode, 0)
 	for _, n := range l {
 		switch t := n.(type) {
 		case *logical.Projection:
-			o.transformProjection(t)
+			o.transformProjection(s, t)
 		case *logical.RootFilter:
-			o.transformRootFilter(t)
+			o.transformRootFilter(s, t)
 		case *logical.Aggregation:
-			o.transformAggregation(t)
+			o.transformAggregation(s, t)
 		}
 	}
 
-	return exec
+	return nil
 }
 
-func (o *MeerkatOptimizer) transformProjection(p *logical.Projection) []exec.OpNode {
+func (o *MeerkatOptimizer) transformProjection(schema schema.Schema, p *logical.Projection) []exec.OpNode {
+
+	for i, idx := range p.Indexes {
+
+		schema.IndexByName(idx)
+		ep := exec.NewProjection()
+
+	}
 
 	return nil
 }
 
-func (o *MeerkatOptimizer) transformRootFilter(r *logical.RootFilter) []exec.OpNode {
+func (o *MeerkatOptimizer) transformRootFilter(schema schema.Schema, r *logical.RootFilter) []exec.OpNode {
 
 	return nil
 }
 
-func (o *MeerkatOptimizer) transformAggregation(a *logical.Aggregation) []exec.OpNode {
-
-	return nil
-}
-
-// TODO(sebad): get data from Schema not Segment.
-func (o *MeerkatOptimizer) getMetadata(i *logical.Projection) *ondsk.Segment {
+func (o *MeerkatOptimizer) transformAggregation(schema schema.Schema, a *logical.Aggregation) []exec.OpNode {
 
 	return nil
 }

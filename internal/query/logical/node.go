@@ -1,5 +1,7 @@
 package logical
 
+import "fmt"
+
 type Node interface {
-	ResultString() string
+	fmt.Stringer
 }

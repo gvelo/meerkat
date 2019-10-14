@@ -13,12 +13,29 @@
 
 package exec
 
-// Shoud return all data.
+import (
+	"meerkat/internal/schema"
+)
+
 type Projection struct {
+	NodeImp
+	Fields []schema.Field
 }
 
-func (p *Projection) Execute() error {
-	return nil
+func NewProjection(lp *schema.IndexInfo) *Projection {
+
+	return &Projection{
+		NodeImp: NodeImp{
+			parent:   nil,
+			children: make([]OpNode, 0),
+		},
+		Fields: make([]schema.Field, 0),
+	}
+
+}
+
+func (p *Projection) Execute(ctx Context) ([][]interface{}, error) {
+	panic("implement me")
 }
 
 func (p *Projection) String() string {

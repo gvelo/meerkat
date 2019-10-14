@@ -71,13 +71,16 @@ func (sw *SegmentWriter) Write() error {
 		tsColumn.Sort()
 	}
 
+	var err error
 	for _, col := range sw.segment.Columns {
 		col.SetSortMap(tsColumn.SortMap())
-		sw.writeColumn(col)
+		_, err = sw.writeColumn(col)
+		if err != nil {
+			return err
+		}
 	}
 
-	err := sw.writeSegmentInfo()
-
+	err = sw.writeSegmentInfo()
 	if err != nil {
 		return err
 	}
@@ -116,11 +119,11 @@ func (sw *SegmentWriter) writeColumn(col inmem.Column) (pd []*inmem.Page, err er
 
 	executeChain := BuildChain(WriteToFile, chain...)
 	err = executeChain(mp)
-	if err != nil {
+	if err == nil {
 		pd = mp.Pages
 	}
 
-	return nil, nil
+	return nil, err
 }
 
 func (sw *SegmentWriter) writeSegmentInfo() error {

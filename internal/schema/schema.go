@@ -154,13 +154,14 @@ func (e *NotFoundError) Error() string {
 type Schema interface {
 	AllIndex() []IndexInfo
 	Index(id string) (IndexInfo, error)
+	IndexByName(id string) (IndexInfo, error)
 	CreateIndex(index IndexInfo) (IndexInfo, error)
 	UpdateIndex(index IndexInfo) (IndexInfo, error)
 	DeleteIndex(id string) error
 
 	AllFields(id string) ([]Field, error)
 	Field(id string) (Field, error)
-	FieldByName(name string) (Field, error)
+	FieldsInIndexByName(name string) ([]IndexInfo, error)
 	UpdateField(field Field) error
 	DeleteField(id string) error
 	CreateFields(id string, fields Field) (Field, error)
@@ -175,7 +176,7 @@ type schema struct {
 	catalog     cluster.Catalog
 	indexCache  map[string]IndexInfo
 	fieldCache  map[string]Field
-	fieldByName map[string]Field
+	fieldByName map[string][]IndexInfo
 	pAllocCache map[string]PartitionAlloc
 	indexByName map[string]IndexInfo
 	log         zerolog.Logger
@@ -211,6 +212,20 @@ func (s *schema) Index(id string) (IndexInfo, error) {
 
 	if !ok {
 		return IndexInfo{}, &NotFoundError{Err: fmt.Sprintf("index %v cannot be found", id)}
+	}
+
+	return indexInfo.copy(), nil
+}
+
+func (s *schema) IndexByName(name string) (IndexInfo, error) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	indexInfo, ok := s.indexByName[name]
+
+	if !ok {
+		return IndexInfo{}, &NotFoundError{Err: fmt.Sprintf("index %v cannot be found", name)}
 	}
 
 	return indexInfo.copy(), nil
@@ -279,9 +294,14 @@ func (s *schema) addToCache(indexInfo IndexInfo) {
 	indexInfo.init()
 	s.indexCache[indexInfo.Id] = indexInfo
 	s.indexByName[indexInfo.Name] = indexInfo
+
 	for _, f := range indexInfo.Fields {
 		s.fieldCache[f.Id] = f
-		s.fieldByName[f.Name] = f
+		if s.fieldByName[f.Name] == nil {
+			s.fieldByName[f.Name] = make([]IndexInfo, 0)
+		}
+		s.fieldByName[f.Name] = append(s.fieldByName[f.Name], indexInfo)
+
 	}
 }
 
@@ -547,15 +567,15 @@ func (s *schema) AllFields(id string) ([]Field, error) {
 
 }
 
-func (s *schema) FieldByName(name string) (Field, error) {
+func (s *schema) FieldsInIndexByName(name string) ([]IndexInfo, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	f, ok := s.fieldByName[name]
 
 	if !ok {
-		return Field{}, &NotFoundError{
-			Err: fmt.Sprintf("field %v doesnt exist", name),
+		return nil, &NotFoundError{
+			Err: fmt.Sprintf("field %v doesnt exist in any index", name),
 		}
 	}
 

@@ -1,4 +1,4 @@
-// Code generated from /Users/sdominguez/desa/workspace_go/eventdb/internal/query/MqlLexer.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/sebad/desa/workspace_go/eventdb/internal/query/MqlLexer.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package mql_parser
 

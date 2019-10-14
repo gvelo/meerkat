@@ -26,6 +26,8 @@ import (
 	"time"
 )
 
+const path = "/Users/sebad/desa/event_db_data"
+
 func TestSegmentWriterReader(t *testing.T) {
 
 	assert := assert.New(t)
@@ -34,19 +36,20 @@ func TestSegmentWriterReader(t *testing.T) {
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
 	indexInfo.AddField("float", segment.FieldTypeFloat, true)
+	indexInfo.AddField("_time", segment.FieldTypeTimestamp, true)
 
-	s := inmem.NewSegment(indexInfo, "3dfa542d", nil)
+	s := inmem.NewSegment(indexInfo, "123456", nil)
 
 	for i := 0; i < 100; i++ {
 		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
-		e["ts"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
+		e["_time"] = uint64(time.Now().Add(time.Duration(i)).Nanosecond())
 		e["mun1"] = i
 		e["float"] = float64(i)
 		s.Add(e)
 	}
 
-	sw := NewSegmentWriter("/tmp", s)
+	sw := NewSegmentWriter(path, s)
 
 	err := sw.Write()
 
@@ -54,7 +57,7 @@ func TestSegmentWriterReader(t *testing.T) {
 		return
 	}
 
-	odSegment, err := readers.ReadSegment("/tmp")
+	odSegment, err := readers.ReadSegment(path)
 
 	if !assert.NoErrorf(err, "an error occurred while reading the segment: %v", err) {
 		return
@@ -88,19 +91,20 @@ func TestSegmentSorted(t *testing.T) {
 	indexInfo.AddField("testfield", segment.FieldTypeKeyword, true)
 	indexInfo.AddField("mun1", segment.FieldTypeInt, true)
 	indexInfo.AddField("float", segment.FieldTypeFloat, true)
+	indexInfo.AddField("_time", segment.FieldTypeTimestamp, true)
 
-	s := inmem.NewSegment(indexInfo, "3dfa542d", nil)
+	s := inmem.NewSegment(indexInfo, "123456", nil)
 
 	for i := 0; i < 100; i++ {
 		e := make(segment.Event)
 		e["testfield"] = fmt.Sprintf("test %v", i)
-		e["ts"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
+		e["_time"] = uint64(time.Now().Add(time.Duration(i + rand.Intn(100000))).Nanosecond())
 		e["mun1"] = i
 		e["float"] = float64(i)
 		s.Add(e)
 	}
 
-	sw := NewSegmentWriter("/tmp", s)
+	sw := NewSegmentWriter(path, s)
 
 	findColumnByName(sw.segment.Columns, "_time")
 	//assert.False(isSortedByTs(c.))
@@ -130,11 +134,11 @@ func TestColumnWrite_Num(t *testing.T) {
 		s.Add(e)
 	}
 
-	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
+	sw := NewSegmentWriter(path, s)
 
 	sw.Write()
 
-	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
+	segment, _ := readers.ReadSegment(path)
 
 	log.Printf("Segmento %v", segment)
 
@@ -197,11 +201,11 @@ func TestColumnWrite_Float(t *testing.T) {
 		s.Add(e)
 	}
 
-	sw := NewSegmentWriter("/Users/sdominguez/desa/event_db_data", s)
+	sw := NewSegmentWriter(path, s)
 
 	sw.Write()
 
-	segment, _ := readers.ReadSegment("/Users/sdominguez/desa/event_db_data")
+	segment, _ := readers.ReadSegment(path)
 
 	log.Printf("Segmento %v", segment)
 

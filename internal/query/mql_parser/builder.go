@@ -14,6 +14,7 @@
 package mql_parser
 
 import (
+	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/schema"
@@ -23,7 +24,7 @@ import (
 type Builder interface {
 	Scan(name string) Builder
 	Filter(filter logical.Node) Builder
-	Project(e ...interface{}) Builder
+	Project(add []string, remove []string) Builder
 	Aggregate(function string, byFields []string) Builder
 	Span(t logical.Expression) Builder
 	Distinct() Builder
@@ -44,7 +45,7 @@ type Builder interface {
 
 func NewRelBuilder(s schema.Schema) Builder {
 	b := new(relationalAlgBuilder)
-	b.projection = logical.NewProjection("_ALL")
+	b.projection = logical.NewProjection()
 	b.schema = s
 	b.steps = make([]logical.Node, 0)
 	b.steps = append(b.steps, b.projection)
@@ -55,7 +56,8 @@ type relationalAlgBuilder struct {
 	steps      []logical.Node
 	projection *logical.Projection
 	schema     schema.Schema
-	err        error
+	// TODO(sebad): improve error handling.
+	err error
 }
 
 func (r *relationalAlgBuilder) Span(t logical.Expression) Builder {
@@ -69,7 +71,13 @@ func (r *relationalAlgBuilder) Regex(field string, rex string) Builder {
 }
 
 func (r *relationalAlgBuilder) Scan(name string) Builder {
-	r.projection.IndexName = name
+
+	if ii, error := r.schema.IndexByName(name); error == nil {
+		r.projection.Index = ii.Name
+	} else {
+		r.err = error
+	}
+
 	return r
 }
 
@@ -78,7 +86,15 @@ func (r *relationalAlgBuilder) Filter(f logical.Node) Builder {
 	return r
 }
 
-func (r *relationalAlgBuilder) Project(e ...interface{}) Builder {
+func (r *relationalAlgBuilder) Project(add []string, remove []string) Builder {
+
+	if r.projection.Index == "" {
+		r.err = &ParseError{
+			Err: "You can't use fields command in multiple indexes",
+		}
+		return r
+	}
+
 	return r
 }
 
@@ -167,11 +183,9 @@ func (r *relationalAlgBuilder) CreateExpresion(l interface{}) logical.Expression
 	case *BoolLiteralContext:
 		e = logical.NewExp(logical.BOOL, l.(*BoolLiteralContext).GetText())
 	case *IdentifierContext:
-		n := l.(*IdentifierContext).GetText()
-		if f, error := r.schema.FieldByName(n); error != nil {
-			r.err = error
-		} else {
-			e = logical.NewIdentifier(logical.IDENTIFIER, n, &f)
+		e = logical.NewExp(logical.IDENTIFIER, l.(*IdentifierContext).GetText())
+		if err := r.checkFieldsInIndexes(e.Value()); err != nil {
+			r.err = err
 		}
 	case *antlr.CommonToken: // string
 		e = logical.NewExp(logical.STRING, l.(*antlr.CommonToken).GetText())
@@ -185,4 +199,57 @@ func (r *relationalAlgBuilder) CreateExpresion(l interface{}) logical.Expression
 	}
 
 	return e
+}
+
+func (r *relationalAlgBuilder) checkFieldsInIndexes(fn string) error {
+
+	idx, error := r.schema.FieldsInIndexByName(fn)
+
+	idxList := make([]string, 0)
+	for _, i := range idx {
+		idxList = append(idxList, i.Name)
+	}
+
+	if error != nil {
+		return &ParseError{
+			Err: fmt.Sprintf("Field %s does not exists in any index", fn),
+		}
+	}
+
+	// was selected an index
+	if r.projection.Index != "" {
+
+		if idxList[0] != r.projection.Index {
+			return &ParseError{
+				Err: fmt.Sprintf("Field %s does not exists in index %s", fn, r.projection.Indexes[0]),
+			}
+		}
+
+		if len(r.projection.Fields) == 0 {
+			// Add all the fields to projection
+			for _, f := range idx[0].Fields {
+				r.projection.Fields = append(r.projection.Fields, f.Name)
+			}
+
+		}
+
+	} else {
+
+		// TODO(sebad): add remove fields in all indexes.
+
+		// no indexes
+		if len(r.projection.Indexes) > 0 {
+			for _, ii := range idxList {
+				r.projection.Indexes = append(r.projection.Indexes, ii)
+			}
+		} else { // indexes selected
+			if !tools.IsStringSubArray(idxList, r.projection.Indexes) {
+				return &ParseError{
+					Err: fmt.Sprintf("Field %s does not exists in all indexes", fn),
+				}
+			}
+		}
+	}
+
+	return nil
 }

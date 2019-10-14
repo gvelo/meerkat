@@ -11,24 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logical
+package exec
 
-// logical aggregation be implemented by all functions
-type Aggregation struct {
-	Function string   // function to apply to fields
-	Fields   []string // fields to apply
+import "meerkat/internal/schema"
 
-	parent   Node
-	children []Node
+type Context interface {
 }
 
-func NewAggregation(f string, fields []string) *Aggregation {
-	return &Aggregation{
-		Function: f,
-		Fields:   fields,
-	}
+type QryContext struct {
+	schema *schema.Schema
 }
 
-func (p *Aggregation) ResultString() string {
-	return "Aggregation"
+func NewQueryContext() Context {
+
 }

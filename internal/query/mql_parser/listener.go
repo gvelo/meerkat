@@ -24,6 +24,7 @@ type MQLListener struct {
 	*antlr.BaseParseTreeListener
 	builder Builder
 	lexer   *MqlLexer
+	err     error
 }
 
 func newListener(b Builder, lexer *MqlLexer) *MQLListener {
@@ -71,7 +72,7 @@ func (l *MQLListener) ExitTopCommand(c *TopCommandContext) {
 
 func (l *MQLListener) ExitSelectCommand(c *SelectCommandContext) {
 
-	f := make([]interface{}, 0)
+	fList := make([]interface{}, 0)
 	for _, ctx := range c.GetChildren() {
 
 		if c.GetIndex() == ctx {
@@ -79,24 +80,26 @@ func (l *MQLListener) ExitSelectCommand(c *SelectCommandContext) {
 			continue
 		}
 
-		f = append(f, ctx)
+		fList = append(fList, ctx)
 
 	}
 
 	rf := &logical.RootFilter{} // root filter
-	for i := 0; i < len(f); i++ {
-		f := l.buildFilters(f[i].(antlr.ParserRuleContext))
+	for i := 0; i < len(fList); i++ {
+		f := l.buildFilters(fList[i].(antlr.ParserRuleContext))
 		rf.RootFilter = f
 	}
+
 	l.builder.Filter(rf)
 
 }
 
 func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter {
+
 	if ctx == nil {
-		tools.Log("Empty")
 		return nil
 	}
+
 	switch ctx.(type) {
 	// something AND | OR something
 	case *BinaryExpressionContext:
@@ -153,13 +156,54 @@ func (l *MQLListener) buildFilters(ctx antlr.ParserRuleContext) *logical.Filter 
 
 	default:
 		tools.Logf("type %v ignored", ctx)
-
 	}
 
 	return nil
 }
 
+func (l *MQLListener) ExitStatCommand(c *StatCommandContext) {
+	t := c.GetF()
+	list := make([]string, 0)
+	for i := c.GetField().GetTokenIndex(); i < c.GetChildCount(); i++ {
+		if s := c.GetChildren()[i].(antlr.Token).GetText(); s != "," {
+			list = append(list, s)
+		}
+	}
+	l.builder.Aggregate(t.GetText(), list)
+}
+
+func (l *MQLListener) ExitFieldList(c *FieldListContext) {
+
+	add := make([]string, 0)
+	remove := make([]string, 0)
+
+	for i := 1; i < c.GetChildCount(); i++ {
+
+		v := c.GetChildren()[i].(antlr.ParseTree).GetText()
+
+		var f string
+		if v != "+" && v != "-" { // its a field
+			f = c.GetChildren()[i].(antlr.ParseTree).GetText()
+			add = append(add, f)
+		} else {
+			f = c.GetChildren()[i+1].(antlr.ParseTree).GetText()
+			if v == "+" {
+				add = append(add, f)
+			} else {
+				remove = append(remove, f)
+			}
+
+		}
+
+	}
+
+	l.builder.Project(add, remove)
+}
+
 func (l *MQLListener) GetTree() ([]logical.Node, error) {
+	if l.err != nil {
+		return nil, l.err
+	}
 	return l.builder.Build()
 }
 
@@ -379,21 +423,6 @@ func (l *MQLListener) ExitRenameCommand(c *RenameCommandContext) {
 
 }
 
-func (l *MQLListener) ExitStatCommand(c *StatCommandContext) {
-	t := c.GetF()
-	list := make([]string, 0)
-	for i := c.GetField().GetTokenIndex(); i < c.GetChildCount(); i++ {
-		if s := c.GetChildren()[i].(antlr.Token).GetText(); s != "," {
-			list = append(list, s)
-		}
-	}
-	l.builder.Aggregate(t.GetText(), list)
-}
-
-func (l *MQLListener) ExitFieldCommand(c *FieldCommandContext) {
-
-}
-
 func (l *MQLListener) ExitDedupCommand(c *DedupCommandContext) {
 
 }
@@ -403,5 +432,18 @@ func (l *MQLListener) ExitCompleteCommand(c *CompleteCommandContext) {
 }
 
 func (l *MQLListener) EnterRexCommand(c *RexCommandContext) {
+
+}
+
+func (l *MQLListener) EnterRegexExpression(c *RegexExpressionContext) {
+}
+
+func (l *MQLListener) EnterFieldList(c *FieldListContext) {
+}
+
+func (l *MQLListener) ExitRegexExpression(c *RegexExpressionContext) {
+}
+
+func (l *MQLListener) ExitFieldCommand(c *FieldCommandContext) {
 
 }

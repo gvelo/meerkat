@@ -25,7 +25,15 @@ import (
 )
 
 type Encoder interface {
-	Encode(col inmem.Column) []*inmem.Page
+	Encode(col inmem.Column) ([]*inmem.Page, error)
+}
+
+type EncodingError struct {
+	Err string
+}
+
+func (e *EncodingError) Error() string {
+	return e.Err
 }
 
 var EncoderHandler = func(f HandlerFunc) HandlerFunc {
@@ -48,7 +56,11 @@ var EncoderHandler = func(f HandlerFunc) HandlerFunc {
 			return nil
 
 		}
-		mp.Pages = e.Encode(mp.Col)
+		var err error
+		mp.Pages, err = e.Encode(mp.Col)
+		if err != nil {
+			return err
+		}
 		return f(mp)
 
 	}
@@ -78,7 +90,7 @@ func NewSnappyEncoder(mp *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *SnappyEncoder) Encode(col inmem.Column) []*inmem.Page {
+func (e *SnappyEncoder) Encode(col inmem.Column) ([]*inmem.Page, error) {
 
 	f := filepath.Join(e.path, e.fieldInfo.Name+pagExt)
 
@@ -87,7 +99,7 @@ func (e *SnappyEncoder) Encode(col inmem.Column) []*inmem.Page {
 
 	err := bw.WriteHeader(io.RowStoreV1)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	pages := make([]*inmem.Page, 0)
@@ -134,7 +146,7 @@ func (e *SnappyEncoder) Encode(col inmem.Column) []*inmem.Page {
 		pages = append(pages, pd)
 	}
 
-	return pages
+	return pages, nil
 }
 
 type RLEIntegerEncoder struct {
@@ -149,16 +161,18 @@ func NewRLEEncoder(payload *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *RLEIntegerEncoder) Encode(col inmem.Column) []*inmem.Page {
+func (e *RLEIntegerEncoder) Encode(col inmem.Column) ([]*inmem.Page, error) {
 	return EncodeRLE(e.path, e.info, col)
 }
 
-func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*inmem.Page {
+func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) ([]*inmem.Page, error) {
 
 	size := col.Size()
 
 	if size == 0 {
-		return nil
+		return nil, &EncodingError{
+			Err: "Column Empty",
+		}
 	}
 
 	pages := make([]*inmem.Page, 0)
@@ -168,12 +182,15 @@ func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*i
 
 	f := filepath.Join(path, fieldInfo.Name+pagExt)
 
-	bw, _ := io.NewBinaryWriter(f)
+	bw, err := io.NewBinaryWriter(f)
+	if err != nil {
+		return nil, err
+	}
 	defer bw.Close()
 
-	err := bw.WriteHeader(io.RowStoreV1)
+	err = bw.WriteHeader(io.RowStoreV1)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	var cur = col.Get(0).(int)
@@ -216,7 +233,7 @@ func EncodeRLE(path string, fieldInfo *segment.FieldInfo, col inmem.Column) []*i
 	bw.WriteVarUInt(run)
 	pages = append(pages, pd)
 
-	return pages
+	return pages, nil
 }
 
 type VarIntEncoder struct {
@@ -231,11 +248,13 @@ func NewVarIntEncoder(payload *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *VarIntEncoder) Encode(col inmem.Column) []*inmem.Page {
+func (e *VarIntEncoder) Encode(col inmem.Column) ([]*inmem.Page, error) {
 	size := col.Size()
 
 	if size == 0 {
-		return nil
+		return nil, &EncodingError{
+			Err: "Empty column",
+		}
 	}
 
 	pages := make([]*inmem.Page, 0)
@@ -247,7 +266,7 @@ func (e *VarIntEncoder) Encode(col inmem.Column) []*inmem.Page {
 
 	err := bw.WriteHeader(io.RowStoreV1)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	bt, _ := io.NewBufferBinaryWriter()
@@ -290,7 +309,7 @@ func (e *VarIntEncoder) Encode(col inmem.Column) []*inmem.Page {
 		pages = append(pages, pd)
 	}
 
-	return pages
+	return pages, nil
 }
 
 type EncodeDictionary struct {
@@ -307,12 +326,14 @@ func NewDictionaryEncoder(mp *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *EncodeDictionary) Encode(col inmem.Column) []*inmem.Page {
+func (e *EncodeDictionary) Encode(col inmem.Column) ([]*inmem.Page, error) {
 
 	size := col.Size()
 
 	if size == 0 {
-		return nil
+		return nil, &EncodingError{
+			Err: "Empty column",
+		}
 	}
 
 	f := filepath.Join(e.path, e.info.Name+pagExt)
@@ -368,7 +389,7 @@ func (e *EncodeDictionary) Encode(col inmem.Column) []*inmem.Page {
 	}
 	bw.WriteFixedUint64(uint64(offset))
 
-	return pages
+	return pages, nil
 }
 
 func buildData(bw *io.BufferBinaryWriter) []byte {
@@ -392,11 +413,13 @@ func NewFloatFPCEncoder(payload *MiddlewarePayload) Encoder {
 	return e
 }
 
-func (e *FPCEncoder) Encode(col inmem.Column) []*inmem.Page {
+func (e *FPCEncoder) Encode(col inmem.Column) ([]*inmem.Page, error) {
 	size := col.Size()
 
 	if size == 0 {
-		return nil
+		return nil, &EncodingError{
+			Err: "Empty column",
+		}
 	}
 
 	pages := make([]*inmem.Page, 0)
@@ -408,7 +431,7 @@ func (e *FPCEncoder) Encode(col inmem.Column) []*inmem.Page {
 
 	err := bw.WriteHeader(io.RowStoreV1)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	bsz := 1000
@@ -458,5 +481,5 @@ func (e *FPCEncoder) Encode(col inmem.Column) []*inmem.Page {
 		pages = append(pages, pd)
 	}
 
-	return pages
+	return pages, nil
 }

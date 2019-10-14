@@ -73,6 +73,9 @@ binary
  : AND | OR
  ;
 
+fieldList:( (ADD|SUB)? IDENTIFIER )*;
+
+
 commands
     : whereCommand
     | renameCommand
@@ -101,7 +104,7 @@ statCommand : STATS f=agrupTypes BY field= IDENTIFIER (COMMA  IDENTIFIER)*   ;
 bucketCommand : BUCKET SPAN ASSIGN span=TIME_LITERAL;
 
 // fields expresion
-fieldCommand: FIELDS (ADD|SUB)? identifierList;
+fieldCommand: FIELDS fieldList;
 
 // dedup expresion
 dedupCommand: DEDUP identifierList;

@@ -11,39 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package tools
 
-import (
-	"fmt"
-)
+func ContainsStringInArray(arr []string, val string) bool {
+	r := false
 
-type OpNode interface {
-	fmt.Stringer
-	Execute(ctx Context) (Cursor, error)
-	Parent() OpNode
-	Children() []OpNode
-	AddChild(n OpNode)
-	Cancel()
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return r
 }
 
-type NodeImp struct {
-	canceled bool
-	parent   OpNode
-	children []OpNode
-}
+func IsStringSubArray(arr []string, sub []string) bool {
 
-func (p *NodeImp) Parent() OpNode {
-	return p.parent
-}
-
-func (p *NodeImp) Children() []OpNode {
-	return p.children
-}
-
-func (p *NodeImp) AddChild(n OpNode) {
-	p.children = append(p.children, n)
-}
-
-func (p *NodeImp) Cancel() {
-	p.canceled = true
+	for _, s := range sub {
+	INIT:
+		sub := false
+		for _, o := range arr {
+			if o == s {
+				goto INIT
+			}
+		}
+		if !sub {
+			return sub
+		}
+	}
+	return true
 }

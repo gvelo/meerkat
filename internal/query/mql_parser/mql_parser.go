@@ -1,4 +1,4 @@
-// Code generated from /Users/sdominguez/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/sebad/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package mql_parser // MqlParser
 import (
@@ -15,93 +15,99 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 83, 204,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 83, 216,
 	4, 2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7,
 	4, 8, 9, 8, 4, 9, 9, 9, 4, 10, 9, 10, 4, 11, 9, 11, 4, 12, 9, 12, 4, 13,
 	9, 13, 4, 14, 9, 14, 4, 15, 9, 15, 4, 16, 9, 16, 4, 17, 9, 17, 4, 18, 9,
 	18, 4, 19, 9, 19, 4, 20, 9, 20, 4, 21, 9, 21, 4, 22, 9, 22, 4, 23, 9, 23,
-	4, 24, 9, 24, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 4, 3, 4, 3, 4, 3, 4, 3,
-	4, 3, 5, 3, 5, 3, 5, 3, 5, 3, 5, 5, 5, 64, 10, 5, 3, 6, 3, 6, 3, 6, 7,
-	6, 69, 10, 6, 12, 6, 14, 6, 72, 11, 6, 3, 7, 3, 7, 5, 7, 76, 10, 7, 3,
-	8, 3, 8, 3, 8, 7, 8, 81, 10, 8, 12, 8, 14, 8, 84, 11, 8, 3, 9, 3, 9, 3,
-	9, 3, 9, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10,
-	3, 10, 3, 10, 3, 10, 5, 10, 102, 10, 10, 3, 10, 5, 10, 105, 10, 10, 3,
-	10, 3, 10, 3, 10, 3, 10, 7, 10, 111, 10, 10, 12, 10, 14, 10, 114, 11, 10,
-	3, 11, 3, 11, 3, 12, 3, 12, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3,
-	13, 3, 13, 3, 13, 5, 13, 129, 10, 13, 3, 14, 3, 14, 3, 14, 3, 15, 7, 15,
-	135, 10, 15, 12, 15, 14, 15, 138, 11, 15, 3, 15, 5, 15, 141, 10, 15, 3,
-	15, 7, 15, 144, 10, 15, 12, 15, 14, 15, 147, 11, 15, 3, 16, 3, 16, 3, 16,
-	3, 16, 6, 16, 153, 10, 16, 13, 16, 14, 16, 154, 3, 17, 3, 17, 3, 17, 3,
-	17, 3, 17, 3, 17, 7, 17, 163, 10, 17, 12, 17, 14, 17, 166, 11, 17, 3, 18,
-	3, 18, 3, 18, 3, 18, 3, 18, 3, 19, 3, 19, 5, 19, 175, 10, 19, 3, 19, 3,
-	19, 3, 20, 3, 20, 3, 20, 3, 21, 3, 21, 3, 21, 3, 21, 5, 21, 186, 10, 21,
-	3, 21, 3, 21, 3, 22, 3, 22, 3, 22, 3, 23, 3, 23, 3, 23, 3, 24, 3, 24, 3,
-	24, 7, 24, 199, 10, 24, 12, 24, 14, 24, 202, 11, 24, 3, 24, 2, 3, 18, 25,
-	2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
-	40, 42, 44, 46, 2, 7, 3, 2, 23, 38, 3, 2, 21, 22, 3, 2, 59, 60, 4, 2, 48,
-	50, 56, 57, 3, 2, 17, 18, 2, 207, 2, 48, 3, 2, 2, 2, 4, 51, 3, 2, 2, 2,
-	6, 53, 3, 2, 2, 2, 8, 63, 3, 2, 2, 2, 10, 65, 3, 2, 2, 2, 12, 73, 3, 2,
-	2, 2, 14, 77, 3, 2, 2, 2, 16, 85, 3, 2, 2, 2, 18, 104, 3, 2, 2, 2, 20,
-	115, 3, 2, 2, 2, 22, 117, 3, 2, 2, 2, 24, 128, 3, 2, 2, 2, 26, 130, 3,
-	2, 2, 2, 28, 136, 3, 2, 2, 2, 30, 148, 3, 2, 2, 2, 32, 156, 3, 2, 2, 2,
-	34, 167, 3, 2, 2, 2, 36, 172, 3, 2, 2, 2, 38, 178, 3, 2, 2, 2, 40, 181,
-	3, 2, 2, 2, 42, 189, 3, 2, 2, 2, 44, 192, 3, 2, 2, 2, 46, 195, 3, 2, 2,
-	2, 48, 49, 5, 46, 24, 2, 49, 50, 7, 2, 2, 3, 50, 3, 3, 2, 2, 2, 51, 52,
-	9, 2, 2, 2, 52, 5, 3, 2, 2, 2, 53, 54, 5, 4, 3, 2, 54, 55, 7, 39, 2, 2,
-	55, 56, 7, 80, 2, 2, 56, 57, 7, 40, 2, 2, 57, 7, 3, 2, 2, 2, 58, 64, 7,
-	76, 2, 2, 59, 64, 7, 67, 2, 2, 60, 64, 7, 72, 2, 2, 61, 64, 7, 74, 2, 2,
-	62, 64, 7, 80, 2, 2, 63, 58, 3, 2, 2, 2, 63, 59, 3, 2, 2, 2, 63, 60, 3,
-	2, 2, 2, 63, 61, 3, 2, 2, 2, 63, 62, 3, 2, 2, 2, 64, 9, 3, 2, 2, 2, 65,
-	70, 7, 80, 2, 2, 66, 67, 7, 46, 2, 2, 67, 69, 7, 80, 2, 2, 68, 66, 3, 2,
-	2, 2, 69, 72, 3, 2, 2, 2, 70, 68, 3, 2, 2, 2, 70, 71, 3, 2, 2, 2, 71, 11,
-	3, 2, 2, 2, 72, 70, 3, 2, 2, 2, 73, 75, 7, 80, 2, 2, 74, 76, 9, 3, 2, 2,
-	75, 74, 3, 2, 2, 2, 75, 76, 3, 2, 2, 2, 76, 13, 3, 2, 2, 2, 77, 82, 5,
-	12, 7, 2, 78, 79, 7, 46, 2, 2, 79, 81, 5, 12, 7, 2, 80, 78, 3, 2, 2, 2,
-	81, 84, 3, 2, 2, 2, 82, 80, 3, 2, 2, 2, 82, 83, 3, 2, 2, 2, 83, 15, 3,
-	2, 2, 2, 84, 82, 3, 2, 2, 2, 85, 86, 7, 3, 2, 2, 86, 87, 7, 48, 2, 2, 87,
-	88, 7, 80, 2, 2, 88, 17, 3, 2, 2, 2, 89, 90, 8, 10, 1, 2, 90, 91, 7, 39,
-	2, 2, 91, 92, 5, 18, 10, 2, 92, 93, 7, 40, 2, 2, 93, 105, 3, 2, 2, 2, 94,
-	95, 5, 8, 5, 2, 95, 96, 5, 20, 11, 2, 96, 97, 5, 8, 5, 2, 97, 105, 3, 2,
-	2, 2, 98, 99, 7, 19, 2, 2, 99, 101, 7, 48, 2, 2, 100, 102, 9, 4, 2, 2,
-	101, 100, 3, 2, 2, 2, 101, 102, 3, 2, 2, 2, 102, 103, 3, 2, 2, 2, 103,
-	105, 7, 71, 2, 2, 104, 89, 3, 2, 2, 2, 104, 94, 3, 2, 2, 2, 104, 98, 3,
-	2, 2, 2, 105, 112, 3, 2, 2, 2, 106, 107, 12, 4, 2, 2, 107, 108, 5, 22,
-	12, 2, 108, 109, 5, 18, 10, 5, 109, 111, 3, 2, 2, 2, 110, 106, 3, 2, 2,
-	2, 111, 114, 3, 2, 2, 2, 112, 110, 3, 2, 2, 2, 112, 113, 3, 2, 2, 2, 113,
-	19, 3, 2, 2, 2, 114, 112, 3, 2, 2, 2, 115, 116, 9, 5, 2, 2, 116, 21, 3,
-	2, 2, 2, 117, 118, 9, 6, 2, 2, 118, 23, 3, 2, 2, 2, 119, 129, 5, 26, 14,
-	2, 120, 129, 5, 30, 16, 2, 121, 129, 5, 32, 17, 2, 122, 129, 5, 36, 19,
-	2, 123, 129, 5, 38, 20, 2, 124, 129, 5, 42, 22, 2, 125, 129, 5, 44, 23,
-	2, 126, 129, 5, 34, 18, 2, 127, 129, 5, 40, 21, 2, 128, 119, 3, 2, 2, 2,
-	128, 120, 3, 2, 2, 2, 128, 121, 3, 2, 2, 2, 128, 122, 3, 2, 2, 2, 128,
-	123, 3, 2, 2, 2, 128, 124, 3, 2, 2, 2, 128, 125, 3, 2, 2, 2, 128, 126,
-	3, 2, 2, 2, 128, 127, 3, 2, 2, 2, 129, 25, 3, 2, 2, 2, 130, 131, 7, 8,
-	2, 2, 131, 132, 5, 18, 10, 2, 132, 27, 3, 2, 2, 2, 133, 135, 5, 18, 10,
-	2, 134, 133, 3, 2, 2, 2, 135, 138, 3, 2, 2, 2, 136, 134, 3, 2, 2, 2, 136,
-	137, 3, 2, 2, 2, 137, 140, 3, 2, 2, 2, 138, 136, 3, 2, 2, 2, 139, 141,
-	5, 16, 9, 2, 140, 139, 3, 2, 2, 2, 140, 141, 3, 2, 2, 2, 141, 145, 3, 2,
-	2, 2, 142, 144, 5, 18, 10, 2, 143, 142, 3, 2, 2, 2, 144, 147, 3, 2, 2,
-	2, 145, 143, 3, 2, 2, 2, 145, 146, 3, 2, 2, 2, 146, 29, 3, 2, 2, 2, 147,
-	145, 3, 2, 2, 2, 148, 152, 7, 4, 2, 2, 149, 150, 7, 80, 2, 2, 150, 151,
-	7, 15, 2, 2, 151, 153, 7, 80, 2, 2, 152, 149, 3, 2, 2, 2, 153, 154, 3,
-	2, 2, 2, 154, 152, 3, 2, 2, 2, 154, 155, 3, 2, 2, 2, 155, 31, 3, 2, 2,
-	2, 156, 157, 7, 14, 2, 2, 157, 158, 5, 4, 3, 2, 158, 159, 7, 16, 2, 2,
-	159, 164, 7, 80, 2, 2, 160, 161, 7, 46, 2, 2, 161, 163, 7, 80, 2, 2, 162,
-	160, 3, 2, 2, 2, 163, 166, 3, 2, 2, 2, 164, 162, 3, 2, 2, 2, 164, 165,
-	3, 2, 2, 2, 165, 33, 3, 2, 2, 2, 166, 164, 3, 2, 2, 2, 167, 168, 7, 11,
-	2, 2, 168, 169, 7, 12, 2, 2, 169, 170, 7, 48, 2, 2, 170, 171, 7, 71, 2,
-	2, 171, 35, 3, 2, 2, 2, 172, 174, 7, 13, 2, 2, 173, 175, 9, 4, 2, 2, 174,
-	173, 3, 2, 2, 2, 174, 175, 3, 2, 2, 2, 175, 176, 3, 2, 2, 2, 176, 177,
-	5, 10, 6, 2, 177, 37, 3, 2, 2, 2, 178, 179, 7, 7, 2, 2, 179, 180, 5, 10,
-	6, 2, 180, 39, 3, 2, 2, 2, 181, 185, 7, 6, 2, 2, 182, 183, 7, 20, 2, 2,
-	183, 184, 7, 48, 2, 2, 184, 186, 7, 80, 2, 2, 185, 182, 3, 2, 2, 2, 185,
-	186, 3, 2, 2, 2, 186, 187, 3, 2, 2, 2, 187, 188, 7, 78, 2, 2, 188, 41,
-	3, 2, 2, 2, 189, 190, 7, 9, 2, 2, 190, 191, 5, 14, 8, 2, 191, 43, 3, 2,
-	2, 2, 192, 193, 7, 10, 2, 2, 193, 194, 7, 67, 2, 2, 194, 45, 3, 2, 2, 2,
-	195, 200, 5, 28, 15, 2, 196, 197, 7, 64, 2, 2, 197, 199, 5, 24, 13, 2,
-	198, 196, 3, 2, 2, 2, 199, 202, 3, 2, 2, 2, 200, 198, 3, 2, 2, 2, 200,
-	201, 3, 2, 2, 2, 201, 47, 3, 2, 2, 2, 202, 200, 3, 2, 2, 2, 18, 63, 70,
-	75, 82, 101, 104, 112, 128, 136, 140, 145, 154, 164, 174, 185, 200,
+	4, 24, 9, 24, 4, 25, 9, 25, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 4, 3, 4, 3,
+	4, 3, 4, 3, 4, 3, 5, 3, 5, 3, 5, 3, 5, 3, 5, 5, 5, 66, 10, 5, 3, 6, 3,
+	6, 3, 6, 7, 6, 71, 10, 6, 12, 6, 14, 6, 74, 11, 6, 3, 7, 3, 7, 5, 7, 78,
+	10, 7, 3, 8, 3, 8, 3, 8, 7, 8, 83, 10, 8, 12, 8, 14, 8, 86, 11, 8, 3, 9,
+	3, 9, 3, 9, 3, 9, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10,
+	3, 10, 3, 10, 3, 10, 3, 10, 5, 10, 104, 10, 10, 3, 10, 5, 10, 107, 10,
+	10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 3, 10, 7, 10, 117,
+	10, 10, 12, 10, 14, 10, 120, 11, 10, 3, 11, 3, 11, 3, 12, 3, 12, 3, 13,
+	5, 13, 127, 10, 13, 3, 13, 7, 13, 130, 10, 13, 12, 13, 14, 13, 133, 11,
+	13, 3, 14, 3, 14, 3, 14, 3, 14, 3, 14, 3, 14, 3, 14, 3, 14, 3, 14, 5, 14,
+	144, 10, 14, 3, 15, 3, 15, 3, 15, 3, 16, 7, 16, 150, 10, 16, 12, 16, 14,
+	16, 153, 11, 16, 3, 16, 5, 16, 156, 10, 16, 3, 16, 7, 16, 159, 10, 16,
+	12, 16, 14, 16, 162, 11, 16, 3, 17, 3, 17, 3, 17, 3, 17, 6, 17, 168, 10,
+	17, 13, 17, 14, 17, 169, 3, 18, 3, 18, 3, 18, 3, 18, 3, 18, 3, 18, 7, 18,
+	178, 10, 18, 12, 18, 14, 18, 181, 11, 18, 3, 19, 3, 19, 3, 19, 3, 19, 3,
+	19, 3, 20, 3, 20, 3, 20, 3, 21, 3, 21, 3, 21, 3, 22, 3, 22, 3, 22, 3, 22,
+	5, 22, 198, 10, 22, 3, 22, 3, 22, 3, 23, 3, 23, 3, 23, 3, 24, 3, 24, 3,
+	24, 3, 25, 3, 25, 3, 25, 7, 25, 211, 10, 25, 12, 25, 14, 25, 214, 11, 25,
+	3, 25, 2, 3, 18, 26, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28,
+	30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 2, 7, 3, 2, 23, 38, 3, 2, 21, 22,
+	3, 2, 59, 60, 4, 2, 48, 50, 56, 57, 3, 2, 17, 18, 2, 220, 2, 50, 3, 2,
+	2, 2, 4, 53, 3, 2, 2, 2, 6, 55, 3, 2, 2, 2, 8, 65, 3, 2, 2, 2, 10, 67,
+	3, 2, 2, 2, 12, 75, 3, 2, 2, 2, 14, 79, 3, 2, 2, 2, 16, 87, 3, 2, 2, 2,
+	18, 106, 3, 2, 2, 2, 20, 121, 3, 2, 2, 2, 22, 123, 3, 2, 2, 2, 24, 131,
+	3, 2, 2, 2, 26, 143, 3, 2, 2, 2, 28, 145, 3, 2, 2, 2, 30, 151, 3, 2, 2,
+	2, 32, 163, 3, 2, 2, 2, 34, 171, 3, 2, 2, 2, 36, 182, 3, 2, 2, 2, 38, 187,
+	3, 2, 2, 2, 40, 190, 3, 2, 2, 2, 42, 193, 3, 2, 2, 2, 44, 201, 3, 2, 2,
+	2, 46, 204, 3, 2, 2, 2, 48, 207, 3, 2, 2, 2, 50, 51, 5, 48, 25, 2, 51,
+	52, 7, 2, 2, 3, 52, 3, 3, 2, 2, 2, 53, 54, 9, 2, 2, 2, 54, 5, 3, 2, 2,
+	2, 55, 56, 5, 4, 3, 2, 56, 57, 7, 39, 2, 2, 57, 58, 7, 80, 2, 2, 58, 59,
+	7, 40, 2, 2, 59, 7, 3, 2, 2, 2, 60, 66, 7, 76, 2, 2, 61, 66, 7, 67, 2,
+	2, 62, 66, 7, 72, 2, 2, 63, 66, 7, 74, 2, 2, 64, 66, 7, 80, 2, 2, 65, 60,
+	3, 2, 2, 2, 65, 61, 3, 2, 2, 2, 65, 62, 3, 2, 2, 2, 65, 63, 3, 2, 2, 2,
+	65, 64, 3, 2, 2, 2, 66, 9, 3, 2, 2, 2, 67, 72, 7, 80, 2, 2, 68, 69, 7,
+	46, 2, 2, 69, 71, 7, 80, 2, 2, 70, 68, 3, 2, 2, 2, 71, 74, 3, 2, 2, 2,
+	72, 70, 3, 2, 2, 2, 72, 73, 3, 2, 2, 2, 73, 11, 3, 2, 2, 2, 74, 72, 3,
+	2, 2, 2, 75, 77, 7, 80, 2, 2, 76, 78, 9, 3, 2, 2, 77, 76, 3, 2, 2, 2, 77,
+	78, 3, 2, 2, 2, 78, 13, 3, 2, 2, 2, 79, 84, 5, 12, 7, 2, 80, 81, 7, 46,
+	2, 2, 81, 83, 5, 12, 7, 2, 82, 80, 3, 2, 2, 2, 83, 86, 3, 2, 2, 2, 84,
+	82, 3, 2, 2, 2, 84, 85, 3, 2, 2, 2, 85, 15, 3, 2, 2, 2, 86, 84, 3, 2, 2,
+	2, 87, 88, 7, 3, 2, 2, 88, 89, 7, 48, 2, 2, 89, 90, 7, 80, 2, 2, 90, 17,
+	3, 2, 2, 2, 91, 92, 8, 10, 1, 2, 92, 93, 7, 39, 2, 2, 93, 94, 5, 18, 10,
+	2, 94, 95, 7, 40, 2, 2, 95, 107, 3, 2, 2, 2, 96, 97, 5, 8, 5, 2, 97, 98,
+	5, 20, 11, 2, 98, 99, 5, 8, 5, 2, 99, 107, 3, 2, 2, 2, 100, 101, 7, 19,
+	2, 2, 101, 103, 7, 48, 2, 2, 102, 104, 9, 4, 2, 2, 103, 102, 3, 2, 2, 2,
+	103, 104, 3, 2, 2, 2, 104, 105, 3, 2, 2, 2, 105, 107, 7, 71, 2, 2, 106,
+	91, 3, 2, 2, 2, 106, 96, 3, 2, 2, 2, 106, 100, 3, 2, 2, 2, 107, 118, 3,
+	2, 2, 2, 108, 109, 12, 5, 2, 2, 109, 110, 5, 22, 12, 2, 110, 111, 5, 18,
+	10, 6, 111, 117, 3, 2, 2, 2, 112, 113, 12, 3, 2, 2, 113, 114, 7, 48, 2,
+	2, 114, 115, 7, 52, 2, 2, 115, 117, 5, 18, 10, 4, 116, 108, 3, 2, 2, 2,
+	116, 112, 3, 2, 2, 2, 117, 120, 3, 2, 2, 2, 118, 116, 3, 2, 2, 2, 118,
+	119, 3, 2, 2, 2, 119, 19, 3, 2, 2, 2, 120, 118, 3, 2, 2, 2, 121, 122, 9,
+	5, 2, 2, 122, 21, 3, 2, 2, 2, 123, 124, 9, 6, 2, 2, 124, 23, 3, 2, 2, 2,
+	125, 127, 9, 4, 2, 2, 126, 125, 3, 2, 2, 2, 126, 127, 3, 2, 2, 2, 127,
+	128, 3, 2, 2, 2, 128, 130, 7, 80, 2, 2, 129, 126, 3, 2, 2, 2, 130, 133,
+	3, 2, 2, 2, 131, 129, 3, 2, 2, 2, 131, 132, 3, 2, 2, 2, 132, 25, 3, 2,
+	2, 2, 133, 131, 3, 2, 2, 2, 134, 144, 5, 28, 15, 2, 135, 144, 5, 32, 17,
+	2, 136, 144, 5, 34, 18, 2, 137, 144, 5, 38, 20, 2, 138, 144, 5, 40, 21,
+	2, 139, 144, 5, 44, 23, 2, 140, 144, 5, 46, 24, 2, 141, 144, 5, 36, 19,
+	2, 142, 144, 5, 42, 22, 2, 143, 134, 3, 2, 2, 2, 143, 135, 3, 2, 2, 2,
+	143, 136, 3, 2, 2, 2, 143, 137, 3, 2, 2, 2, 143, 138, 3, 2, 2, 2, 143,
+	139, 3, 2, 2, 2, 143, 140, 3, 2, 2, 2, 143, 141, 3, 2, 2, 2, 143, 142,
+	3, 2, 2, 2, 144, 27, 3, 2, 2, 2, 145, 146, 7, 8, 2, 2, 146, 147, 5, 18,
+	10, 2, 147, 29, 3, 2, 2, 2, 148, 150, 5, 18, 10, 2, 149, 148, 3, 2, 2,
+	2, 150, 153, 3, 2, 2, 2, 151, 149, 3, 2, 2, 2, 151, 152, 3, 2, 2, 2, 152,
+	155, 3, 2, 2, 2, 153, 151, 3, 2, 2, 2, 154, 156, 5, 16, 9, 2, 155, 154,
+	3, 2, 2, 2, 155, 156, 3, 2, 2, 2, 156, 160, 3, 2, 2, 2, 157, 159, 5, 18,
+	10, 2, 158, 157, 3, 2, 2, 2, 159, 162, 3, 2, 2, 2, 160, 158, 3, 2, 2, 2,
+	160, 161, 3, 2, 2, 2, 161, 31, 3, 2, 2, 2, 162, 160, 3, 2, 2, 2, 163, 167,
+	7, 4, 2, 2, 164, 165, 7, 80, 2, 2, 165, 166, 7, 15, 2, 2, 166, 168, 7,
+	80, 2, 2, 167, 164, 3, 2, 2, 2, 168, 169, 3, 2, 2, 2, 169, 167, 3, 2, 2,
+	2, 169, 170, 3, 2, 2, 2, 170, 33, 3, 2, 2, 2, 171, 172, 7, 14, 2, 2, 172,
+	173, 5, 4, 3, 2, 173, 174, 7, 16, 2, 2, 174, 179, 7, 80, 2, 2, 175, 176,
+	7, 46, 2, 2, 176, 178, 7, 80, 2, 2, 177, 175, 3, 2, 2, 2, 178, 181, 3,
+	2, 2, 2, 179, 177, 3, 2, 2, 2, 179, 180, 3, 2, 2, 2, 180, 35, 3, 2, 2,
+	2, 181, 179, 3, 2, 2, 2, 182, 183, 7, 11, 2, 2, 183, 184, 7, 12, 2, 2,
+	184, 185, 7, 48, 2, 2, 185, 186, 7, 71, 2, 2, 186, 37, 3, 2, 2, 2, 187,
+	188, 7, 13, 2, 2, 188, 189, 5, 24, 13, 2, 189, 39, 3, 2, 2, 2, 190, 191,
+	7, 7, 2, 2, 191, 192, 5, 10, 6, 2, 192, 41, 3, 2, 2, 2, 193, 197, 7, 6,
+	2, 2, 194, 195, 7, 20, 2, 2, 195, 196, 7, 48, 2, 2, 196, 198, 7, 80, 2,
+	2, 197, 194, 3, 2, 2, 2, 197, 198, 3, 2, 2, 2, 198, 199, 3, 2, 2, 2, 199,
+	200, 7, 78, 2, 2, 200, 43, 3, 2, 2, 2, 201, 202, 7, 9, 2, 2, 202, 203,
+	5, 14, 8, 2, 203, 45, 3, 2, 2, 2, 204, 205, 7, 10, 2, 2, 205, 206, 7, 67,
+	2, 2, 206, 47, 3, 2, 2, 2, 207, 212, 5, 30, 16, 2, 208, 209, 7, 64, 2,
+	2, 209, 211, 5, 26, 14, 2, 210, 208, 3, 2, 2, 2, 211, 214, 3, 2, 2, 2,
+	212, 210, 3, 2, 2, 2, 212, 213, 3, 2, 2, 2, 213, 49, 3, 2, 2, 2, 214, 212,
+	3, 2, 2, 2, 20, 65, 72, 77, 84, 103, 106, 116, 118, 126, 131, 143, 151,
+	155, 160, 169, 179, 197, 212,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
@@ -133,10 +139,10 @@ var symbolicNames = []string{
 
 var ruleNames = []string{
 	"start", "agrupTypes", "agrupCall", "literal", "identifierList", "sort",
-	"sortList", "indexExpression", "expression", "comparator", "binary", "commands",
-	"whereCommand", "selectCommand", "renameCommand", "statCommand", "bucketCommand",
-	"fieldCommand", "dedupCommand", "rexCommand", "sortCommand", "topCommand",
-	"completeCommand",
+	"sortList", "indexExpression", "expression", "comparator", "binary", "fieldList",
+	"commands", "whereCommand", "selectCommand", "renameCommand", "statCommand",
+	"bucketCommand", "fieldCommand", "dedupCommand", "rexCommand", "sortCommand",
+	"topCommand", "completeCommand",
 }
 var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
 
@@ -263,18 +269,19 @@ const (
 	MqlParserRULE_expression      = 8
 	MqlParserRULE_comparator      = 9
 	MqlParserRULE_binary          = 10
-	MqlParserRULE_commands        = 11
-	MqlParserRULE_whereCommand    = 12
-	MqlParserRULE_selectCommand   = 13
-	MqlParserRULE_renameCommand   = 14
-	MqlParserRULE_statCommand     = 15
-	MqlParserRULE_bucketCommand   = 16
-	MqlParserRULE_fieldCommand    = 17
-	MqlParserRULE_dedupCommand    = 18
-	MqlParserRULE_rexCommand      = 19
-	MqlParserRULE_sortCommand     = 20
-	MqlParserRULE_topCommand      = 21
-	MqlParserRULE_completeCommand = 22
+	MqlParserRULE_fieldList       = 11
+	MqlParserRULE_commands        = 12
+	MqlParserRULE_whereCommand    = 13
+	MqlParserRULE_selectCommand   = 14
+	MqlParserRULE_renameCommand   = 15
+	MqlParserRULE_statCommand     = 16
+	MqlParserRULE_bucketCommand   = 17
+	MqlParserRULE_fieldCommand    = 18
+	MqlParserRULE_dedupCommand    = 19
+	MqlParserRULE_rexCommand      = 20
+	MqlParserRULE_sortCommand     = 21
+	MqlParserRULE_topCommand      = 22
+	MqlParserRULE_completeCommand = 23
 )
 
 // IStartContext is an interface to support dynamic dispatch.
@@ -371,11 +378,11 @@ func (p *MqlParser) Start() (localctx IStartContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(46)
+		p.SetState(48)
 		p.CompleteCommand()
 	}
 	{
-		p.SetState(47)
+		p.SetState(49)
 		p.Match(MqlParserEOF)
 	}
 
@@ -527,7 +534,7 @@ func (p *MqlParser) AgrupTypes() (localctx IAgrupTypesContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(49)
+		p.SetState(51)
 		_la = p.GetTokenStream().LA(1)
 
 		if !(((_la-21)&-(0x1f+1)) == 0 && ((1<<uint((_la-21)))&((1<<(MqlParserAVG-21))|(1<<(MqlParserCOUNT-21))|(1<<(MqlParserDISTINCT_COUNT-21))|(1<<(MqlParserESTDC-21))|(1<<(MqlParserESTDC_ERROR-21))|(1<<(MqlParserMAX-21))|(1<<(MqlParserMEDIAN-21))|(1<<(MqlParserMIN-21))|(1<<(MqlParserMODE-21))|(1<<(MqlParserRANGE-21))|(1<<(MqlParserSTDEV-21))|(1<<(MqlParserSTDEVP-21))|(1<<(MqlParserSUM-21))|(1<<(MqlParserSUMSQ-21))|(1<<(MqlParserVAR-21))|(1<<(MqlParserVARP-21)))) != 0) {
@@ -643,19 +650,19 @@ func (p *MqlParser) AgrupCall() (localctx IAgrupCallContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(51)
+		p.SetState(53)
 		p.AgrupTypes()
 	}
 	{
-		p.SetState(52)
+		p.SetState(54)
 		p.Match(MqlParserLPAREN)
 	}
 	{
-		p.SetState(53)
+		p.SetState(55)
 		p.Match(MqlParserIDENTIFIER)
 	}
 	{
-		p.SetState(54)
+		p.SetState(56)
 		p.Match(MqlParserRPAREN)
 	}
 
@@ -902,7 +909,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		}
 	}()
 
-	p.SetState(61)
+	p.SetState(63)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -910,7 +917,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		localctx = NewStringLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(56)
+			p.SetState(58)
 			p.Match(MqlParserSTRING_LITERAL)
 		}
 
@@ -918,7 +925,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		localctx = NewDecimalLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(57)
+			p.SetState(59)
 			p.Match(MqlParserDECIMAL_LITERAL)
 		}
 
@@ -926,7 +933,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		localctx = NewFloatLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(58)
+			p.SetState(60)
 			p.Match(MqlParserFLOAT_LITERAL)
 		}
 
@@ -934,7 +941,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		localctx = NewBoolLiteralContext(p, localctx)
 		p.EnterOuterAlt(localctx, 4)
 		{
-			p.SetState(59)
+			p.SetState(61)
 			p.Match(MqlParserBOOL_LITERAL)
 		}
 
@@ -942,7 +949,7 @@ func (p *MqlParser) Literal() (localctx ILiteralContext) {
 		localctx = NewIdentifierContext(p, localctx)
 		p.EnterOuterAlt(localctx, 5)
 		{
-			p.SetState(60)
+			p.SetState(62)
 			p.Match(MqlParserIDENTIFIER)
 		}
 
@@ -1050,24 +1057,24 @@ func (p *MqlParser) IdentifierList() (localctx IIdentifierListContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(63)
+		p.SetState(65)
 		p.Match(MqlParserIDENTIFIER)
 	}
-	p.SetState(68)
+	p.SetState(70)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == MqlParserCOMMA {
 		{
-			p.SetState(64)
+			p.SetState(66)
 			p.Match(MqlParserCOMMA)
 		}
 		{
-			p.SetState(65)
+			p.SetState(67)
 			p.Match(MqlParserIDENTIFIER)
 		}
 
-		p.SetState(70)
+		p.SetState(72)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -1190,19 +1197,19 @@ func (p *MqlParser) Sort() (localctx ISortContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(71)
+		p.SetState(73)
 
 		var _m = p.Match(MqlParserIDENTIFIER)
 
 		localctx.(*SortContext).field = _m
 	}
-	p.SetState(73)
+	p.SetState(75)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	if _la == MqlParserASC || _la == MqlParserDESC {
 		{
-			p.SetState(72)
+			p.SetState(74)
 
 			var _lt = p.GetTokenStream().LT(1)
 
@@ -1337,24 +1344,24 @@ func (p *MqlParser) SortList() (localctx ISortListContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(75)
+		p.SetState(77)
 		p.Sort()
 	}
-	p.SetState(80)
+	p.SetState(82)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == MqlParserCOMMA {
 		{
-			p.SetState(76)
+			p.SetState(78)
 			p.Match(MqlParserCOMMA)
 		}
 		{
-			p.SetState(77)
+			p.SetState(79)
 			p.Sort()
 		}
 
-		p.SetState(82)
+		p.SetState(84)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -1465,15 +1472,15 @@ func (p *MqlParser) IndexExpression() (localctx IIndexExpressionContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(83)
+		p.SetState(85)
 		p.Match(MqlParserINDEX)
 	}
 	{
-		p.SetState(84)
+		p.SetState(86)
 		p.Match(MqlParserASSIGN)
 	}
 	{
-		p.SetState(85)
+		p.SetState(87)
 
 		var _m = p.Match(MqlParserIDENTIFIER)
 
@@ -1659,6 +1666,82 @@ func (s *ParenExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
+type RegexExpressionContext struct {
+	*ExpressionContext
+	left  IExpressionContext
+	op    antlr.Token
+	right IExpressionContext
+}
+
+func NewRegexExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *RegexExpressionContext {
+	var p = new(RegexExpressionContext)
+
+	p.ExpressionContext = NewEmptyExpressionContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*ExpressionContext))
+
+	return p
+}
+
+func (s *RegexExpressionContext) GetOp() antlr.Token { return s.op }
+
+func (s *RegexExpressionContext) SetOp(v antlr.Token) { s.op = v }
+
+func (s *RegexExpressionContext) GetLeft() IExpressionContext { return s.left }
+
+func (s *RegexExpressionContext) GetRight() IExpressionContext { return s.right }
+
+func (s *RegexExpressionContext) SetLeft(v IExpressionContext) { s.left = v }
+
+func (s *RegexExpressionContext) SetRight(v IExpressionContext) { s.right = v }
+
+func (s *RegexExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *RegexExpressionContext) TILDE() antlr.TerminalNode {
+	return s.GetToken(MqlParserTILDE, 0)
+}
+
+func (s *RegexExpressionContext) AllExpression() []IExpressionContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IExpressionContext)(nil)).Elem())
+	var tst = make([]IExpressionContext, len(ts))
+
+	for i, t := range ts {
+		if t != nil {
+			tst[i] = t.(IExpressionContext)
+		}
+	}
+
+	return tst
+}
+
+func (s *RegexExpressionContext) Expression(i int) IExpressionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IExpressionContext)(nil)).Elem(), i)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpressionContext)
+}
+
+func (s *RegexExpressionContext) ASSIGN() antlr.TerminalNode {
+	return s.GetToken(MqlParserASSIGN, 0)
+}
+
+func (s *RegexExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(MqlParserListener); ok {
+		listenerT.EnterRegexExpression(s)
+	}
+}
+
+func (s *RegexExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(MqlParserListener); ok {
+		listenerT.ExitRegexExpression(s)
+	}
+}
+
 type ComparatorExpressionContext struct {
 	*ExpressionContext
 	left  ILiteralContext
@@ -1835,7 +1918,7 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(102)
+	p.SetState(104)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -1845,15 +1928,15 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 		_prevctx = localctx
 
 		{
-			p.SetState(88)
+			p.SetState(90)
 			p.Match(MqlParserLPAREN)
 		}
 		{
-			p.SetState(89)
+			p.SetState(91)
 			p.expression(0)
 		}
 		{
-			p.SetState(90)
+			p.SetState(92)
 			p.Match(MqlParserRPAREN)
 		}
 
@@ -1862,21 +1945,21 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(92)
+			p.SetState(94)
 
 			var _x = p.Literal()
 
 			localctx.(*ComparatorExpressionContext).left = _x
 		}
 		{
-			p.SetState(93)
+			p.SetState(95)
 
 			var _x = p.Comparator()
 
 			localctx.(*ComparatorExpressionContext).op = _x
 		}
 		{
-			p.SetState(94)
+			p.SetState(96)
 
 			var _x = p.Literal()
 
@@ -1888,26 +1971,26 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(96)
+			p.SetState(98)
 
 			var _m = p.Match(MqlParserEARLIER)
 
 			localctx.(*TimeExpressionContext).left = _m
 		}
 		{
-			p.SetState(97)
+			p.SetState(99)
 
 			var _m = p.Match(MqlParserASSIGN)
 
 			localctx.(*TimeExpressionContext).op = _m
 		}
-		p.SetState(99)
+		p.SetState(101)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
 		if _la == MqlParserADD || _la == MqlParserSUB {
 			{
-				p.SetState(98)
+				p.SetState(100)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -1927,7 +2010,7 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 
 		}
 		{
-			p.SetState(101)
+			p.SetState(103)
 			p.Match(MqlParserTIME_LITERAL)
 		}
 
@@ -1935,9 +2018,9 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(110)
+	p.SetState(116)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 6, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 7, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -1945,34 +2028,69 @@ func (p *MqlParser) expression(_p int) (localctx IExpressionContext) {
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			localctx = NewBinaryExpressionContext(p, NewExpressionContext(p, _parentctx, _parentState))
-			localctx.(*BinaryExpressionContext).left = _prevctx
+			p.SetState(114)
+			p.GetErrorHandler().Sync(p)
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 6, p.GetParserRuleContext()) {
+			case 1:
+				localctx = NewBinaryExpressionContext(p, NewExpressionContext(p, _parentctx, _parentState))
+				localctx.(*BinaryExpressionContext).left = _prevctx
 
-			p.PushNewRecursionContext(localctx, _startState, MqlParserRULE_expression)
-			p.SetState(104)
-
-			if !(p.Precpred(p.GetParserRuleContext(), 2)) {
-				panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 2)", ""))
-			}
-			{
-				p.SetState(105)
-
-				var _x = p.Binary()
-
-				localctx.(*BinaryExpressionContext).op = _x
-			}
-			{
+				p.PushNewRecursionContext(localctx, _startState, MqlParserRULE_expression)
 				p.SetState(106)
 
-				var _x = p.expression(3)
+				if !(p.Precpred(p.GetParserRuleContext(), 3)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 3)", ""))
+				}
+				{
+					p.SetState(107)
 
-				localctx.(*BinaryExpressionContext).right = _x
+					var _x = p.Binary()
+
+					localctx.(*BinaryExpressionContext).op = _x
+				}
+				{
+					p.SetState(108)
+
+					var _x = p.expression(4)
+
+					localctx.(*BinaryExpressionContext).right = _x
+				}
+
+			case 2:
+				localctx = NewRegexExpressionContext(p, NewExpressionContext(p, _parentctx, _parentState))
+				localctx.(*RegexExpressionContext).left = _prevctx
+
+				p.PushNewRecursionContext(localctx, _startState, MqlParserRULE_expression)
+				p.SetState(110)
+
+				if !(p.Precpred(p.GetParserRuleContext(), 1)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 1)", ""))
+				}
+				{
+					p.SetState(111)
+
+					var _m = p.Match(MqlParserASSIGN)
+
+					localctx.(*RegexExpressionContext).op = _m
+				}
+				{
+					p.SetState(112)
+					p.Match(MqlParserTILDE)
+				}
+				{
+					p.SetState(113)
+
+					var _x = p.expression(2)
+
+					localctx.(*RegexExpressionContext).right = _x
+				}
+
 			}
 
 		}
-		p.SetState(112)
+		p.SetState(118)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 6, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 7, p.GetParserRuleContext())
 	}
 
 	return localctx
@@ -2079,7 +2197,7 @@ func (p *MqlParser) Comparator() (localctx IComparatorContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(113)
+		p.SetState(119)
 		_la = p.GetTokenStream().LA(1)
 
 		if !(((_la-46)&-(0x1f+1)) == 0 && ((1<<uint((_la-46)))&((1<<(MqlParserASSIGN-46))|(1<<(MqlParserGT-46))|(1<<(MqlParserLT-46))|(1<<(MqlParserLE-46))|(1<<(MqlParserGE-46)))) != 0) {
@@ -2182,7 +2300,7 @@ func (p *MqlParser) Binary() (localctx IBinaryContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(115)
+		p.SetState(121)
 		_la = p.GetTokenStream().LA(1)
 
 		if !(_la == MqlParserAND || _la == MqlParserOR) {
@@ -2191,6 +2309,146 @@ func (p *MqlParser) Binary() (localctx IBinaryContext) {
 			p.GetErrorHandler().ReportMatch(p)
 			p.Consume()
 		}
+	}
+
+	return localctx
+}
+
+// IFieldListContext is an interface to support dynamic dispatch.
+type IFieldListContext interface {
+	antlr.ParserRuleContext
+
+	// GetParser returns the parser.
+	GetParser() antlr.Parser
+
+	// IsFieldListContext differentiates from other interfaces.
+	IsFieldListContext()
+}
+
+type FieldListContext struct {
+	*antlr.BaseParserRuleContext
+	parser antlr.Parser
+}
+
+func NewEmptyFieldListContext() *FieldListContext {
+	var p = new(FieldListContext)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
+	p.RuleIndex = MqlParserRULE_fieldList
+	return p
+}
+
+func (*FieldListContext) IsFieldListContext() {}
+
+func NewFieldListContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *FieldListContext {
+	var p = new(FieldListContext)
+
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
+
+	p.parser = parser
+	p.RuleIndex = MqlParserRULE_fieldList
+
+	return p
+}
+
+func (s *FieldListContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *FieldListContext) AllIDENTIFIER() []antlr.TerminalNode {
+	return s.GetTokens(MqlParserIDENTIFIER)
+}
+
+func (s *FieldListContext) IDENTIFIER(i int) antlr.TerminalNode {
+	return s.GetToken(MqlParserIDENTIFIER, i)
+}
+
+func (s *FieldListContext) AllADD() []antlr.TerminalNode {
+	return s.GetTokens(MqlParserADD)
+}
+
+func (s *FieldListContext) ADD(i int) antlr.TerminalNode {
+	return s.GetToken(MqlParserADD, i)
+}
+
+func (s *FieldListContext) AllSUB() []antlr.TerminalNode {
+	return s.GetTokens(MqlParserSUB)
+}
+
+func (s *FieldListContext) SUB(i int) antlr.TerminalNode {
+	return s.GetToken(MqlParserSUB, i)
+}
+
+func (s *FieldListContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *FieldListContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+func (s *FieldListContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(MqlParserListener); ok {
+		listenerT.EnterFieldList(s)
+	}
+}
+
+func (s *FieldListContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(MqlParserListener); ok {
+		listenerT.ExitFieldList(s)
+	}
+}
+
+func (p *MqlParser) FieldList() (localctx IFieldListContext) {
+	localctx = NewFieldListContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 22, MqlParserRULE_fieldList)
+	var _la int
+
+	defer func() {
+		p.ExitRule()
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
+	p.EnterOuterAlt(localctx, 1)
+	p.SetState(129)
+	p.GetErrorHandler().Sync(p)
+	_la = p.GetTokenStream().LA(1)
+
+	for ((_la-57)&-(0x1f+1)) == 0 && ((1<<uint((_la-57)))&((1<<(MqlParserADD-57))|(1<<(MqlParserSUB-57))|(1<<(MqlParserIDENTIFIER-57)))) != 0 {
+		p.SetState(124)
+		p.GetErrorHandler().Sync(p)
+		_la = p.GetTokenStream().LA(1)
+
+		if _la == MqlParserADD || _la == MqlParserSUB {
+			{
+				p.SetState(123)
+				_la = p.GetTokenStream().LA(1)
+
+				if !(_la == MqlParserADD || _la == MqlParserSUB) {
+					p.GetErrorHandler().RecoverInline(p)
+				} else {
+					p.GetErrorHandler().ReportMatch(p)
+					p.Consume()
+				}
+			}
+
+		}
+		{
+			p.SetState(126)
+			p.Match(MqlParserIDENTIFIER)
+		}
+
+		p.SetState(131)
+		p.GetErrorHandler().Sync(p)
+		_la = p.GetTokenStream().LA(1)
 	}
 
 	return localctx
@@ -2346,7 +2604,7 @@ func (s *CommandsContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) Commands() (localctx ICommandsContext) {
 	localctx = NewCommandsContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 22, MqlParserRULE_commands)
+	p.EnterRule(localctx, 24, MqlParserRULE_commands)
 
 	defer func() {
 		p.ExitRule()
@@ -2364,70 +2622,70 @@ func (p *MqlParser) Commands() (localctx ICommandsContext) {
 		}
 	}()
 
-	p.SetState(126)
+	p.SetState(141)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
 	case MqlParserWHERE:
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(117)
+			p.SetState(132)
 			p.WhereCommand()
 		}
 
 	case MqlParserRENAME:
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(118)
+			p.SetState(133)
 			p.RenameCommand()
 		}
 
 	case MqlParserSTATS:
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(119)
+			p.SetState(134)
 			p.StatCommand()
 		}
 
 	case MqlParserFIELDS:
 		p.EnterOuterAlt(localctx, 4)
 		{
-			p.SetState(120)
+			p.SetState(135)
 			p.FieldCommand()
 		}
 
 	case MqlParserDEDUP:
 		p.EnterOuterAlt(localctx, 5)
 		{
-			p.SetState(121)
+			p.SetState(136)
 			p.DedupCommand()
 		}
 
 	case MqlParserSORT:
 		p.EnterOuterAlt(localctx, 6)
 		{
-			p.SetState(122)
+			p.SetState(137)
 			p.SortCommand()
 		}
 
 	case MqlParserTOP:
 		p.EnterOuterAlt(localctx, 7)
 		{
-			p.SetState(123)
+			p.SetState(138)
 			p.TopCommand()
 		}
 
 	case MqlParserBUCKET:
 		p.EnterOuterAlt(localctx, 8)
 		{
-			p.SetState(124)
+			p.SetState(139)
 			p.BucketCommand()
 		}
 
 	case MqlParserREX:
 		p.EnterOuterAlt(localctx, 9)
 		{
-			p.SetState(125)
+			p.SetState(140)
 			p.RexCommand()
 		}
 
@@ -2512,7 +2770,7 @@ func (s *WhereCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) WhereCommand() (localctx IWhereCommandContext) {
 	localctx = NewWhereCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 24, MqlParserRULE_whereCommand)
+	p.EnterRule(localctx, 26, MqlParserRULE_whereCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -2532,11 +2790,11 @@ func (p *MqlParser) WhereCommand() (localctx IWhereCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(128)
+		p.SetState(143)
 		p.Match(MqlParserWHERE)
 	}
 	{
-		p.SetState(129)
+		p.SetState(144)
 		p.expression(0)
 	}
 
@@ -2647,7 +2905,7 @@ func (s *SelectCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 	localctx = NewSelectCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 26, MqlParserRULE_selectCommand)
+	p.EnterRule(localctx, 28, MqlParserRULE_selectCommand)
 	var _la int
 
 	defer func() {
@@ -2669,29 +2927,29 @@ func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(134)
+	p.SetState(149)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 8, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 11, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
 			{
-				p.SetState(131)
+				p.SetState(146)
 				p.expression(0)
 			}
 
 		}
-		p.SetState(136)
+		p.SetState(151)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 8, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 11, p.GetParserRuleContext())
 	}
-	p.SetState(138)
+	p.SetState(153)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	if _la == MqlParserINDEX {
 		{
-			p.SetState(137)
+			p.SetState(152)
 
 			var _x = p.IndexExpression()
 
@@ -2699,17 +2957,17 @@ func (p *MqlParser) SelectCommand() (localctx ISelectCommandContext) {
 		}
 
 	}
-	p.SetState(143)
+	p.SetState(158)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == MqlParserEARLIER || _la == MqlParserLPAREN || (((_la-65)&-(0x1f+1)) == 0 && ((1<<uint((_la-65)))&((1<<(MqlParserDECIMAL_LITERAL-65))|(1<<(MqlParserFLOAT_LITERAL-65))|(1<<(MqlParserBOOL_LITERAL-65))|(1<<(MqlParserSTRING_LITERAL-65))|(1<<(MqlParserIDENTIFIER-65)))) != 0) {
 		{
-			p.SetState(140)
+			p.SetState(155)
 			p.expression(0)
 		}
 
-		p.SetState(145)
+		p.SetState(160)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -2797,7 +3055,7 @@ func (s *RenameCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) RenameCommand() (localctx IRenameCommandContext) {
 	localctx = NewRenameCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 28, MqlParserRULE_renameCommand)
+	p.EnterRule(localctx, 30, MqlParserRULE_renameCommand)
 	var _la int
 
 	defer func() {
@@ -2818,28 +3076,28 @@ func (p *MqlParser) RenameCommand() (localctx IRenameCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(146)
+		p.SetState(161)
 		p.Match(MqlParserRENAME)
 	}
-	p.SetState(150)
+	p.SetState(165)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for ok := true; ok; ok = _la == MqlParserIDENTIFIER {
 		{
-			p.SetState(147)
+			p.SetState(162)
 			p.Match(MqlParserIDENTIFIER)
 		}
 		{
-			p.SetState(148)
+			p.SetState(163)
 			p.Match(MqlParserAS)
 		}
 		{
-			p.SetState(149)
+			p.SetState(164)
 			p.Match(MqlParserIDENTIFIER)
 		}
 
-		p.SetState(152)
+		p.SetState(167)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -2963,7 +3221,7 @@ func (s *StatCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 	localctx = NewStatCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 30, MqlParserRULE_statCommand)
+	p.EnterRule(localctx, 32, MqlParserRULE_statCommand)
 	var _la int
 
 	defer func() {
@@ -2984,42 +3242,42 @@ func (p *MqlParser) StatCommand() (localctx IStatCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(154)
+		p.SetState(169)
 		p.Match(MqlParserSTATS)
 	}
 	{
-		p.SetState(155)
+		p.SetState(170)
 
 		var _x = p.AgrupTypes()
 
 		localctx.(*StatCommandContext).f = _x
 	}
 	{
-		p.SetState(156)
+		p.SetState(171)
 		p.Match(MqlParserBY)
 	}
 	{
-		p.SetState(157)
+		p.SetState(172)
 
 		var _m = p.Match(MqlParserIDENTIFIER)
 
 		localctx.(*StatCommandContext).field = _m
 	}
-	p.SetState(162)
+	p.SetState(177)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == MqlParserCOMMA {
 		{
-			p.SetState(158)
+			p.SetState(173)
 			p.Match(MqlParserCOMMA)
 		}
 		{
-			p.SetState(159)
+			p.SetState(174)
 			p.Match(MqlParserIDENTIFIER)
 		}
 
-		p.SetState(164)
+		p.SetState(179)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -3114,7 +3372,7 @@ func (s *BucketCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) BucketCommand() (localctx IBucketCommandContext) {
 	localctx = NewBucketCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 32, MqlParserRULE_bucketCommand)
+	p.EnterRule(localctx, 34, MqlParserRULE_bucketCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -3134,19 +3392,19 @@ func (p *MqlParser) BucketCommand() (localctx IBucketCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(165)
+		p.SetState(180)
 		p.Match(MqlParserBUCKET)
 	}
 	{
-		p.SetState(166)
+		p.SetState(181)
 		p.Match(MqlParserSPAN)
 	}
 	{
-		p.SetState(167)
+		p.SetState(182)
 		p.Match(MqlParserASSIGN)
 	}
 	{
-		p.SetState(168)
+		p.SetState(183)
 
 		var _m = p.Match(MqlParserTIME_LITERAL)
 
@@ -3198,22 +3456,14 @@ func (s *FieldCommandContext) FIELDS() antlr.TerminalNode {
 	return s.GetToken(MqlParserFIELDS, 0)
 }
 
-func (s *FieldCommandContext) IdentifierList() IIdentifierListContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IIdentifierListContext)(nil)).Elem(), 0)
+func (s *FieldCommandContext) FieldList() IFieldListContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IFieldListContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IIdentifierListContext)
-}
-
-func (s *FieldCommandContext) ADD() antlr.TerminalNode {
-	return s.GetToken(MqlParserADD, 0)
-}
-
-func (s *FieldCommandContext) SUB() antlr.TerminalNode {
-	return s.GetToken(MqlParserSUB, 0)
+	return t.(IFieldListContext)
 }
 
 func (s *FieldCommandContext) GetRuleContext() antlr.RuleContext {
@@ -3238,8 +3488,7 @@ func (s *FieldCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) FieldCommand() (localctx IFieldCommandContext) {
 	localctx = NewFieldCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 34, MqlParserRULE_fieldCommand)
-	var _la int
+	p.EnterRule(localctx, 36, MqlParserRULE_fieldCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -3259,30 +3508,12 @@ func (p *MqlParser) FieldCommand() (localctx IFieldCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(170)
+		p.SetState(185)
 		p.Match(MqlParserFIELDS)
 	}
-	p.SetState(172)
-	p.GetErrorHandler().Sync(p)
-	_la = p.GetTokenStream().LA(1)
-
-	if _la == MqlParserADD || _la == MqlParserSUB {
-		{
-			p.SetState(171)
-			_la = p.GetTokenStream().LA(1)
-
-			if !(_la == MqlParserADD || _la == MqlParserSUB) {
-				p.GetErrorHandler().RecoverInline(p)
-			} else {
-				p.GetErrorHandler().ReportMatch(p)
-				p.Consume()
-			}
-		}
-
-	}
 	{
-		p.SetState(174)
-		p.IdentifierList()
+		p.SetState(186)
+		p.FieldList()
 	}
 
 	return localctx
@@ -3362,7 +3593,7 @@ func (s *DedupCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) DedupCommand() (localctx IDedupCommandContext) {
 	localctx = NewDedupCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 36, MqlParserRULE_dedupCommand)
+	p.EnterRule(localctx, 38, MqlParserRULE_dedupCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -3382,11 +3613,11 @@ func (p *MqlParser) DedupCommand() (localctx IDedupCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(176)
+		p.SetState(188)
 		p.Match(MqlParserDEDUP)
 	}
 	{
-		p.SetState(177)
+		p.SetState(189)
 		p.IdentifierList()
 	}
 
@@ -3495,7 +3726,7 @@ func (s *RexCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) RexCommand() (localctx IRexCommandContext) {
 	localctx = NewRexCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 38, MqlParserRULE_rexCommand)
+	p.EnterRule(localctx, 40, MqlParserRULE_rexCommand)
 	var _la int
 
 	defer func() {
@@ -3516,24 +3747,24 @@ func (p *MqlParser) RexCommand() (localctx IRexCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(179)
+		p.SetState(191)
 		p.Match(MqlParserREX)
 	}
-	p.SetState(183)
+	p.SetState(195)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	if _la == MqlParserFIELD {
 		{
-			p.SetState(180)
+			p.SetState(192)
 			p.Match(MqlParserFIELD)
 		}
 		{
-			p.SetState(181)
+			p.SetState(193)
 			p.Match(MqlParserASSIGN)
 		}
 		{
-			p.SetState(182)
+			p.SetState(194)
 
 			var _m = p.Match(MqlParserIDENTIFIER)
 
@@ -3542,7 +3773,7 @@ func (p *MqlParser) RexCommand() (localctx IRexCommandContext) {
 
 	}
 	{
-		p.SetState(185)
+		p.SetState(197)
 
 		var _m = p.Match(MqlParserREGEX)
 
@@ -3637,7 +3868,7 @@ func (s *SortCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) SortCommand() (localctx ISortCommandContext) {
 	localctx = NewSortCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 40, MqlParserRULE_sortCommand)
+	p.EnterRule(localctx, 42, MqlParserRULE_sortCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -3657,11 +3888,11 @@ func (p *MqlParser) SortCommand() (localctx ISortCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(187)
+		p.SetState(199)
 		p.Match(MqlParserSORT)
 	}
 	{
-		p.SetState(188)
+		p.SetState(200)
 
 		var _x = p.SortList()
 
@@ -3750,7 +3981,7 @@ func (s *TopCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) TopCommand() (localctx ITopCommandContext) {
 	localctx = NewTopCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 42, MqlParserRULE_topCommand)
+	p.EnterRule(localctx, 44, MqlParserRULE_topCommand)
 
 	defer func() {
 		p.ExitRule()
@@ -3770,11 +4001,11 @@ func (p *MqlParser) TopCommand() (localctx ITopCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(190)
+		p.SetState(202)
 		p.Match(MqlParserTOP)
 	}
 	{
-		p.SetState(191)
+		p.SetState(203)
 
 		var _m = p.Match(MqlParserDECIMAL_LITERAL)
 
@@ -3885,7 +4116,7 @@ func (s *CompleteCommandContext) ExitRule(listener antlr.ParseTreeListener) {
 
 func (p *MqlParser) CompleteCommand() (localctx ICompleteCommandContext) {
 	localctx = NewCompleteCommandContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 44, MqlParserRULE_completeCommand)
+	p.EnterRule(localctx, 46, MqlParserRULE_completeCommand)
 	var _la int
 
 	defer func() {
@@ -3906,24 +4137,24 @@ func (p *MqlParser) CompleteCommand() (localctx ICompleteCommandContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(193)
+		p.SetState(205)
 		p.SelectCommand()
 	}
-	p.SetState(198)
+	p.SetState(210)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == MqlParserBITOR {
 		{
-			p.SetState(194)
+			p.SetState(206)
 			p.Match(MqlParserBITOR)
 		}
 		{
-			p.SetState(195)
+			p.SetState(207)
 			p.Commands()
 		}
 
-		p.SetState(200)
+		p.SetState(212)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -3948,7 +4179,10 @@ func (p *MqlParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int
 func (p *MqlParser) Expression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 0:
-		return p.Precpred(p.GetParserRuleContext(), 2)
+		return p.Precpred(p.GetParserRuleContext(), 3)
+
+	case 1:
+		return p.Precpred(p.GetParserRuleContext(), 1)
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(predIndex))

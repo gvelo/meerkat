@@ -14,7 +14,6 @@
 package logical
 
 // Si le pongo el nombre projection el ide explota  ¯\_(ツ)_/¯
-
 type Order struct {
 	Direction string
 	Field     string
@@ -22,26 +21,33 @@ type Order struct {
 
 // a logical projection.
 type Projection struct {
-	IndexName string   // index to search
-	Fields    []string // fields names to show
-	Limit     int      // limit the results
+	Indexes []string // indexes to search
+	Index   string   // index selected
+
+	Fields []string
+
+	Limit int // limit the results
 
 	Order []*Order // order
-
-	parent   Node
-	children []Node
 
 	RexField *RexField // field created by regex
 	Span     Expression
 }
 
-func NewProjection(name string) *Projection {
+func NewProjection() *Projection {
 	s := &Projection{
-		IndexName: name,
+		Indexes: make([]string, 0),
+		Index:   "",
+		Fields:  make([]string, 0),
 	}
 	return s
 }
 
-func (p *Projection) ResultString() string {
+func (p *Projection) String() string {
 	return "projection"
+}
+
+func (p *Projection) AddIndex(idx string) error {
+	p.Indexes = append(p.Indexes, idx)
+	return nil
 }

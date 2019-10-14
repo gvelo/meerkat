@@ -35,7 +35,7 @@ func TestSnappyEncoder_Encode(t *testing.T) {
 		c.Add(fmt.Sprintf("String numero %d", i))
 	}
 
-	s := enc.Encode(c)
+	s, _ := enc.Encode(c)
 
 	sum := 0
 	for i := 0; i < len(s); i++ {
@@ -66,7 +66,7 @@ func TestRLEIntegerEncoder_Encode(t *testing.T) {
 
 	mp := NewMiddlewarePayload("/tmp/", c)
 	enc := NewRLEEncoder(mp)
-	s := enc.Encode(c)
+	s, _ := enc.Encode(c)
 
 	assert.NotNil(s)
 	assert.Equal(10, len(s))
@@ -103,8 +103,9 @@ func TestNewDictionaryEncoder(t *testing.T) {
 	mp := NewMiddlewarePayload("/tmp/", c)
 	mp.Cardinality = len(dict)
 	e := NewDictionaryEncoder(mp)
-	pages := e.Encode(c)
+	pages, err := e.Encode(c)
 
+	assert.Nil(err)
 	assert.NotNil(pages)
 	assert.Equal(10, len(pages))
 

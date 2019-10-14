@@ -18,7 +18,6 @@ package logical
 
 import (
 	"fmt"
-	"meerkat/internal/schema"
 )
 
 type Operator int
@@ -49,7 +48,7 @@ type RootFilter struct {
 	RootFilter *Filter
 }
 
-func (f *RootFilter) ResultString() string {
+func (f *RootFilter) String() string {
 	return fmt.Sprintf("RF")
 }
 
@@ -66,7 +65,7 @@ type Filter struct {
 	Group bool
 }
 
-func (f *Filter) ResultString() string {
+func (f *Filter) String() string {
 	return fmt.Sprintf("Filter op %s", f.Op)
 }
 
@@ -83,7 +82,7 @@ func NewFilter(l Node, operator Operator, r Node) *Filter {
 }
 
 type Expression interface {
-	ResultString() string
+	Node
 	Type() ExpType
 	Value() string
 }
@@ -108,21 +107,6 @@ func (f *Exp) Type() ExpType {
 	return f.expType
 }
 
-func (f *Exp) ResultString() string {
+func (f *Exp) String() string {
 	return fmt.Sprintf("Expression %s value %s", f.expType, f.value)
-}
-
-type IdentifierExp struct {
-	Exp
-	Field *schema.Field
-}
-
-func NewIdentifier(t ExpType, v string, f *schema.Field) *IdentifierExp {
-	return &IdentifierExp{
-		Exp: Exp{
-			expType: t,
-			value:   v,
-		},
-		Field: f,
-	}
 }

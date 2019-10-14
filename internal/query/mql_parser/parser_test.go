@@ -19,6 +19,7 @@ import (
 	"meerkat/internal/query/logical"
 	"meerkat/internal/schema"
 	"testing"
+	"time"
 )
 
 func TestParseQuery(t *testing.T) {
@@ -28,9 +29,32 @@ func TestParseQuery(t *testing.T) {
 
 	s := schema.NewMockSchema(ctrl)
 
+	// TODO(sebad): rebuild schema mock.
 	s.EXPECT().
-		FieldByName(gomock.Any()).
-		Return(schema.Field{}, nil).Times(3)
+		FieldsInIndexByName(gomock.Any()).
+		Return([]schema.IndexInfo{
+			{
+				Id:             "1",
+				Name:           "coso",
+				Desc:           "coso",
+				Created:        time.Time{},
+				Updated:        time.Time{},
+				Fields:         nil,
+				PartitionAlloc: schema.PartitionAlloc{},
+			},
+		}, nil).Times(3)
+
+	s.EXPECT().
+		IndexByName(gomock.Any()).
+		Return(schema.IndexInfo{
+			Id:             "1",
+			Name:           "coso",
+			Desc:           "coso",
+			Created:        time.Time{},
+			Updated:        time.Time{},
+			Fields:         nil,
+			PartitionAlloc: schema.PartitionAlloc{},
+		}, nil).AnyTimes()
 
 	a := assert.New(t)
 
@@ -39,7 +63,7 @@ func TestParseQuery(t *testing.T) {
 	steps, _ := Parse(s, str)
 
 	p := steps[0].(*logical.Projection)
-	a.Equal("Index", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 
 	f := steps[1].(*logical.RootFilter).RootFilter
 
@@ -77,9 +101,32 @@ func TestParseQuery2(t *testing.T) {
 
 	s := schema.NewMockSchema(ctrl)
 
+	ii := schema.IndexInfo{
+		Id:      "1",
+		Name:    "Index",
+		Desc:    "coso",
+		Created: time.Time{},
+		Updated: time.Time{},
+		Fields: []schema.Field{{
+			Id:        "",
+			Name:      "campo1",
+			Desc:      "",
+			IndexId:   "",
+			FieldType: 0,
+			Nullable:  false,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}},
+		PartitionAlloc: schema.PartitionAlloc{},
+	}
+
 	s.EXPECT().
-		FieldByName(gomock.Any()).
-		Return(schema.Field{}, nil).Times(1)
+		FieldsInIndexByName(gomock.Any()).
+		Return([]schema.IndexInfo{ii}, nil).Times(1)
+
+	s.EXPECT().
+		IndexByName(gomock.Any()).
+		Return(ii, nil).Times(1)
 
 	a := assert.New(t)
 
@@ -88,9 +135,8 @@ func TestParseQuery2(t *testing.T) {
 	steps, _ := Parse(s, str)
 
 	p := steps[0].(*logical.Projection)
-	a.Equal("Index", p.IndexName)
 
-	a.Equal("Index", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 	a.Equal(10, p.Limit)
 
 	a.Equal(2, len(p.Order))
@@ -111,8 +157,8 @@ func TestParseQuery3(t *testing.T) {
 	s := schema.NewMockSchema(ctrl)
 
 	s.EXPECT().
-		FieldByName(gomock.Any()).
-		Return(schema.Field{}, nil).AnyTimes()
+		FieldsInIndexByName(gomock.Any()).
+		Return(make([]schema.IndexInfo, 0), nil).AnyTimes()
 
 	a := assert.New(t)
 
@@ -120,7 +166,7 @@ func TestParseQuery3(t *testing.T) {
 
 	steps, _ := Parse(s, str)
 	p := steps[0].(*logical.Projection)
-	a.Equal("_ALL", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 
 	f := steps[1].(*logical.RootFilter).RootFilter
 	a.NotNil(f)
@@ -130,7 +176,7 @@ func TestParseQuery3(t *testing.T) {
 	steps, _ = Parse(s, str)
 	p = steps[0].(*logical.Projection)
 
-	a.Equal("_ALL", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 	a.NotNil(f)
 
 }
@@ -142,18 +188,50 @@ func TestParseQuery4(t *testing.T) {
 
 	s := schema.NewMockSchema(ctrl)
 
+	ii := schema.IndexInfo{
+		Id:      "1",
+		Name:    "Index",
+		Desc:    "coso",
+		Created: time.Time{},
+		Updated: time.Time{},
+		Fields: []schema.Field{{
+			Id:        "",
+			Name:      "service",
+			Desc:      "",
+			IndexId:   "",
+			FieldType: 0,
+			Nullable:  false,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}, {
+			Id:        "",
+			Name:      "hbm",
+			Desc:      "",
+			IndexId:   "",
+			FieldType: 0,
+			Nullable:  false,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}},
+		PartitionAlloc: schema.PartitionAlloc{},
+	}
+
 	s.EXPECT().
-		FieldByName(gomock.Any()).
-		Return(schema.Field{}, nil).AnyTimes()
+		FieldsInIndexByName(gomock.Any()).
+		Return([]schema.IndexInfo{ii}, nil).Times(2)
+
+	s.EXPECT().
+		IndexByName(gomock.Any()).
+		Return(ii, nil).Times(1)
 
 	a := assert.New(t)
 
-	str := "earlier=-1h index=access service=hbm | bucket span=1m | stats count by _id, status"
+	str := "earlier=-1h index=Index service=hbm | bucket span=1m | stats count by _id, status"
 
 	steps, _ := Parse(s, str)
 	p := steps[0].(*logical.Projection)
 	// pojection
-	a.Equal("access", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 
 	// Filter
 	a.NotNil(steps[1].(*logical.RootFilter))
@@ -171,8 +249,8 @@ func TestParseQuery5(t *testing.T) {
 	s := schema.NewMockSchema(ctrl)
 
 	s.EXPECT().
-		FieldByName(gomock.Any()).
-		Return(schema.Field{}, nil).AnyTimes()
+		FieldsInIndexByName(gomock.Any()).
+		Return(make([]schema.IndexInfo, 0), nil).AnyTimes()
 
 	a := assert.New(t)
 
@@ -182,9 +260,116 @@ func TestParseQuery5(t *testing.T) {
 	p := steps[0].(*logical.Projection)
 
 	// pojection
-	a.Equal("_ALL", p.IndexName)
+	a.Equal(0, len(p.Indexes))
 
 	// Filter
 	a.NotNil(steps[1].(*logical.RootFilter).RootFilter)
+
+}
+
+func TestParseQuery6(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		IndexByName(gomock.Any()).
+		Return(schema.IndexInfo{
+			Id:      "ii",
+			Name:    "ii",
+			Desc:    "index ii",
+			Created: time.Time{},
+			Updated: time.Time{},
+			Fields: []schema.Field{{
+				Id:        "",
+				Name:      "campo1",
+				Desc:      "",
+				IndexId:   "",
+				FieldType: 0,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			}, {
+				Id:        "",
+				Name:      "campo2",
+				Desc:      "",
+				IndexId:   "",
+				FieldType: 0,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			}, {
+				Id:        "",
+				Name:      "campo3",
+				Desc:      "",
+				IndexId:   "",
+				FieldType: 0,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			},
+			},
+			PartitionAlloc: schema.PartitionAlloc{},
+		}, nil).Times(0)
+
+	a := assert.New(t)
+
+	str := "earlier=-1d | fields -campo1 -campo2 "
+
+	_, err := Parse(s, str)
+	if err == nil {
+		a.Fail("Error not thrown")
+	}
+
+}
+
+func TestParseQuery7(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := schema.NewMockSchema(ctrl)
+
+	s.EXPECT().
+		IndexByName(gomock.Any()).
+		Return(schema.IndexInfo{
+			Id:      "ii",
+			Name:    "ii",
+			Desc:    "index ii",
+			Created: time.Time{},
+			Updated: time.Time{},
+			Fields: []schema.Field{{
+				Id:        "",
+				Name:      "campo2",
+				Desc:      "",
+				IndexId:   "",
+				FieldType: 0,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			}, {
+				Id:        "",
+				Name:      "campo3",
+				Desc:      "",
+				IndexId:   "",
+				FieldType: 0,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			},
+			},
+			PartitionAlloc: schema.PartitionAlloc{},
+		}, nil).Times(1)
+
+	a := assert.New(t)
+
+	str := "earlier=-1d index=ii | fields -campo1 -campo2 "
+
+	_, err := Parse(s, str)
+	if err != nil {
+		a.Fail("Error thrown")
+	}
 
 }

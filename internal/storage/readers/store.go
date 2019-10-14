@@ -55,7 +55,7 @@ func ReadColumn(path string, info *segment.FieldInfo) (*ondsk.OnDiskColumn, erro
 
 	fileType, _ := br.ReadHeader()
 
-	if fileType != io.RowStoreV1 {
+	if fileType != io.RowStoreV1 && fileType != io.PostingListV1 {
 		panic("invalid file type")
 	}
 

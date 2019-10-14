@@ -15,6 +15,7 @@ package logical
 
 // a logical projection.
 type RexField struct {
+	//TODO(sebad): how to detect the field this Rex uses?
 	Rex   string // regular expression
 	Field string // new field
 }
@@ -24,4 +25,8 @@ func NewRexField(field string, rex string) *RexField {
 		Rex:   field,
 		Field: rex,
 	}
+}
+
+func (p *RexField) String() string {
+	return "RexField"
 }

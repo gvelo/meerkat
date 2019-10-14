@@ -1,4 +1,4 @@
-// Code generated from /Users/sdominguez/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/sebad/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package mql_parser // MqlParser
 import "github.com/antlr/antlr4/runtime/Go/antlr"
@@ -104,6 +104,12 @@ func (s *BaseMqlParserListener) EnterParenExpression(ctx *ParenExpressionContext
 // ExitParenExpression is called when production parenExpression is exited.
 func (s *BaseMqlParserListener) ExitParenExpression(ctx *ParenExpressionContext) {}
 
+// EnterRegexExpression is called when production regexExpression is entered.
+func (s *BaseMqlParserListener) EnterRegexExpression(ctx *RegexExpressionContext) {}
+
+// ExitRegexExpression is called when production regexExpression is exited.
+func (s *BaseMqlParserListener) ExitRegexExpression(ctx *RegexExpressionContext) {}
+
 // EnterComparatorExpression is called when production comparatorExpression is entered.
 func (s *BaseMqlParserListener) EnterComparatorExpression(ctx *ComparatorExpressionContext) {}
 
@@ -127,6 +133,12 @@ func (s *BaseMqlParserListener) EnterBinary(ctx *BinaryContext) {}
 
 // ExitBinary is called when production binary is exited.
 func (s *BaseMqlParserListener) ExitBinary(ctx *BinaryContext) {}
+
+// EnterFieldList is called when production fieldList is entered.
+func (s *BaseMqlParserListener) EnterFieldList(ctx *FieldListContext) {}
+
+// ExitFieldList is called when production fieldList is exited.
+func (s *BaseMqlParserListener) ExitFieldList(ctx *FieldListContext) {}
 
 // EnterCommands is called when production commands is entered.
 func (s *BaseMqlParserListener) EnterCommands(ctx *CommandsContext) {}

@@ -1,4 +1,4 @@
-// Code generated from /Users/sdominguez/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from /Users/sebad/desa/workspace_go/eventdb/internal/query/MqlParser.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package mql_parser // MqlParser
 import "github.com/antlr/antlr4/runtime/Go/antlr"
@@ -49,6 +49,9 @@ type MqlParserListener interface {
 	// EnterParenExpression is called when entering the parenExpression production.
 	EnterParenExpression(c *ParenExpressionContext)
 
+	// EnterRegexExpression is called when entering the regexExpression production.
+	EnterRegexExpression(c *RegexExpressionContext)
+
 	// EnterComparatorExpression is called when entering the comparatorExpression production.
 	EnterComparatorExpression(c *ComparatorExpressionContext)
 
@@ -60,6 +63,9 @@ type MqlParserListener interface {
 
 	// EnterBinary is called when entering the binary production.
 	EnterBinary(c *BinaryContext)
+
+	// EnterFieldList is called when entering the fieldList production.
+	EnterFieldList(c *FieldListContext)
 
 	// EnterCommands is called when entering the commands production.
 	EnterCommands(c *CommandsContext)
@@ -139,6 +145,9 @@ type MqlParserListener interface {
 	// ExitParenExpression is called when exiting the parenExpression production.
 	ExitParenExpression(c *ParenExpressionContext)
 
+	// ExitRegexExpression is called when exiting the regexExpression production.
+	ExitRegexExpression(c *RegexExpressionContext)
+
 	// ExitComparatorExpression is called when exiting the comparatorExpression production.
 	ExitComparatorExpression(c *ComparatorExpressionContext)
 
@@ -150,6 +159,9 @@ type MqlParserListener interface {
 
 	// ExitBinary is called when exiting the binary production.
 	ExitBinary(c *BinaryContext)
+
+	// ExitFieldList is called when exiting the fieldList production.
+	ExitFieldList(c *FieldListContext)
 
 	// ExitCommands is called when exiting the commands production.
 	ExitCommands(c *CommandsContext)
