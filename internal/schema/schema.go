@@ -14,12 +14,14 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/cluster"
+	"sort"
 	"sync"
 	"time"
 )
@@ -32,7 +34,23 @@ const (
 	indexMapName  = "index"
 	fieldsMapName = "fields"
 	pAllocMapName = "alloc"
+
+	TSFieldName = "_ts"
+	IDFieldName = "_id"
 )
+
+type OpType int
+
+const (
+	OpIndexCreate OpType = iota
+	OpIndexUpdate
+	OpIndexDelete
+)
+
+var internalFields = map[string]bool{
+	TSFieldName: true,
+	IDFieldName: true,
+}
 
 type IndexInfo struct {
 	Id             string         `json:"id"`
@@ -40,21 +58,36 @@ type IndexInfo struct {
 	Desc           string         `json:"desc"`
 	Created        time.Time      `json:"created"`
 	Updated        time.Time      `json:"updated"`
-	Fields         []Field        `json:"fields"`
+	Fields         []Field        `json:"fields"` // TODO(gvelo): remove the array and keep fields info indexed on maps.
 	PartitionAlloc PartitionAlloc `json:"partitionAlloc"`
 	fieldsByID     map[string]Field
+	fieldsByName   map[string]Field
 }
 
-// TODO(gvelo): this is quite confusing. we should move this mapping
-//              to a new field by index cache.
 func (ii *IndexInfo) addField(f Field) {
 	ii.fieldsByID[f.Id] = f
+	ii.fieldsByName[f.Name] = f
 	ii.Fields = ii.fields()
 }
 
 func (ii *IndexInfo) removeField(id string) {
-	delete(ii.fieldsByID, id)
-	ii.Fields = ii.fields()
+	field, found := ii.fieldsByID[id]
+	if found {
+		delete(ii.fieldsByID, id)
+		delete(ii.fieldsByName, field.Name)
+		ii.Fields = ii.fields()
+	}
+}
+
+func (ii *IndexInfo) FieldByName(name string) (Field, error) {
+
+	field, ok := ii.fieldsByName[name]
+
+	if !ok {
+		return Field{}, &NotFoundError{Err: fmt.Sprintf("field with name %v cannot be found", name)}
+	}
+
+	return field, nil
 }
 
 func (ii *IndexInfo) fields() []Field {
@@ -67,17 +100,22 @@ func (ii *IndexInfo) fields() []Field {
 	return fields
 }
 
+//TODO(gvelo): remove this method and use custom json serialization.
 func (ii *IndexInfo) init() {
 	ii.fieldsByID = make(map[string]Field)
+	ii.fieldsByName = make(map[string]Field)
 	for _, f := range ii.Fields {
 		ii.fieldsByID[f.Id] = f
+		ii.fieldsByName[f.Name] = f
 	}
 }
 
+//TODO(gvelo): reflection.deepCopy()
 func (ii IndexInfo) copy() IndexInfo {
 	f := make([]Field, len(ii.Fields))
 	copy(f, ii.Fields)
 	ii.Fields = f
+	ii.init()
 	return ii
 }
 
@@ -90,6 +128,7 @@ func (ii *IndexInfo) validate() error {
 		}
 	}
 
+	// TODO(gvelo) move this validation to the new json custom unmarshall.
 	fieldsByName := make(map[string]Field)
 
 	for _, field := range ii.Fields {
@@ -117,6 +156,35 @@ func (ii *IndexInfo) validate() error {
 
 }
 
+func (ii *IndexInfo) addInternalFields(now time.Time) {
+
+	ts := Field{
+		Id:        TSFieldName,
+		Name:      TSFieldName,
+		Desc:      "TS Field",
+		IndexId:   ii.Id,
+		FieldType: FieldType_TIMESTAMP,
+		Nullable:  false,
+		Created:   now,
+		Updated:   now,
+	}
+
+	id := Field{
+		Id:        IDFieldName,
+		Name:      IDFieldName,
+		Desc:      "id",
+		IndexId:   ii.Id,
+		FieldType: FieldType_UUID,
+		Nullable:  false,
+		Created:   now,
+		Updated:   now,
+	}
+
+	ii.addField(ts)
+	ii.addField(id)
+
+}
+
 func (f *Field) validate() error {
 
 	if f.Name == "" {
@@ -130,7 +198,34 @@ func (f *Field) validate() error {
 
 }
 
+func (ft FieldType) MarshalJSON() ([]byte, error) {
+	v := FieldType_name[int32(ft)]
+	return json.Marshal(v)
+}
+
+func (ft *FieldType) UnmarshalJSON(b []byte) error {
+
+	var s string
+
+	err := json.Unmarshal(b, &s)
+
+	if err != nil {
+		return err
+	}
+
+	v, found := FieldType_value[s]
+
+	if !found {
+		return fmt.Errorf("invalid FieldType value [%v]", s)
+	}
+
+	*ft = FieldType(v)
+
+	return nil
+}
+
 func (p *PartitionAlloc) validate() error {
+	// TODO: validate partition allocation.
 	return nil
 }
 
@@ -154,6 +249,7 @@ func (e *NotFoundError) Error() string {
 type Schema interface {
 	AllIndex() []IndexInfo
 	Index(id string) (IndexInfo, error)
+	IndexByName(name string) (IndexInfo, error)
 	CreateIndex(index IndexInfo) (IndexInfo, error)
 	UpdateIndex(index IndexInfo) (IndexInfo, error)
 	DeleteIndex(id string) error
@@ -167,19 +263,28 @@ type Schema interface {
 	Alloc(id string) (PartitionAlloc, error)
 	UpdateAlloc(id string, parAlloc PartitionAlloc) error
 
+	AddEventHandler(id string, h chan IndexUpdateEvent)
+	RemoveEventHandler(id string)
+
 	Shutdown()
 }
 
+type IndexUpdateEvent struct {
+	OpType    OpType
+	IndexInfo IndexInfo
+}
+
 type schema struct {
-	catalog     cluster.Catalog
-	indexCache  map[string]IndexInfo
-	fieldCache  map[string]Field
-	pAllocCache map[string]PartitionAlloc
-	indexByName map[string]IndexInfo
-	log         zerolog.Logger
-	catalogCh   chan []cluster.Entry
-	mu          sync.Mutex
-	done        chan struct{}
+	catalog       cluster.Catalog
+	indexCache    map[string]IndexInfo
+	fieldCache    map[string]Field
+	pAllocCache   map[string]PartitionAlloc
+	indexByName   map[string]IndexInfo
+	log           zerolog.Logger
+	catalogCh     chan []cluster.Entry
+	mu            sync.Mutex
+	done          chan struct{}
+	eventHandlers map[string]chan IndexUpdateEvent
 }
 
 func (s *schema) AllIndex() []IndexInfo {
@@ -192,6 +297,7 @@ func (s *schema) AllIndex() []IndexInfo {
 	i := 0
 
 	for _, index := range s.indexCache {
+		// TODO(gvelo) instead of copy-on-read use copy-on-write
 		indexes[i] = index.copy()
 		i++
 	}
@@ -214,8 +320,24 @@ func (s *schema) Index(id string) (IndexInfo, error) {
 	return indexInfo.copy(), nil
 }
 
+func (s *schema) IndexByName(name string) (IndexInfo, error) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	indexInfo, ok := s.indexByName[name]
+
+	if !ok {
+		return IndexInfo{}, &NotFoundError{Err: fmt.Sprintf("index %v cannot be found", name)}
+	}
+
+	return indexInfo.copy(), nil
+}
+
 func (s *schema) CreateIndex(indexInfo IndexInfo) (IndexInfo, error) {
 
+	// TODO(gvelo): storing more entries than the catalog emit channel capacity will
+	//  deadlock since the gorutine that read from catalog use the same lock.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -256,6 +378,7 @@ func (s *schema) CreateIndex(indexInfo IndexInfo) (IndexInfo, error) {
 				Field: "id",
 			}
 		}
+		// TODO(gvelo) could we use a binary representation of the UUID ? ( []byte ?)
 		f.Id = uuid.New().String()
 		f.IndexId = indexInfo.Id
 		f.Created = now
@@ -263,13 +386,21 @@ func (s *schema) CreateIndex(indexInfo IndexInfo) (IndexInfo, error) {
 		indexInfo.Fields[i] = f
 	}
 
-	entries, err := createEntries(indexInfo, now)
+	// add internal fields
+	indexInfo.init()
+	indexInfo.addInternalFields(now)
 
-	s.catalog.SetAll(entries)
+	entries, err := createEntries(indexInfo, now)
 
 	s.addToCache(indexInfo)
 
-	return indexInfo.copy(), nil
+	indexInfo = indexInfo.copy()
+
+	s.emitEvent(IndexUpdateEvent{OpIndexCreate, indexInfo})
+
+	s.catalog.SetAll(entries)
+
+	return indexInfo, nil
 
 }
 
@@ -312,13 +443,14 @@ func (s *schema) UpdateIndex(index IndexInfo) (IndexInfo, error) {
 
 	if indexInfo.PartitionAlloc.NumOfPartitions != index.PartitionAlloc.NumOfPartitions {
 		return IndexInfo{}, &ValidationError{
-			Err:   fmt.Sprintf("NumOfPartitions cannot be updated", index.Name),
+			Err:   "NumOfPartitions cannot be updated",
 			Field: "PartitionAlloc.NumOfPartitions",
 		}
 	}
 
 	index.init()
 
+	// TODO(gvelo) validate internal fields
 	// delete fields
 	now := time.Now()
 
@@ -370,8 +502,6 @@ func (s *schema) UpdateIndex(index IndexInfo) (IndexInfo, error) {
 
 	entries = append(entries, delEntries...)
 
-	s.catalog.SetAll(entries)
-
 	for _, f := range fieldsToRemove {
 		delete(s.fieldCache, f.Id)
 	}
@@ -380,7 +510,13 @@ func (s *schema) UpdateIndex(index IndexInfo) (IndexInfo, error) {
 	delete(s.indexByName, indexInfo.Name)
 	s.addToCache(index)
 
-	return index.copy(), nil
+	index = index.copy()
+
+	s.emitEvent(IndexUpdateEvent{OpIndexUpdate, index})
+
+	s.catalog.SetAll(entries)
+
+	return index, nil
 }
 
 func (s *schema) DeleteIndex(id string) error {
@@ -414,14 +550,16 @@ func (s *schema) DeleteIndex(id string) error {
 		entries[i].Deleted = true
 	}
 
-	s.catalog.SetAll(entries)
-
 	delete(s.indexCache, indexInfo.Id)
 	delete(s.indexByName, indexInfo.Name)
 
 	for _, f := range indexInfo.Fields {
 		delete(s.fieldCache, f.Id)
 	}
+
+	s.emitEvent(IndexUpdateEvent{OpIndexDelete, indexInfo.copy()})
+
+	s.catalog.SetAll(entries)
 
 	return nil
 
@@ -608,10 +746,13 @@ func (s *schema) UpdateField(field Field) error {
 		Time:    field.Updated,
 	}
 
-	s.catalog.Set(fieldEntry)
-
 	s.fieldCache[field.Id] = field
 	s.indexCache[i.Id] = i
+
+	s.emitEvent(IndexUpdateEvent{OpIndexUpdate, i})
+
+	s.catalog.Set(fieldEntry)
+
 	return nil
 
 }
@@ -641,6 +782,8 @@ func (s *schema) DeleteField(id string) error {
 
 	i.removeField(id)
 
+	//TODO(gvelo):use createEntries()
+
 	fieldBytes, err := proto.Marshal(&f)
 
 	if err != nil {
@@ -655,9 +798,12 @@ func (s *schema) DeleteField(id string) error {
 		Deleted: true,
 	}
 
+	delete(s.fieldCache, f.Id)
+
+	s.emitEvent(IndexUpdateEvent{OpIndexUpdate, i.copy()})
+
 	s.catalog.Set(fieldEntry)
 
-	delete(s.fieldCache, f.Id)
 	return nil
 
 }
@@ -691,6 +837,8 @@ func (s *schema) CreateFields(id string, field Field) (Field, error) {
 		return Field{}, err
 	}
 
+	// TODO:(gvelo): use createEntries() ?
+
 	fieldBytes, err := proto.Marshal(&field)
 
 	if err != nil {
@@ -704,11 +852,13 @@ func (s *schema) CreateFields(id string, field Field) (Field, error) {
 		Value:   fieldBytes,
 	}
 
-	s.catalog.Set(entry)
-
 	s.fieldCache[field.Id] = field
 	s.indexCache[i.Id] = i
 	s.indexByName[i.Name] = i
+
+	s.emitEvent(IndexUpdateEvent{OpIndexUpdate, i})
+
+	s.catalog.Set(entry)
 
 	return field, nil
 }
@@ -760,6 +910,8 @@ func (s *schema) UpdateAlloc(id string, pAlloc PartitionAlloc) error {
 
 	pAlloc.Updated = now
 
+	// TODO(gvelo): move to createEntry()
+
 	pAllocBytes, err := proto.Marshal(&pAlloc)
 
 	if err != nil {
@@ -773,8 +925,12 @@ func (s *schema) UpdateAlloc(id string, pAlloc PartitionAlloc) error {
 		Time:    now,
 	}
 
-	s.catalog.Set(entry)
 	index.PartitionAlloc = pAlloc
+	s.indexCache[index.Id] = index
+
+	s.emitEvent(IndexUpdateEvent{OpIndexUpdate, index.copy()})
+
+	s.catalog.Set(entry)
 
 	return nil
 
@@ -783,14 +939,15 @@ func (s *schema) UpdateAlloc(id string, pAlloc PartitionAlloc) error {
 func NewSchema(catalog cluster.Catalog) (Schema, error) {
 
 	s := &schema{
-		catalog:     catalog,
-		indexCache:  make(map[string]IndexInfo),
-		fieldCache:  make(map[string]Field),
-		pAllocCache: make(map[string]PartitionAlloc),
-		indexByName: make(map[string]IndexInfo),
-		log:         log.With().Str("component", "schema").Logger(),
-		catalogCh:   make(chan []cluster.Entry),
-		done:        make(chan struct{}),
+		catalog:       catalog,
+		indexCache:    make(map[string]IndexInfo),
+		fieldCache:    make(map[string]Field),
+		pAllocCache:   make(map[string]PartitionAlloc),
+		indexByName:   make(map[string]IndexInfo),
+		log:           log.With().Str("component", "schema").Logger(),
+		catalogCh:     make(chan []cluster.Entry, 1024),
+		done:          make(chan struct{}),
+		eventHandlers: make(map[string]chan IndexUpdateEvent),
 	}
 
 	catalog.AddEventHandler(eventHandlerID, s.catalogCh)
@@ -815,7 +972,7 @@ func (s *schema) Shutdown() {
 
 func (s *schema) load() error {
 
-	//TODO(gvelo): read from index and field buckets should be synchronized.
+	//TODO(gvelo): read from index and field buckets inside a transaction.
 
 	fieldsByIdx := make(map[string][]Field)
 
@@ -885,37 +1042,64 @@ func (s *schema) sync() {
 			s.log.Info().Msg("stopping schema synchronization")
 			return
 		case delta := <-s.catalogCh:
-			s.syncDelta(delta)
+			events := s.syncDelta(delta)
+			s.emitEvents(events)
 		}
 	}
 
 }
 
-func (s *schema) syncDelta(delta []cluster.Entry) {
+func (s *schema) syncDelta(delta []cluster.Entry) map[string]IndexUpdateEvent {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	events := make(map[string]IndexUpdateEvent)
+
 	// update all fields and Pallocs.
 	for _, e := range delta {
+
+		var index IndexInfo
+
 		switch e.MapName {
 		case fieldsMapName:
-			s.updateField(e)
+			index = s.updateField(e)
 		case pAllocMapName:
-			s.updatePAlloc(e)
+			index = s.updatePAlloc(e)
 		}
+
+		if index.Id != "" {
+			events[index.Id] = IndexUpdateEvent{
+				OpType:    OpIndexUpdate,
+				IndexInfo: index.copy(),
+			}
+		}
+
 	}
 
 	// update all index.
 	for _, e := range delta {
+
 		if e.MapName == indexMapName {
-			s.updateIndex(e)
+
+			index, op := s.updateIndex(e)
+
+			if index.Id != "" {
+				events[index.Id] = IndexUpdateEvent{
+					OpType:    op,
+					IndexInfo: index.copy(),
+				}
+			}
+
 		}
+
 	}
+
+	return events
 
 }
 
-func (s *schema) updateField(e cluster.Entry) {
+func (s *schema) updateField(e cluster.Entry) IndexInfo {
 
 	var field Field
 
@@ -926,25 +1110,53 @@ func (s *schema) updateField(e cluster.Entry) {
 	}
 
 	if e.Deleted {
+
 		delete(s.fieldCache, field.Id)
+
+		// index map and field map are eventually consistent
+		// so there is a chance of a missing index.
 		index, ok := s.indexCache[field.IndexId]
+
 		if ok {
+
+			_, ok := index.fieldsByID[field.Id]
+
+			// the field has been already removed.
+			if !ok {
+				return IndexInfo{}
+			}
+
 			index.removeField(field.Id)
 			s.indexCache[index.Id] = index
+			return index
 		}
-		return
+
+		return IndexInfo{}
 	}
 
 	s.fieldCache[field.Id] = field
+
 	index, ok := s.indexCache[field.IndexId]
+
 	if ok {
+
+		f, ok := index.fieldsByID[field.Id]
+
+		if ok && f.Updated.Equal(field.Updated) {
+			return IndexInfo{}
+		}
+
 		index.addField(field)
 		s.indexCache[index.Id] = index
+		return index
+
 	}
+
+	return IndexInfo{}
 
 }
 
-func (s *schema) updatePAlloc(e cluster.Entry) {
+func (s *schema) updatePAlloc(e cluster.Entry) IndexInfo {
 
 	var pAlloc PartitionAlloc
 
@@ -954,17 +1166,28 @@ func (s *schema) updatePAlloc(e cluster.Entry) {
 		s.log.Panic().Err(err).Msg("Cannot unmarshal pAlloc value")
 	}
 
+	// TODO(gvelo): handle alloc delete properly.
+
 	s.pAllocCache[e.Key] = pAlloc
 
 	index, ok := s.indexCache[e.Key]
+
 	if ok {
+
+		if index.PartitionAlloc.Updated.Equal(pAlloc.Updated) {
+			return IndexInfo{}
+		}
+
 		index.PartitionAlloc = pAlloc
 		s.indexCache[index.Id] = index
+		return index
 	}
+
+	return IndexInfo{}
 
 }
 
-func (s *schema) updateIndex(e cluster.Entry) {
+func (s *schema) updateIndex(e cluster.Entry) (IndexInfo, OpType) {
 
 	var index Index
 
@@ -974,11 +1197,18 @@ func (s *schema) updateIndex(e cluster.Entry) {
 		s.log.Panic().Err(err).Msg("cannot unmarshall index catalog entry")
 	}
 
-	// fields will be deleted on updateFields
 	if e.Deleted {
-		delete(s.indexCache, index.Id)
-		delete(s.indexByName, index.Name)
-		return
+
+		i, found := s.indexCache[index.Id]
+
+		if found {
+			delete(s.indexCache, index.Id)
+			delete(s.indexByName, index.Name)
+			return i, OpIndexDelete
+		}
+
+		return IndexInfo{}, -1
+
 	}
 
 	indexInfo := IndexInfo{
@@ -998,7 +1228,74 @@ func (s *schema) updateIndex(e cluster.Entry) {
 
 	indexInfo.init()
 
+	op := OpIndexCreate
+
+	if i, found := s.indexCache[indexInfo.Id]; found {
+
+		if i.Updated.Equal(index.Updated) {
+			return indexInfo, -1
+		}
+
+		op = OpIndexUpdate
+	}
+
 	s.indexCache[indexInfo.Id] = indexInfo
 	s.indexByName[indexInfo.Name] = indexInfo
+
+	return indexInfo, op
+
+}
+
+func (s *schema) AddEventHandler(id string, h chan IndexUpdateEvent) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.eventHandlers[id] = h
+
+}
+
+func (s *schema) RemoveEventHandler(id string) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.eventHandlers, id)
+
+}
+
+func (s *schema) emitEvent(event IndexUpdateEvent) {
+
+	for id, h := range s.eventHandlers {
+		select {
+		case h <- event:
+			s.log.Debug().Msgf("dispatching event to %v", id)
+		default:
+			s.log.Error().Msgf("dispatcher blocks on event handler channel [%v]", id)
+			h <- event
+		}
+	}
+
+}
+
+func (s *schema) emitEvents(events map[string]IndexUpdateEvent) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var sortedEvt []IndexUpdateEvent
+
+	for _, event := range events {
+		sortedEvt = append(sortedEvt, event)
+	}
+
+	// dispatch event in order (create/update/delete)
+	sort.Slice(sortedEvt, func(i, j int) bool {
+		return sortedEvt[i].OpType < sortedEvt[j].OpType
+	})
+
+	for _, se := range sortedEvt {
+		s.emitEvent(se)
+	}
 
 }

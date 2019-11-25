@@ -5,7 +5,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"meerkat/internal/intake"
 	"meerkat/internal/schema"
+	"meerkat/internal/segments"
 	"net/http"
 	"sync"
 )
@@ -16,6 +18,7 @@ type ApiServer struct {
 	server *http.Server
 	log    zerolog.Logger
 	mu     sync.Mutex
+	bReg   *segments.SegmentBufferRegistry
 }
 
 type ApiError struct {
@@ -30,11 +33,14 @@ const (
 	fieldIDParam = "fieldID"
 )
 
-func NewRest(schema schema.Schema) (*ApiServer, error) {
+func NewRest(schema schema.Schema, bReg *segments.SegmentBufferRegistry) (*ApiServer, error) {
 
 	// TODO(gvelo) set gin to production mode
 	server := &ApiServer{
 		router: gin.Default(),
+
+		schema: schema,
+		bReg:   bReg,
 		log:    log.With().Str("src", "rest-api").Logger(),
 	}
 
@@ -49,12 +55,12 @@ func NewRest(schema schema.Schema) (*ApiServer, error) {
 	server.router.GET("/index/:indexID/fields", server.getFields)
 	server.router.POST("/index/:indexID/fields", server.createFields)
 	server.router.POST("/index/:indexID/fields/:fieldID", server.updateField)
-	server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteIndex)
+	server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteField)
 
 	server.router.POST("/index/:indexID/alloc", server.updateAlloc)
 	server.router.GET("/index/:indexID/alloc", server.getAlloc)
 
-	server.schema = schema
+	server.router.POST("/index/:indexID/ingest", server.ingest)
 
 	return server, nil
 
@@ -138,7 +144,7 @@ func (s *ApiServer) updateIndex(c *gin.Context) {
 	id := c.Param(indexIDParam)
 	indexInfo := schema.IndexInfo{}
 
-	err := c.ShouldBindJSON(indexInfo)
+	err := c.ShouldBindJSON(&indexInfo)
 
 	if err != nil {
 		bindError("cannot update index", c, err)
@@ -255,6 +261,21 @@ func (s *ApiServer) updateField(c *gin.Context) {
 
 }
 
+func (s *ApiServer) deleteField(c *gin.Context) {
+
+	id := c.Param(fieldIDParam)
+
+	err := s.schema.DeleteField(id)
+
+	if err != nil {
+		appError("cannot delete field", c, err)
+		return
+	}
+
+	c.Status(http.StatusOK)
+
+}
+
 func (s *ApiServer) updateAlloc(c *gin.Context) {
 
 	indexID := c.Param(indexIDParam)
@@ -298,6 +319,57 @@ func (s *ApiServer) getAlloc(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, alloc)
+
+}
+
+func (s *ApiServer) ingest(c *gin.Context) {
+
+	indexID := c.Param(indexIDParam)
+
+	index, err := s.schema.Index(indexID)
+
+	if err != nil {
+
+		index, err = s.schema.IndexByName(indexID)
+
+		if err != nil {
+			appError("cannot ingest on index", c, err)
+			return
+		}
+
+	}
+
+	ingester := intake.NewIngester(index, c.Request.Body)
+
+	// TODO(gvelo) the ingester shoud return the parsing
+	//  errors plus the partition RCV status.
+	t, ingestErrors := ingester.IngestFromJSON()
+
+	// TODO(gvelo): move all this logic out of the rest api.
+	buff := s.bReg.Buffer(index.Id)
+
+	if buff == nil {
+		c.JSON(http.StatusNotFound, ApiError{
+			Code:      http.StatusNotFound,
+			Status:    "cannot ingest on index",
+			ErrorText: "index buffer not found",
+			Error:     nil,
+		})
+		return
+	}
+
+	ic := buff.IngestChan()
+
+	select {
+	case ic <- t:
+		// log ?
+	default:
+		s.log.Error().Str("indexID", indexID).Msg("ingest channel blocked")
+	}
+
+	c.JSON(http.StatusOK, ingestErrors)
+
+	return
 
 }
 
