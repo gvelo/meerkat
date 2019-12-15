@@ -2,9 +2,8 @@ module meerkat
 
 require (
 	github.com/RoaringBitmap/roaring v0.4.17
-	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
-	github.com/apache/arrow/go/arrow v0.0.0-20191014211426-40c971110247
+	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
