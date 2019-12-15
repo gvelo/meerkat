@@ -57,4 +57,5 @@ enum FieldType{
     INT       = 4;
     UINT      = 5;
     FLOAT     = 6;
+    UUID      = 7;
 }

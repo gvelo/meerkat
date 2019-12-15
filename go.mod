@@ -2,6 +2,7 @@ module meerkat
 
 require (
 	github.com/RoaringBitmap/roaring v0.4.17
+	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/apache/arrow/go/arrow v0.0.0-20191014211426-40c971110247
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
@@ -37,5 +38,3 @@ require (
 	google.golang.org/grpc v1.22.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
-
-go 1.13

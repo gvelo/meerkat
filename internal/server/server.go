@@ -24,10 +24,13 @@ import (
 	"meerkat/internal/query/plan"
 	"meerkat/internal/rest"
 	"meerkat/internal/schema"
+	"meerkat/internal/segments"
+	"meerkat/internal/storage"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Meerkat struct {
@@ -42,6 +45,8 @@ type Meerkat struct {
 	catalog      cluster.Catalog
 	Conf         config.Config
 	log          zerolog.Logger
+	segReg       *segments.SegmentBufferRegistry
+	writePool    *storage.SegmentWriterPool
 }
 
 func (m *Meerkat) Start(ctx context.Context) {
@@ -105,6 +110,14 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create schema")
 	}
 
+	m.writePool = storage.NewSegmentWriterPool(1024, 10)
+
+	// TODO(gvelo): use conf values.
+	sbf := segments.NewSegmentBufferFactory(1024, time.Second, m.writePool.InChan())
+
+	sbr := segments.NewSegmentBufferRegistry(m.schema, sbf)
+
+	m.apiServer, err = rest.NewRest(m.schema, sbr)
 	m.qm, err = plan.NewQueryManager(m.schema)
 
 	if err != nil {
