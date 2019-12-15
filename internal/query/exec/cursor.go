@@ -1,25 +1,43 @@
 package exec
 
+import (
+	"github.com/RoaringBitmap/roaring"
+	"github.com/apache/arrow/go/arrow/array"
+	"github.com/spf13/cast"
+)
+
 type Cursor interface {
 	Size() int
-	Data() []interface{}
-	Labels() []string
+	Bitmap() *roaring.Bitmap
+	Record() array.Record
 }
 
-type Int64Cursor struct {
-	data []int64
+type CursorImpl struct {
+	bitmap *roaring.Bitmap
+	record array.Record
 }
 
-func (c *Int64Cursor) Size() int {
-	return len(c.data)
+func (c *CursorImpl) Size() int64 {
+
+	if c.record != nil {
+		return c.record.NumRows()
+	}
+
+	if c.bitmap != nil {
+		i, err := cast.ToInt64E(c.bitmap.GetSizeInBytes())
+		if err != nil {
+			panic(err) // uff!
+		}
+		return i
+	}
+
+	return 0
 }
 
-func (c *Int64Cursor) Data() interface{} {
-	return c.data
+func (c *CursorImpl) Bitmap() *roaring.Bitmap {
+	return c.bitmap
 }
 
-type MultiFieldCursor interface {
-	Size() int
-	Cursors() []Cursor
-	FieldNames() []string
+func (c *CursorImpl) Record() array.Record {
+	return c.record
 }

@@ -3,6 +3,7 @@ module meerkat
 require (
 	github.com/RoaringBitmap/roaring v0.4.17
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
+	github.com/apache/arrow/go/arrow v0.0.0-20191014211426-40c971110247
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
@@ -21,6 +22,7 @@ require (
 	github.com/rs/zerolog v1.14.3
 	github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac // indirect
 	github.com/spenczar/fpc v0.0.0-20170401035850-1262d7d5cced
+	github.com/spf13/cast v1.3.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.4.0

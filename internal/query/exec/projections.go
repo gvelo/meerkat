@@ -14,28 +14,41 @@
 package exec
 
 import (
-	"meerkat/internal/schema"
+	"meerkat/internal/query/logical"
+	"time"
 )
 
 type Projection struct {
-	NodeImp
-	Fields []schema.Field
+	SingleNodeImpl
+	Fields []string
+	Limit  int
+	Span   time.Duration
 }
 
-func NewProjection(lp *schema.IndexInfo) *Projection {
+func NewProjection(lp *logical.Projection) (*Projection, error) {
 
-	return &Projection{
-		NodeImp: NodeImp{
-			parent:   nil,
-			children: make([]OpNode, 0),
-		},
-		Fields: make([]schema.Field, 0),
+	p := &Projection{
+		Fields: lp.Fields,
+		Limit:  lp.Limit,
 	}
 
+	if lp.Span != nil {
+		t, err := buildDuration(lp.Span.Value())
+		if err != nil {
+			return nil, err
+		}
+		p.Span = t
+	}
+
+	return p, nil
 }
 
-func (p *Projection) Execute(ctx Context) ([][]interface{}, error) {
-	panic("implement me")
+func buildDuration(sp string) (time.Duration, error) {
+	return time.ParseDuration("1m")
+}
+
+func (p *Projection) Execute(ctx Context) (Cursor, error) {
+	return p.child.Execute(ctx)
 }
 
 func (p *Projection) String() string {

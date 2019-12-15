@@ -13,15 +13,42 @@
 
 package exec
 
-import "meerkat/internal/schema"
+import (
+	"fmt"
+	"meerkat/internal/schema"
+	"time"
+)
 
 type Context interface {
+	fmt.Stringer
+	Schema() schema.Schema
+	SetSpan(sp time.Duration)
+	Span() time.Duration
 }
 
 type QryContext struct {
-	schema *schema.Schema
+	schema schema.Schema
+	span   time.Duration
 }
 
-func NewQueryContext() Context {
+func (ctx *QryContext) String() string {
+	return "QryContext"
+}
 
+func NewQueryContext(s schema.Schema) Context {
+	return &QryContext{
+		schema: s,
+	}
+}
+
+func (ctx *QryContext) Schema() schema.Schema {
+	return ctx.schema
+}
+
+func (ctx *QryContext) SetSpan(sp time.Duration) {
+	ctx.span = sp
+}
+
+func (ctx *QryContext) Span() time.Duration {
+	return ctx.span
 }

@@ -1,14 +1,14 @@
 package exec
 
 type Aggregation struct {
-	NodeImp
+	SingleNodeImpl
 }
 
 func NewAggregation() *Aggregation {
 	return &Aggregation{
-		NodeImp: NodeImp{
-			parent:   nil,
-			children: make([]OpNode, 0),
+		SingleNodeImpl: SingleNodeImpl{
+			parent: nil,
+			child:  nil,
 		},
 	}
 }

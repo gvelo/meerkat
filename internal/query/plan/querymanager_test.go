@@ -29,12 +29,12 @@ func Test_Query_Fields_bad_type(t *testing.T) {
 	s := schema.NewMockSchema(ctrl)
 
 	s.EXPECT().
-		FieldByName(gomock.Eq("f1")).
-		Return(schema.Field{}, &schema.NotFoundError{Err: "No se encontro el campo."})
+		FieldsInIndexByName(gomock.Eq("f1")).
+		Return(make([]schema.IndexInfo, 0), &schema.NotFoundError{Err: "No se encontro el campo."})
 
 	assert := assert.New(t)
 
-	qm, err := NewQueryManager(s)
+	qm, err := NewQueryManager(s, nil, nil, nil)
 	assert.NoError(err)
 
 	_, err = qm.Query("earlier=1d f1=\"campo1\" ")
@@ -49,33 +49,39 @@ func Test_Query_FieldsOk(t *testing.T) {
 
 	s := schema.NewMockSchema(ctrl)
 
-	s.EXPECT().
-		FieldByName(gomock.Eq("f1")).
-		Return(schema.Field{
-			Id:        "f1",
+	ii := schema.IndexInfo{
+		Id:      "1",
+		Name:    "Index",
+		Desc:    "coso",
+		Created: time.Time{},
+		Updated: time.Time{},
+		Fields: []schema.Field{{
+			Id:        "",
 			Name:      "f1",
-			Desc:      "f1",
-			IndexId:   "f1",
+			Desc:      "",
+			IndexId:   "",
 			FieldType: 0,
 			Nullable:  false,
 			Created:   time.Time{},
 			Updated:   time.Time{},
-		}, nil).Times(2)
+		}, {
+			Id:        "",
+			Name:      "f2",
+			Desc:      "",
+			IndexId:   "",
+			FieldType: 0,
+			Nullable:  false,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}},
+		PartitionAlloc: schema.PartitionAlloc{},
+	}
 
 	s.EXPECT().
-		FieldByName(gomock.Eq("f2")).
-		Return(schema.Field{
-			Id:        "f2",
-			Name:      "f2",
-			Desc:      "f2",
-			IndexId:   "f2",
-			FieldType: 0,
-			Nullable:  false,
-			Created:   time.Time{},
-			Updated:   time.Time{},
-		}, nil).Times(2)
+		FieldsInIndexByName(gomock.Any()).
+		Return([]schema.IndexInfo{ii}, nil).Times(4)
 
-	qm, err := NewQueryManager(s)
+	qm, err := NewQueryManager(s, nil, nil, nil)
 	assert.NoError(err)
 
 	_, err = qm.Query("earlier=1d f1=\"campo1\" f2=12 or f1=f2 ")

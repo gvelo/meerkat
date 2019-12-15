@@ -11,14 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plan
-
-import (
-	"meerkat/internal/query/logical"
-)
+package exec
 
 type Executor interface {
-	ExecuteQuery(t *logical.Projection) *ResultSet
+	ExecuteQuery(n ExNode) (*ResultSet, error)
 }
 
 type MeerkatExecutor struct {
@@ -28,9 +24,9 @@ func NewMeerkatExecutor() *MeerkatExecutor {
 	return &MeerkatExecutor{}
 }
 
-func (e *MeerkatExecutor) ExecuteQuery(t *logical.Projection) *ResultSet {
+func (e *MeerkatExecutor) ExecuteQuery(n ExNode) (*ResultSet, error) {
 
 	//e.exe(t.IndexScan.GetFilter())
 
-	return nil
+	return nil, nil
 }

@@ -1,24 +1,39 @@
 package exec
 
-import "meerkat/internal/query/logical"
+import (
+	"meerkat/internal/query/logical"
+)
 
 type Filter struct {
-	NodeImp
+	MultiNodeImpl
+	Op *logical.Filter
 }
 
-func NewFilter(f *logical.Exp) *Filter {
-
+func NewMFilter(op *logical.Filter) *Filter {
 	return &Filter{
-		NodeImp: NodeImp{
+		MultiNodeImpl: MultiNodeImpl{
 			parent:   nil,
-			children: make([]OpNode, 0),
+			children: make([]ExNode, 0),
 		},
+		Op: op,
 	}
 
 }
 
-func (p *Filter) Execute(ctx Context) ([][]interface{}, error) {
-	panic("implement me")
+func NewSFilter(op *logical.Filter) *Filter {
+	return &Filter{
+		MultiNodeImpl: MultiNodeImpl{
+			parent:   nil,
+			children: make([]ExNode, 0),
+		},
+		Op: op,
+	}
+
+}
+
+func (p *Filter) Execute(ctx Context) (Cursor, error) {
+
+	return nil, nil
 }
 
 func (p *Filter) String() string {
