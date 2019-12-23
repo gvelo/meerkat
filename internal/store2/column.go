@@ -45,23 +45,36 @@ type Column interface {
 	Dictionary() Dictionary
 }
 
+type Dictionary interface {
+	String(id int) string
+	Int(id int) ()
+}
+type Index interface {
+}
+
 type Page interface {
+	FirstRow() int
 	Type() PageType
 	Size() int // value count
 	Len() int  // byte len
 	Bytes() []byte
-	toValue ??
-	oneValue ??
-}
+	Read(p []byte) (n int, err error) //nuls ????
 
+	// bitmaps ??
+	// full ?
+	// nuls ??
+
+}
 type Iterator interface {
 	HasNext() bool
 	Next() Page
 }
 
 type Stats struct {
-	Len int
-	Size int
+	Len         int
+	Size        int
 	Cardinality int
-	Compresed
+	Compresed   int
+	Max         interface{}
+	Min         interface{}
 }
