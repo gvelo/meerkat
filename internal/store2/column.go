@@ -13,33 +13,6 @@
 
 package store2
 
-// Page Iteration
-// Las paginas de una columna se pueden iterar en un fullscan o filtradas por un bitmap posicional.
-// Los nulls se representan como bitmap posicional
-// agregar filtrado de nulls
-
-// Vectores
-// - Continuos sin Nulls ( no poseen nulls ) : se representan en forma continua sin nuls
-// - Continuos con Nulls : se representa como un array continuo mas un array de bools para validez
-// - Posicionales ( poseen nulls ) los nulls se representan como un bitmap posicional
-// - String son representados como vectores cuyo primer byte es el len.
-// - Vectores de paginas ??? procesamiento comprimido.
-
-// Ejemplo sum() posicional vs continuo
-//
-//
-//          +---------(+)-------+
-//          |                   |
-//          |                   |
-//   +------+-------+    +------+-------+
-//   |  pos | value |    |  pos | value |
-//   +------+-------+    +------+-------+
-//   |  132 |   10  |    |    0 |  112  |
-//   |  156 | 2334  |    |   15 |   23  |
-//   | 1234 |   11  |    |  132 |  345  |
-//   | 1344 |   12  |    | 1344 |  654  |
-//   +------+-------+    +------+-------+
-
 import (
 	"github.com/RoaringBitmap/roaring"
 	"time"
@@ -68,32 +41,56 @@ const (
 	Snappy
 )
 
-type PageType int
-
-const (
-	Plain PageType = iota
-	BitPack
-	Run
-)
-
 type Column interface {
 	Encoding() Encoding
 	Validity() *roaring.Bitmap
-	Scan() PageIterator
-	Page(rows *roaring.Bitmap) PageIterator
-	Index() Index
+	HasNulls() bool
 	Stats() *Stats
-	Dictionary() Dictionary
 }
 
-type Dictionary interface {
-	Get(id int) []byte
+type IntColumn interface {
+	Column
+	Dict() IntDict
+	Index() IntIndex
+	Read(pos []int) (IntVector, error)
 }
 
-type StringIndex interface {
-	Regex(s string) *roaring.Bitmap
-	Prefix(s string) *roaring.Bitmap
-	Search(s string) *roaring.Bitmap
+type ByteColumn interface {
+	Column
+	Dict() ByteArrayDict
+	Index() ByteArrayIndex
+	ReadEnc(pos []int) (IntVector, error)
+	Read(pos []int) (ByteArrayVector, error)
+	IteratorEnc() IntIterator
+	Iterator() ByteArrayIterator
+}
+
+type Iterator interface {
+	HasNext() bool
+}
+
+type IntIterator interface {
+	Iterator
+	Next() (IntVector, error)
+}
+
+type ByteArrayIterator interface {
+	Iterator
+	Next() (ByteArrayVector, error)
+}
+
+type IntDict interface {
+	DecodeInt(id int) (int, error)
+}
+
+type ByteArrayDict interface {
+	DecodeByteArray(i int) ([]byte, error)
+}
+
+type ByteArrayIndex interface {
+	Regex(s []byte) *roaring.Bitmap
+	Prefix(s []byte) *roaring.Bitmap
+	Search(s []byte) *roaring.Bitmap
 }
 
 type IntIndex interface {
@@ -106,26 +103,12 @@ type IntIndex interface {
 }
 
 type FloatIndex interface {
-	Eq(f float) *roaring.Bitmap
-	Ne(f float) *roaring.Bitmap
-	Gt(f float) *roaring.Bitmap
-	Ge(f float) *roaring.Bitmap
-	Lt(f float) *roaring.Bitmap
-	Le(f float) *roaring.Bitmap
-}
-
-type Page interface {
-	Row() int
-	Type() PageType
-	Size() int // value count
-	Len() int  // byte len
-	Bytes() []byte
-}
-
-type PageIterator interface {
-	HasNext() bool
-	Next() []Page
-	Next(p []Page)
+	Eq(f float64) *roaring.Bitmap
+	Ne(f float64) *roaring.Bitmap
+	Gt(f float64) *roaring.Bitmap
+	Ge(f float64) *roaring.Bitmap
+	Lt(f float64) *roaring.Bitmap
+	Le(f float64) *roaring.Bitmap
 }
 
 type Stats struct {
@@ -137,15 +120,20 @@ type Stats struct {
 	Min         interface{}
 }
 
-type Vec struct {
-	values []byte
-	pos    []int
+type Vector interface {
+	Len() int
+	HasNulls() bool
+	Pos() []int
+	ValuesAsBytes() []byte
+	PosAsBytes() []byte
 }
 
-func (v *Vec) AsInt() []int {
-
+type IntVector interface {
+	Vector
+	ValuesAsInt() []int
 }
 
-type Batch struct {
-	Vec []Vec
+type ByteArrayVector interface {
+	Vector
+	ValuesAsSlide() [][]byte
 }
