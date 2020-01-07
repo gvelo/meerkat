@@ -46,15 +46,16 @@ import (
 )
 
 type Segment interface {
-	Index() string
+	IndexName() string
+	IndexID() []byte
 	From() time.Time
 	To() time.Time
 	Rows() int
-	Cols() map[string]Column
+	Col(id []byte) Column
 }
 
 type SegmentRegistry interface {
-	Segment(indexId string, from *time.Time, to *time.Time) []Segment
+	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
 }
 
 type Encoding int
@@ -86,28 +87,41 @@ type Column interface {
 }
 
 type Dictionary interface {
-	String(id int) string
+	Get(id int) []byte
 }
 
 type StringIndex interface {
 	Regex(s string) *roaring.Bitmap
-	Gt(i int)
-	Lt()
-	Eq()
+	Prefix(s string) *roaring.Bitmap
+	Search(s string) *roaring.Bitmap
+}
+
+type IntIndex interface {
+	Eq(i int) *roaring.Bitmap
+	Ne(i int) *roaring.Bitmap
+	Gt(i int) *roaring.Bitmap
+	Ge(i int) *roaring.Bitmap
+	Lt(i int) *roaring.Bitmap
+	Le(i int) *roaring.Bitmap
+}
+
+type FloatIndex interface {
+	Eq(f float) *roaring.Bitmap
+	Ne(f float) *roaring.Bitmap
+	Gt(f float) *roaring.Bitmap
+	Ge(f float) *roaring.Bitmap
+	Lt(f float) *roaring.Bitmap
+	Le(f float) *roaring.Bitmap
 }
 
 type Page interface {
-	FirstRow() int
+	Row() int
 	Type() PageType
 	Size() int // value count
 	Len() int  // byte len
 	Bytes() []byte
-	Read(p []byte) (n int, err error) //nuls ????
-
-	// bitmaps ??
-	// full ?
-	// nuls ??
 }
+
 type PageIterator interface {
 	HasNext() bool
 	Next() []Page
