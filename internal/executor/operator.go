@@ -18,6 +18,15 @@ import (
 	"meerkat/internal/store2"
 )
 
+type Operation int
+
+const (
+	and Operation = iota
+	or
+	xor
+	eq
+)
+
 type Operator interface {
 	Init()
 	Close()
@@ -31,4 +40,43 @@ type BitmapOperator interface {
 type VectorOperator interface {
 	Operator
 	Next() store2.Vector
+}
+
+func NewBinaryBitmapOperator(op Operation, left BitmapOperator, right BitmapOperator) *BinaryBitmapOperator {
+	return &BinaryBitmapOperator{
+		op:    op,
+		left:  left,
+		right: right,
+	}
+}
+
+type BinaryBitmapOperator struct {
+	op    Operation
+	left  BitmapOperator
+	right BitmapOperator
+}
+
+func (op *BinaryBitmapOperator) Init() {
+	// do nothing for now
+}
+
+func (op *BinaryBitmapOperator) Close() {
+	// nothing to release here
+}
+
+func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
+
+	// parallelize
+	l := op.left.Next()
+	r := op.left.Next()
+
+	switch op.op {
+	case and:
+		return roaring.And(l, r)
+	case or:
+		return roaring.Or(l, r)
+	case xor:
+		return roaring.Xor(l, r)
+	}
+
 }
