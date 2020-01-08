@@ -1,4 +1,4 @@
-// Copyright 2019 The Meerkat Authors
+// Copyright 2020 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"meerkat/internal/store2"
 )
 
+// Operation represents an operation between two expressions
 type Operation int
 
 const (
@@ -27,21 +28,43 @@ const (
 	eq
 )
 
+// Operator represents an Operator of a physical plan execution.
+// Operators take one or more inputs and produce an output in the form
+// of vectors, bitmaps or some other type.
 type Operator interface {
+	// Init initializes the Operator acquiring the required resources.
+	// Init will call the init method on all it's input operators.
 	Init()
-	Close()
+
+	// Destroy the Operator releasing all the acquired resources.
+	// Destroy will cascade calling the Destroy method on all it's
+	// children operators.
+	Destroy()
 }
 
+// BitmapOperator is an Operator that produces bitmaps as output
 type BitmapOperator interface {
 	Operator
+
+	// Next returns the next result from this operator or nil
+	// if there is no more data to process.
+	// TODO(gvelo) should we destroy the operator automatically when
+	//  there is no more data ?
 	Next() *roaring.Bitmap
 }
 
+// BitmapOperator is an Operator that produces Vectors as output
 type VectorOperator interface {
 	Operator
+
+	// Next returns the next result from this operator or nil
+	// if there is no more data to process.
+	// TODO(gvelo) should we destroy the operator automatically when
+	//  there is no more data ?
 	Next() store2.Vector
 }
 
+// NewBinaryBitmapOperator creates a new bitmap binary operator.
 func NewBinaryBitmapOperator(op Operation, left BitmapOperator, right BitmapOperator) *BinaryBitmapOperator {
 	return &BinaryBitmapOperator{
 		op:    op,
@@ -50,6 +73,8 @@ func NewBinaryBitmapOperator(op Operation, left BitmapOperator, right BitmapOper
 	}
 }
 
+// BinaryBitmapOperator executes a binary operation between two bitmaps
+// and returns a new bitmap.
 type BinaryBitmapOperator struct {
 	op    Operation
 	left  BitmapOperator
@@ -57,11 +82,13 @@ type BinaryBitmapOperator struct {
 }
 
 func (op *BinaryBitmapOperator) Init() {
-	// do nothing for now
+	op.left.Init()
+	op.right.Init()
 }
 
-func (op *BinaryBitmapOperator) Close() {
-	// nothing to release here
+func (op *BinaryBitmapOperator) Destroy() {
+	op.left.Destroy()
+	op.right.Destroy()
 }
 
 func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
