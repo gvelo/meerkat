@@ -18,6 +18,10 @@ import (
 	"os"
 )
 
+const (
+	bufSize = 1024 * 1024
+)
+
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
@@ -31,7 +35,7 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	}
 	bw := &BinaryWriter{
 		file:   f,
-		writer: bufio.NewWriter(f),
+		writer: bufio.NewWriterSize(f, bufSize),
 		Offset: 0,
 	}
 	return bw, nil
