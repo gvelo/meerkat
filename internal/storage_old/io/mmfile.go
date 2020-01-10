@@ -1,4 +1,4 @@
-// Copyright 2020 The Meerkat Authors
+// Copyright 2019 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,9 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package io
 
-const (
-	MagicNumber = "MK"
-	Version     = 1
-)
+import "meerkat/internal/storage/io/mmap"
+
+type MMFile struct {
+	Bytes []byte
+}
+
+func MMap(path string) (*MMFile, error) {
+
+	b, err := mmap.Map(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &MMFile{
+		Bytes: b,
+	}, nil
+
+}
+
+func (f *MMFile) UnMap() error {
+	return mmap.UnMap(f.Bytes)
+}
+
+func (f *MMFile) NewBinaryReader() *BinaryReader {
+	return NewBinaryReader(f.Bytes)
+}

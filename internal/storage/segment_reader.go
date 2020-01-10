@@ -13,7 +13,4 @@
 
 package storage
 
-const (
-	MagicNumber = "MK"
-	Version     = 1
-)
+var errUnknFileType = errors.New("unknown file type")

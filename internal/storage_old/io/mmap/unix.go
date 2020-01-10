@@ -1,4 +1,4 @@
-// Copyright 2020 The Meerkat Authors
+// Copyright 2019 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,9 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+// +build darwin linux
 
-const (
-	MagicNumber = "MK"
-	Version     = 1
+package mmap
+
+import (
+	"os"
+	"syscall"
 )
+
+func mmap(f *os.File, size int64) ([]byte, error) {
+
+	b, err := syscall.Mmap(int(f.Fd()), 0, int(size), syscall.PROT_READ, syscall.MAP_SHARED)
+
+	// TODO add kernel advicing.
+
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+
+}
+
+func unmap(ref []byte) error {
+	return syscall.Munmap(ref)
+}

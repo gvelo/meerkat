@@ -1,4 +1,4 @@
-// Copyright 2020 The Meerkat Authors
+// Copyright 2019 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,9 +11,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package mmap
 
-const (
-	MagicNumber = "MK"
-	Version     = 1
+import (
+	"errors"
+	"os"
 )
+
+func Map(path string) ([]byte, error) {
+
+	f, err := os.Open(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+
+	fs, err := f.Stat()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if fs.Size() == 0 {
+		return nil, errors.New("trying to map an empty file")
+	}
+
+	return mmap(f, fs.Size())
+
+}
+
+func UnMap(ref []byte) error {
+	return unmap(ref)
+}
