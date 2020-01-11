@@ -25,60 +25,157 @@ import (
 
 const testSize = 1024 * 1024
 
-func Test_Binary(t *testing.T) {
+func Test(t *testing.T) {
 
-	fileName := path.Join(os.TempDir(), "binary_file_test")
-	defer os.Remove(fileName)
-
-	w, err := NewBinaryWriter(fileName)
-
-	if err != nil {
-		t.Error(err)
-		return
+	type TestCase struct {
+		name string
+		test BinaryStreamTest
 	}
 
-	values := make([][]byte, testSize)
+	testCases := []TestCase{
+		{
+			name: "testBytes",
+			test: &TestBytes{},
+		},
+		{
+			name: "testVarInt",
+			test: &TestVarInt{},
+		},
+	}
+
+	for _, testCase := range testCases {
+
+		t.Run(testCase.name, func(t *testing.T) {
+
+			fileName := path.Join(os.TempDir(), "binary_writer_test.bin")
+			defer os.Remove(fileName)
+
+			writer, err := NewBinaryWriter(fileName)
+
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			err = testCase.test.TestWrite(t, writer)
+
+			if err != nil {
+				return
+			}
+
+			err = writer.Close()
+
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			mf, err := MMap(fileName)
+
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			reader := mf.NewBinaryReader()
+
+			testCase.test.TestRead(t, reader)
+
+		})
+	}
+
+}
+
+type BinaryStreamTest interface {
+	TestWrite(t *testing.T, writer *BinaryWriter) error
+	TestRead(t *testing.T, reader *BinaryReader)
+}
+
+type TestBytes struct {
+	values [][]byte
+}
+
+func (tb *TestBytes) TestWrite(t *testing.T, w *BinaryWriter) error {
+
+	tb.values = make([][]byte, testSize)
 
 	for i := 0; i < testSize; i++ {
-		values[i] = randomBytes()
-		err := w.WriteBytes(values[i])
+		tb.values[i] = randomBytes()
+		err := w.WriteBytes(tb.values[i])
+		if err != nil {
+			t.Error(err)
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+func (tb *TestBytes) TestRead(t *testing.T, reader *BinaryReader) {
+
+	for i := 0; i < testSize; i++ {
+
+		b, err := reader.ReadBytes()
+
 		if err != nil {
 			t.Error(err)
 			return
 		}
+		if !assert.True(t, bytes.Equal(tb.values[i], b), "read bytes doesn't match") {
+			return
+		}
 	}
 
-	err = w.Close()
+	_, err := reader.ReadBytes()
 
-	if err != nil {
-		t.Error(err)
+	assert.Equal(t, err, io.ErrUnexpectedEOF, "")
+
+	return
+
+}
+
+type TestVarInt struct {
+	values []int
+}
+
+func (tv *TestVarInt) TestWrite(t *testing.T, w *BinaryWriter) error {
+
+	tv.values = make([]int, testSize)
+
+	for i := 0; i < testSize; i++ {
+		tv.values[i] = rand.Int()
+		err := w.WriteVarInt(tv.values[i])
+		if err != nil {
+			t.Error(err)
+			return err
+		}
 	}
 
-	mf, err := MMap(fileName)
+	return nil
 
-	if err != nil {
-		t.Error(err)
-		return
-	}
+}
 
-	r := mf.NewBinaryReader()
+func (tv *TestVarInt) TestRead(t *testing.T, reader *BinaryReader) {
 
 	for i := 0; i < testSize; i++ {
 
-		b, err := r.ReadBytes()
+		r, err := reader.ReadVarInt()
 
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		if !assert.True(t, bytes.Equal(values[i], b), "read bytes doesn't match") {
+		if !assert.Equal(t, tv.values[i], r, "read int doesn't match") {
 			return
 		}
 	}
 
-	_, err = r.ReadBytes()
+	_, err := reader.ReadVarInt()
 
-	assert.Equal(t, err, io.ErrUnexpectedEOF)
+	assert.Equal(t, err, io.ErrUnexpectedEOF, "")
+
+	return
 
 }
 
