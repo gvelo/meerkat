@@ -13,4 +13,6 @@
 
 package storage
 
+import "errors"
+
 var errUnknFileType = errors.New("unknown file type")

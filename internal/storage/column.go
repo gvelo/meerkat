@@ -115,7 +115,7 @@ type Stats struct {
 	Len         int
 	Size        int
 	Cardinality int
-	Compresed   int
+	Compressed  int
 	Max         interface{}
 	Min         interface{}
 }
@@ -136,4 +136,38 @@ type IntVector interface {
 type ByteArrayVector interface {
 	Vector
 	ValuesAsSlide() [][]byte
+}
+
+type intVector struct {
+	v []int
+}
+
+func NewIntVector(v []int) IntVector {
+	return &intVector{
+		v: v,
+	}
+}
+
+func (i *intVector) Len() int {
+	return len(i.v)
+}
+
+func (i *intVector) HasNulls() bool {
+	return false
+}
+
+func (i *intVector) Pos() []int {
+	return nil
+}
+
+func (i *intVector) ValuesAsBytes() []byte {
+	return nil
+}
+
+func (i *intVector) PosAsBytes() []byte {
+	return nil
+}
+
+func (i *intVector) ValuesAsInt() []int {
+	return i.v
 }

@@ -15,7 +15,7 @@ package executor
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/store2"
+	"meerkat/internal/storage"
 )
 
 // Operation represents an operation between two expressions
@@ -53,7 +53,7 @@ type BitmapOperator interface {
 	Next() *roaring.Bitmap
 }
 
-// BitmapOperator is an Operator that produces Vectors as output
+// VectorOperator is an Operator that produces Vector as output
 type VectorOperator interface {
 	Operator
 
@@ -61,7 +61,18 @@ type VectorOperator interface {
 	// if there is no more data to process.
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
-	Next() store2.Vector
+	Next() storage.Vector
+}
+
+// MultiVectorOperator is an Operator that produces a Vector array as output
+type MultiVectorOperator interface {
+	Operator
+
+	// Next returns the next result from this operator or nil
+	// if there is no more data to process.
+	// TODO(gvelo) should we destroy the operator automatically when
+	//  there is no more data ?
+	Next() []storage.Vector
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
@@ -105,5 +116,6 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 	case xor:
 		return roaring.Xor(l, r)
 	}
-
+	//TODO: What do we return in this case?
+	return nil
 }
