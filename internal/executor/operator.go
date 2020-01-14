@@ -119,3 +119,84 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 	//TODO: What do we return in this case?
 	return nil
 }
+
+// NewBinaryBitmapOperator creates a new bitmap binary operator.
+func NewIntIndexScanOperator(op Operation, value int, idx storage.IntIndex) BitmapOperator {
+	return &IntIndexScanOperator{
+		op:  op,
+		idx: idx,
+	}
+}
+
+// IndexScanOperator executes a binary operation between two bitmaps
+// and returns a new bitmap.
+type IntIndexScanOperator struct {
+	op  Operation
+	idx storage.Column
+}
+
+func (op *IntIndexScanOperator) Init() {
+
+}
+
+func (op *IntIndexScanOperator) Destroy() {
+
+}
+
+func (op *IntIndexScanOperator) Next() *roaring.Bitmap {
+
+	//TODO: What do we return in this case?
+	return nil
+}
+
+// NewColumnScanOperator creates a ColumnScanOperator
+func NewColumnScanOperator(p []int, c interface{}) MultiVectorOperator {
+	return &ColumnScanOperator{
+		p: p,
+		c: c,
+	}
+}
+
+//
+// ColumnScanOperator takes a array of positions and a condition
+// it scans a non indexed column, search for that condition in the positions
+// provided and returns 2 Vectors:
+//
+// 1 . position vector that meet the conditions
+// 2 . values that meet the conditions
+//
+// if the arrays of positions is empty it scan all
+//
+type ColumnScanOperator struct {
+	c interface{}
+}
+
+func (op *ColumnScanOperator) Init() {
+}
+
+func (op *ColumnScanOperator) Destroy() {
+}
+
+func (op *ColumnScanOperator) Next() []storage.Vector {
+
+	//TODO: What do we return in this case?
+	return nil
+}
+
+// ByteArrayScanOperator scans a non indexed column, search for the []pos
+// registers and returns the bitmap that meets that condition.
+//
+type ByteArrayScanOperator struct {
+	pos []int
+}
+
+func (op *ByteArrayScanOperator) Init() {
+}
+
+func (op *ByteArrayScanOperator) Destroy() {
+}
+
+func (op *ByteArrayScanOperator) Next() *roaring.Bitmap {
+	//TODO: What do we return in this case?
+	return nil
+}

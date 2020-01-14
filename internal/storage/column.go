@@ -53,6 +53,7 @@ type IntColumn interface {
 	Dict() IntDict
 	Index() IntIndex
 	Read(pos []int) (IntVector, error)
+	Iterator() IntIterator
 }
 
 type ByteColumn interface {
