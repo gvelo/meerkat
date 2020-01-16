@@ -90,6 +90,10 @@ func (b *IntBuffer) Bytes() []byte {
 	return CastToBytes(Int64SizeBytes, unsafe.Pointer(&b.buf))
 }
 
+func (b *IntBuffer) Int() []int {
+	return b.buf
+}
+
 func (b *IntBuffer) AppendInt(i int) {
 	b.buf = append(b.buf, i)
 }

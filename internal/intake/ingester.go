@@ -99,11 +99,13 @@ func (igt *ingester) IngestFromJSON() (*buffer.Table, []IngestError) {
 
 			if !ok {
 
+				// TODO(gvelo) user well-known fieldId
 				if f.Name == schema.TSFieldName {
 					row.AddCol(schema.TSFieldName, int(time.Now().UnixNano()))
 					continue
 				}
 
+				// TODO(gvelo) user well-known fieldId
 				if f.Name == schema.IDFieldName {
 					row.AddCol(schema.IDFieldName, uuid.New())
 					continue
