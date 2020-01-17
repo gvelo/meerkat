@@ -56,14 +56,29 @@ type IntColumn interface {
 	Iterator() IntIterator
 }
 
-type ByteColumn interface {
+type FloatColumn interface {
 	Column
-	Dict() ByteArrayDict
-	Index() ByteArrayIndex
-	ReadEnc(pos []int) (IntVector, error)
-	Read(pos []int) (ByteArrayVector, error)
-	IteratorEnc() IntIterator
-	Iterator() ByteArrayIterator
+	Dict() FloatDict
+	Index() FloatIndex
+	Read(pos []int) (FloatVector, error)
+	Iterator() FloatIterator
+}
+
+type ByteSliceColumn interface {
+	Column
+	Dict() ByteSliceDict
+	Index() ByteSliceIndex
+	ReadDictEnc(pos []int) (IntVector, error)
+	Read(pos []int) (ByteSliceVector, error)
+	DictEncodedIterator() IntIterator
+	Iterator() ByteSliceIterator
+}
+
+type TimeColumn interface {
+	Column
+	Index() TimeIndex
+	Read(pos []int) (IntVector, error)
+	Iterator() IntIterator
 }
 
 type Iterator interface {
@@ -75,20 +90,29 @@ type IntIterator interface {
 	Next() (IntVector, error)
 }
 
-type ByteArrayIterator interface {
+type FloatIterator interface {
 	Iterator
-	Next() (ByteArrayVector, error)
+	Next() (FloatVector, error)
+}
+
+type ByteSliceIterator interface {
+	Iterator
+	Next() (ByteSliceVector, error)
 }
 
 type IntDict interface {
 	DecodeInt(id int) (int, error)
 }
 
-type ByteArrayDict interface {
-	DecodeByteArray(i int) ([]byte, error)
+type FloatDict interface {
+	DecodeFloat(id int) (float64, error)
 }
 
-type ByteArrayIndex interface {
+type ByteSliceDict interface {
+	DecodeByteSlice(i int) ([]byte, error)
+}
+
+type ByteSliceIndex interface {
 	Regex(s []byte) *roaring.Bitmap
 	Prefix(s []byte) *roaring.Bitmap
 	Search(s []byte) *roaring.Bitmap
@@ -110,6 +134,11 @@ type FloatIndex interface {
 	Ge(f float64) *roaring.Bitmap
 	Lt(f float64) *roaring.Bitmap
 	Le(f float64) *roaring.Bitmap
+}
+
+type TimeIndex interface {
+	TimeRange(start int, end int) (startPos, endPos int)
+	TimeRangeAsBitmap(start int, end int) *roaring.Bitmap
 }
 
 type Stats struct {
@@ -134,7 +163,12 @@ type IntVector interface {
 	ValuesAsInt() []int
 }
 
-type ByteArrayVector interface {
+type FloatVector interface {
+	Vector
+	ValuesAsFloat() []float64
+}
+
+type ByteSliceVector interface {
 	Vector
 	ValuesAsSlide() [][]byte
 }
