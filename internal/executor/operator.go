@@ -26,6 +26,10 @@ const (
 	or
 	xor
 	eq
+	lt
+	let
+	gt
+	get
 )
 
 // Operator represents an Operator of a physical plan execution.
@@ -121,10 +125,10 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewIntIndexScanOperator(op Operation, value int, idx storage.IntIndex) BitmapOperator {
+func NewIntIndexScanOperator(op Operation, value int, col storage.Column) BitmapOperator {
 	return &IntIndexScanOperator{
 		op:  op,
-		idx: idx,
+		idx: col,
 	}
 }
 

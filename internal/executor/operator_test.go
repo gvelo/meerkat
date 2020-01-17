@@ -38,23 +38,42 @@ func (b BitmapIndexOperator) Next() *roaring.Bitmap {
 	panic("implement me")
 }
 
+// Select * From Index Where c1 = 12 and ts Between  F1 AND F2
+// C1, F1, F2 indexed
 func TestBinaryBitmapOperator(t *testing.T) {
 	a := assert.New(t)
+	var ts storage.IntColumn
+	var c1 storage.IntColumn
 
-	op := NewBinaryBitmapOperator(list, 5, true)
+	op1 := NewIntIndexScanOperator(lt, 1, ts) // ts > 1
+	op2 := NewIntIndexScanOperator(gt, 2, ts) // ts < 2
 
-	r := op.Next()
-	k := r[0].(storage.IntVector).ValuesAsInt()
-	v := r[1].(storage.IntVector).ValuesAsInt()
+	op3 := NewBinaryBitmapOperator(and, op1, op2) // ts > 1 AND ts < 2
+	op4 := NewIntIndexScanOperator(and, 12, c1)   // C1 == 12
 
-	a.Len(k, 5, "length is wrong ")
-	a.Len(v, 5, "length is wrong ")
+	op5 := NewBinaryBitmapOperator(gt, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
 
-	c := 10
-	for i := 0; i < len(k); i++ {
-		a.Equal(k[i], c)
-		a.Equal(v[i], c)
-		c++
-	}
+	op6 := NewReaderOperator(op5) // definir columna o mejor este tiene que saber que hacer en todos los campos
+	// op5 := Decompress
 
+}
+
+func NewReaderOperator(child BitmapOperator) *ReaderOperator {
+	return &ReaderOperator{child}
+}
+
+type ReaderOperator struct {
+	child BitmapOperator // (Positions to review)
+}
+
+func (r *ReaderOperator) Init() {
+
+}
+
+func (r *ReaderOperator) Destroy() {
+
+}
+
+func (r *ReaderOperator) Next() storage.Vector {
+	return nil
 }
