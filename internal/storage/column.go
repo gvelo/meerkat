@@ -52,7 +52,7 @@ type IntColumn interface {
 	Column
 	Dict() IntDict
 	Index() IntIndex
-	Read(pos []int) (IntVector, error)
+	Read(pos []uint32) (IntVector, error)
 	Iterator() IntIterator
 }
 
@@ -60,24 +60,31 @@ type FloatColumn interface {
 	Column
 	Dict() FloatDict
 	Index() FloatIndex
-	Read(pos []int) (FloatVector, error)
+	Read(pos []uint32) (FloatVector, error)
 	Iterator() FloatIterator
 }
 
-type ByteSliceColumn interface {
+type StringColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	ReadDictEnc(pos []int) (IntVector, error)
-	Read(pos []int) (ByteSliceVector, error)
+	ReadDictEnc(pos []uint32) (IntVector, error)
+	Read(pos []uint32) (ByteSliceVector, error)
 	DictEncodedIterator() IntIterator
+	Iterator() ByteSliceIterator
+}
+
+type TextColumn interface {
+	Column
+	Index() ByteSliceIndex
+	Read(pos []uint32) (ByteSliceVector, error)
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []int) (IntVector, error)
+	Read(pos []uint32) (IntVector, error)
 	Iterator() IntIterator
 }
 
@@ -153,7 +160,7 @@ type Stats struct {
 type Vector interface {
 	Len() int
 	HasNulls() bool
-	Pos() []int
+	Pos() []uint32
 	ValuesAsBytes() []byte
 	PosAsBytes() []byte
 }
