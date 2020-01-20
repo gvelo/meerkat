@@ -52,17 +52,40 @@ type IntColumn interface {
 	Column
 	Dict() IntDict
 	Index() IntIndex
-	Read(pos []int) (IntVector, error)
+	Read(pos []uint32) (IntVector, error)
+	Iterator() IntIterator
 }
 
-type ByteColumn interface {
+type FloatColumn interface {
 	Column
-	Dict() ByteArrayDict
-	Index() ByteArrayIndex
-	ReadEnc(pos []int) (IntVector, error)
-	Read(pos []int) (ByteArrayVector, error)
-	IteratorEnc() IntIterator
-	Iterator() ByteArrayIterator
+	Dict() FloatDict
+	Index() FloatIndex
+	Read(pos []uint32) (FloatVector, error)
+	Iterator() FloatIterator
+}
+
+type StringColumn interface {
+	Column
+	Dict() ByteSliceDict
+	Index() ByteSliceIndex
+	ReadDictEnc(pos []uint32) (IntVector, error)
+	Read(pos []uint32) (ByteSliceVector, error)
+	DictEncodedIterator() IntIterator
+	Iterator() ByteSliceIterator
+}
+
+type TextColumn interface {
+	Column
+	Index() ByteSliceIndex
+	Read(pos []uint32) (ByteSliceVector, error)
+	Iterator() ByteSliceIterator
+}
+
+type TimeColumn interface {
+	Column
+	Index() TimeIndex
+	Read(pos []uint32) (IntVector, error)
+	Iterator() IntIterator
 }
 
 type Iterator interface {
@@ -74,20 +97,29 @@ type IntIterator interface {
 	Next() (IntVector, error)
 }
 
-type ByteArrayIterator interface {
+type FloatIterator interface {
 	Iterator
-	Next() (ByteArrayVector, error)
+	Next() (FloatVector, error)
+}
+
+type ByteSliceIterator interface {
+	Iterator
+	Next() (ByteSliceVector, error)
 }
 
 type IntDict interface {
 	DecodeInt(id int) (int, error)
 }
 
-type ByteArrayDict interface {
-	DecodeByteArray(i int) ([]byte, error)
+type FloatDict interface {
+	DecodeFloat(id int) (float64, error)
 }
 
-type ByteArrayIndex interface {
+type ByteSliceDict interface {
+	DecodeByteSlice(i int) ([]byte, error)
+}
+
+type ByteSliceIndex interface {
 	Regex(s []byte) *roaring.Bitmap
 	Prefix(s []byte) *roaring.Bitmap
 	Search(s []byte) *roaring.Bitmap
@@ -111,6 +143,11 @@ type FloatIndex interface {
 	Le(f float64) *roaring.Bitmap
 }
 
+type TimeIndex interface {
+	TimeRange(start int, end int) (startPos, endPos int)
+	TimeRangeAsBitmap(start int, end int) *roaring.Bitmap
+}
+
 type Stats struct {
 	Len         int
 	Size        int
@@ -123,7 +160,7 @@ type Stats struct {
 type Vector interface {
 	Len() int
 	HasNulls() bool
-	Pos() []int
+	Pos() []uint32
 	ValuesAsBytes() []byte
 	PosAsBytes() []byte
 }
@@ -133,7 +170,12 @@ type IntVector interface {
 	ValuesAsInt() []int
 }
 
-type ByteArrayVector interface {
+type FloatVector interface {
+	Vector
+	ValuesAsFloat() []float64
+}
+
+type ByteSliceVector interface {
 	Vector
 	ValuesAsSlide() [][]byte
 }
