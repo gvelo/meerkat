@@ -35,6 +35,8 @@ func (sw *SegmentWriter) WriteSegment(table *buffer.Table) error {
 
 	// write segment head
 	sw.writeTSColumn()
+
+	// crear column source y pasarselo al writer
 	// write columns
 	// write stats
 
@@ -54,17 +56,19 @@ func (sw *SegmentWriter) writeTSColumn() ([]int, error) {
 		return nil, errors.New("wrong TS column type")
 	}
 
-	pos := SortTSColumn(tsColumn.Int())
+	sorted := sort.IntsAreSorted(tsColumn.Int())
+
+	var pos []int
+
+	if !sorted {
+		pos = SortTSColumn(tsColumn.Int())
+	}
+
+	writeValues()
 
 }
 
 func SortTSColumn(values []int) []int {
-
-	sorted := sort.IntsAreSorted(values)
-
-	if sorted {
-		return nil
-	}
 
 	pos := make([]int, len(values))
 
