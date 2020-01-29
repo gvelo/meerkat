@@ -14,8 +14,8 @@
 package buffer
 
 import (
-	"github.com/RoaringBitmap/roaring"
 	"github.com/google/uuid"
+	"io"
 	"log"
 	"meerkat/internal/schema"
 	"reflect"
@@ -47,7 +47,7 @@ type Buffer interface {
 	Append(interface{})
 	AppendBuffer(interface{})
 	Nullable() bool
-	Bytes() []byte
+	writeTo(w io.Writer)
 }
 
 type IntBuffer struct {
@@ -76,6 +76,7 @@ func (b *IntBuffer) Len() int {
 }
 
 func (b *IntBuffer) Size() int {
+	// TODO(gvelo) add null space.
 	return len(b.buf) * Int64SizeBytes
 }
 
@@ -96,10 +97,6 @@ func (b *IntBuffer) AppendNull() {
 
 func (b *IntBuffer) Nullable() bool {
 	return b.nullable
-}
-
-func (b *IntBuffer) Bytes() []byte {
-	return CastToBytes(Int64SizeBytes, unsafe.Pointer(&b.buf))
 }
 
 func (b *IntBuffer) AppendInt(i int) {
@@ -132,6 +129,14 @@ func (b *IntBuffer) AppendIntBuffer(s *IntBuffer) {
 
 func (b *IntBuffer) AppendBuffer(buf interface{}) {
 	b.AppendIntBuffer(buf.(*IntBuffer))
+}
+
+func (b *IntBuffer) Values() []int {
+	return b.buf
+}
+
+func (b *IntBuffer) writeTo(w io.Writer) {
+	panic("implement me")
 }
 
 // UINT
@@ -184,10 +189,6 @@ func (b *UintBuffer) Nullable() bool {
 	return b.nullable
 }
 
-func (b *UintBuffer) Bytes() []byte {
-	return CastToBytes(Int64SizeBytes, unsafe.Pointer(&b.buf))
-}
-
 func (b *UintBuffer) AppendUint(i uint) {
 	b.buf = append(b.buf, i)
 	if b.nullable {
@@ -215,6 +216,14 @@ func (b *UintBuffer) AppendUintBuffer(s *UintBuffer) {
 
 func (b *UintBuffer) AppendBuffer(buf interface{}) {
 	b.AppendUintBuffer(buf.(*UintBuffer))
+}
+
+func (b *UintBuffer) Values() []uint {
+	return b.buf
+}
+
+func (b *UintBuffer) writeTo(w io.Writer) {
+	panic("implement me")
 }
 
 //Float
@@ -266,10 +275,6 @@ func (b *Float64Buffer) Nullable() bool {
 	return b.nullable
 }
 
-func (b *Float64Buffer) Bytes() []byte {
-	return CastToBytes(Int64SizeBytes, unsafe.Pointer(&b.buf))
-}
-
 func (b *Float64Buffer) AppendFloat(f float64) {
 
 	b.buf = append(b.buf, f)
@@ -300,6 +305,14 @@ func (b *Float64Buffer) AppendFloat64Buffer(s *Float64Buffer) {
 
 func (b *Float64Buffer) AppendBuffer(buf interface{}) {
 	b.AppendFloat64Buffer(buf.(*Float64Buffer))
+}
+
+func (b *Float64Buffer) Values() []float64 {
+	return b.buf
+}
+
+func (b *Float64Buffer) writeTo(w io.Writer) {
+	panic("implement me")
 }
 
 // slice
@@ -347,22 +360,26 @@ func (b *SliceBuffer) Nullable() bool {
 	return b.nulls != nil
 }
 
-func (b *SliceBuffer) Bytes() []byte {
-	return b.buf
-}
-
-func (b *SliceBuffer) OffsetBytes() []byte {
-	return CastToBytes(Int64SizeBytes, unsafe.Pointer(&b.offsets))
-}
-
 func (b *SliceBuffer) AppendSlice(s []byte) {
+
 	b.buf = append(b.buf, s...)
 	b.offsets = append(b.offsets, len(b.buf))
+
+	if b.nullable {
+		b.nulls = append(b.nulls, false)
+	}
+
 }
 
 func (b *SliceBuffer) AppendString(s string) {
+
 	b.buf = append(b.buf, s...)
 	b.offsets = append(b.offsets, len(b.buf))
+
+	if b.nullable {
+		b.nulls = append(b.nulls, false)
+	}
+
 }
 
 func (b *SliceBuffer) Append(i interface{}) {
@@ -397,6 +414,18 @@ func (b *SliceBuffer) AppendBuffer(buf interface{}) {
 	b.AppendSliceBuffer(buf.(*SliceBuffer))
 }
 
+func (b *SliceBuffer) Get(i int) []byte {
+
+	var start int
+
+	if i > 0 {
+		start = b.offsets[i-1]
+	}
+
+	return b.buf[start:b.offsets[i]]
+
+}
+
 func (b *SliceBuffer) Each(f func(int, []byte) bool) {
 
 	for i, end := range b.offsets {
@@ -417,22 +446,31 @@ func (b *SliceBuffer) Each(f func(int, []byte) bool) {
 
 }
 
+func (b *SliceBuffer) writeTo(w io.Writer) {
+	panic("implement me")
+}
+
 // UUID
 
 type UUIDBuffer struct {
-	nulls    *roaring.Bitmap
+	nulls    []bool
 	buf      []byte
 	nullUUID []byte
+	nullable bool
 }
 
 func NewUUIDBuffer(nullable bool, capacity int) *UUIDBuffer {
+
 	b := &UUIDBuffer{
-		buf: make([]byte, 0, capacity),
+		buf:      make([]byte, 0, capacity),
+		nullable: nullable,
 	}
+
 	if nullable {
-		b.nulls = roaring.NewBitmap()
+		b.nulls = make([]bool, 0, capacity)
 		b.nullUUID = make([]byte, 16)
 	}
+
 	return b
 }
 
@@ -444,26 +482,28 @@ func (b *UUIDBuffer) Size() int {
 	return len(b.buf)
 }
 
-func (b *UUIDBuffer) Nulls() *roaring.Bitmap {
+func (b *UUIDBuffer) Nulls() []bool {
 	return b.nulls
 }
 
 func (b *UUIDBuffer) AppendNull() {
-	b.nulls.AddInt(b.Len())
+	b.nulls = append(b.nulls, true)
 	b.buf = append(b.buf, b.nullUUID...)
 }
 
 func (b *UUIDBuffer) Nullable() bool {
-	return b.nulls != nil
-}
-
-func (b *UUIDBuffer) Bytes() []byte {
-	return b.buf
+	return b.nullable
 }
 
 func (b *UUIDBuffer) AppendUUID(uuid uuid.UUID) {
+
 	bytes := [16]byte(uuid)
 	b.buf = append(b.buf, bytes[:]...)
+
+	if b.nullable {
+		b.nulls = append(b.nulls, false)
+	}
+
 }
 
 func (b *UUIDBuffer) Append(i interface{}) {
@@ -472,17 +512,33 @@ func (b *UUIDBuffer) Append(i interface{}) {
 
 func (b *UUIDBuffer) AppendUUIDBuffer(s *UUIDBuffer) {
 
+	if b.nullable != s.nullable {
+		panic("schema mutation on ingestion not supported yet")
+	}
+
 	b.buf = append(b.buf, s.buf...)
 
-	if s.nulls != nil && b.nulls != nil {
-		bshift := roaring.AddOffset(s.nulls, uint32(b.Len()))
-		b.nulls.Or(bshift)
+	if b.nullable {
+		b.nulls = append(b.nulls, s.nulls...)
 	}
 
 }
 
 func (b *UUIDBuffer) AppendBuffer(buf interface{}) {
 	b.AppendUUIDBuffer(buf.(*UUIDBuffer))
+}
+
+func (b *UUIDBuffer) Get(i int) uuid.UUID {
+
+	start := i << 4
+	end := start + 16
+
+	var uid [16]byte
+
+	copy(uid[:], b.buf[start:end])
+
+	return uid
+
 }
 
 func (b *UUIDBuffer) Each(f func(int, uuid.UUID) bool) {
@@ -499,72 +555,73 @@ func (b *UUIDBuffer) Each(f func(int, uuid.UUID) bool) {
 
 }
 
+func (b *UUIDBuffer) writeTo(w io.Writer) {
+	panic("implement me")
+}
+
 // bool
 
 type BoolBuffer struct {
-	nulls *roaring.Bitmap
-	buf   *roaring.Bitmap
-	len   int
+	nulls    []bool
+	buf      []bool
+	nullable bool
 }
 
 func (b BoolBuffer) Len() int {
-	return b.len
+	return len(b.buf)
 }
 
 func (b BoolBuffer) Size() int {
-	return int(b.buf.GetSizeInBytes())
+	return len(b.buf)
 }
 
-func (b BoolBuffer) Nulls() *roaring.Bitmap {
+func (b BoolBuffer) Nulls() []bool {
 	return b.nulls
 }
 
 func (b BoolBuffer) AppendNull() {
-	b.nulls.AddInt(b.len)
-	b.len++
+	b.nulls = append(b.nulls, true)
+	b.buf = append(b.buf, false)
 }
 
 func (b BoolBuffer) Nullable() bool {
-	return b.nulls != nil
-}
-
-func (b BoolBuffer) Bytes() []byte {
-	bytes, err := b.buf.ToBytes()
-	if err != nil {
-		panic(err)
-	}
-	return bytes
+	return b.nullable
 }
 
 func (b *BoolBuffer) AppendBool(v bool) {
-	if v {
-		b.buf.AddInt(b.len)
+
+	b.buf = append(b.buf, v)
+
+	if b.nullable {
+		b.nulls = append(b.nulls, false)
 	}
-	b.len++
+
 }
 
 func (b *BoolBuffer) Append(i interface{}) {
 	b.AppendBool(i.(bool))
 }
 
-func (b *BoolBuffer) Values() *roaring.Bitmap {
-	return b.buf
-}
-
 func (b *BoolBuffer) AppendBoolBuffer(s *BoolBuffer) {
 
-	vshift := roaring.AddOffset(s.nulls, uint32(b.Len()))
-	b.nulls.Or(vshift)
+	if b.nullable != s.nullable {
+		panic("schema mutation on ingestion not supported yet")
+	}
 
-	if s.nulls != nil && b.nulls != nil {
-		nshift := roaring.AddOffset(s.nulls, uint32(b.Len()))
-		b.nulls.Or(nshift)
+	b.buf = append(b.buf, s.buf...)
+
+	if b.nullable {
+		b.nulls = append(b.nulls, s.nulls...)
 	}
 
 }
 
 func (b *BoolBuffer) AppendBuffer(buf interface{}) {
 	b.AppendBoolBuffer(buf.(*BoolBuffer))
+}
+
+func (b *BoolBuffer) writeTo(w io.Writer) {
+	panic("implement me")
 }
 
 type Row struct {
