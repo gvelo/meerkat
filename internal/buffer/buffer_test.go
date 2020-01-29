@@ -25,7 +25,6 @@ func TestNewIntBuffer(t *testing.T) {
 	b := NewIntBuffer(false, 0)
 	assert.False(b.Nullable(), "wrong nullable return value")
 	assert.Zero(b.Len(), "wrong len return value")
-	assert.Len(b.Bytes(), 0, "wrong byte len return value")
 }
 
 func TestNewNullableIntBuffer(t *testing.T) {
@@ -33,7 +32,6 @@ func TestNewNullableIntBuffer(t *testing.T) {
 	b := NewIntBuffer(true, 0)
 	assert.True(b.Nullable(), "wrong nullable return value")
 	assert.Zero(b.Len(), "wrong len return value")
-	assert.Len(b.Bytes(), 0, "wrong byte len return value")
 }
 
 func TestNewIntBufferWithCap(t *testing.T) {
@@ -41,7 +39,6 @@ func TestNewIntBufferWithCap(t *testing.T) {
 	b := NewIntBuffer(true, 1024)
 	assert.True(b.Nullable(), "wrong nullable return value")
 	assert.Zero(b.Len(), "wrong len return value")
-	assert.Len(b.Bytes(), 0, "wrong byte len return value")
 }
 
 func TestIntBuffer_AddInt(t *testing.T) {
@@ -50,7 +47,6 @@ func TestIntBuffer_AddInt(t *testing.T) {
 	b.AppendInt(1)
 	assert.True(b.Nullable(), "wrong nullable return value")
 	assert.Equal(b.Len(), 1, "wrong len return value")
-	assert.Len(b.Bytes(), 8, "wrong byte len return value")
 }
 
 func TestIntBuffer_AddNull(t *testing.T) {
@@ -59,8 +55,7 @@ func TestIntBuffer_AddNull(t *testing.T) {
 	b.AppendNull()
 	assert.True(b.Nullable(), "wrong nullable return value")
 	assert.Equal(b.Len(), 1, "wrong len return value")
-	assert.Len(b.Bytes(), 8, "wrong byte len return value")
-	assert.Equal(b.Nulls().GetCardinality(), uint64(1), "wrong bitmap cardinality value")
+	assert.Equal(len(b.Nulls()), 1, "wrong null len return value")
 }
 
 func TestIntBuffer_AddBuffer(t *testing.T) {
@@ -78,8 +73,11 @@ func TestIntBuffer_AddBuffer(t *testing.T) {
 	dstBuff.AppendIntBuffer(srcBuff)
 
 	assert.Equal(dstBuff.Len(), 200, "wrong len return value")
-	assert.Len(dstBuff.Bytes(), 8*200, "wrong byte len return value")
-	assert.Equal(dstBuff.Nulls().GetCardinality(), uint64(0), "wrong bitmap cardinality value")
+	assert.Equal(len(dstBuff.nulls), 200, "wrong nulls len return value")
+	for _, value := range dstBuff.Nulls() {
+		assert.True(value, "wrong null value")
+	}
+
 }
 
 func TestIntBuffer_AddBufferNull(t *testing.T) {
@@ -97,12 +95,11 @@ func TestIntBuffer_AddBufferNull(t *testing.T) {
 	dstBuff.AppendIntBuffer(srcBuff)
 
 	assert.Equal(dstBuff.Len(), 200, "wrong len return value")
-	assert.Len(dstBuff.Bytes(), 8*200, "wrong byte len return value")
-	assert.Equal(dstBuff.Nulls().GetCardinality(), uint64(100), "wrong bitmap cardinality value")
+	assert.Len(dstBuff.Nulls(), 200, "wrong nulls len return value")
 
 	for i := 0; i < 100; i++ {
 		assert.Equal(i, dstBuff.buf[i+100], "wrong array content")
-		assert.True(dstBuff.nulls.Contains(uint32(i)))
+		assert.True(dstBuff.Nulls()[i])
 	}
 
 }
@@ -121,7 +118,6 @@ func TestSliceBuffer_AppendString(t *testing.T) {
 		bufSize = bufSize + len(s)
 	}
 
-	assert.Equal(bufSize, len(buf.Bytes()))
 	assert.Equal(len(ss), len(buf.offsets))
 
 	var sr []string
