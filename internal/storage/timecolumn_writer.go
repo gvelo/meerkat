@@ -18,7 +18,7 @@ import "meerkat/internal/storage/io"
 func NewTimeColumnWriter(values []int, bw *io.BinaryWriter) *TimeColumnWriter {
 	return &TimeColumnWriter{
 		values: values,
-		bw:     bw
+		bw:     bw,
 	}
 }
 
@@ -27,9 +27,9 @@ type TimeColumnWriter struct {
 	values []int
 }
 
-
 func (w *TimeColumnWriter) Write() error {
 
-	err := w.bw.WriteByte(byte(Plain))
+	//err := w.bw.WriteByte(byte(Plain))
+	return nil
 
 }

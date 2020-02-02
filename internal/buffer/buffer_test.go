@@ -110,7 +110,7 @@ func TestSliceBuffer_AppendString(t *testing.T) {
 
 	ss := []string{"one", "two", "three"}
 
-	buf := NewSliceBuffer(false, 0)
+	buf := NewByteSliceBuffer(false, 0)
 
 	bufSize := 0
 	for _, s := range ss {
@@ -138,8 +138,8 @@ func TestSliceBuffer_AppendSliceBuffer(t *testing.T) {
 	sb1 := []string{"one", "two", "three"}
 	sb2 := []string{"four", "five"}
 
-	buf1 := NewSliceBuffer(false, 0)
-	buf2 := NewSliceBuffer(false, 0)
+	buf1 := NewByteSliceBuffer(false, 0)
+	buf2 := NewByteSliceBuffer(false, 0)
 
 	for _, s := range sb1 {
 		buf1.AppendString(s)

@@ -108,7 +108,7 @@ func (b *IntBuffer) AppendInt(i int) {
 	b.buf = append(b.buf, i)
 
 	if b.nullable {
-		b.nulls = append(b.nulls, true)
+		b.nulls = append(b.nulls, false)
 	}
 
 }
@@ -321,16 +321,16 @@ func (b *Float64Buffer) writeTo(w io.Writer) {
 
 // slice
 
-type SliceBuffer struct {
+type ByteSliceBuffer struct {
 	nulls    []bool
 	buf      []byte
 	offsets  []int
 	nullable bool
 }
 
-func NewSliceBuffer(nullable bool, capacity int) *SliceBuffer {
+func NewByteSliceBuffer(nullable bool, capacity int) *ByteSliceBuffer {
 
-	b := &SliceBuffer{
+	b := &ByteSliceBuffer{
 		buf:      make([]byte, 0, capacity),
 		nullable: nullable,
 	}
@@ -343,28 +343,28 @@ func NewSliceBuffer(nullable bool, capacity int) *SliceBuffer {
 
 }
 
-func (b *SliceBuffer) Len() int {
+func (b *ByteSliceBuffer) Len() int {
 	return len(b.offsets)
 }
 
-func (b *SliceBuffer) Size() int {
+func (b *ByteSliceBuffer) Size() int {
 	return len(b.buf) + len(b.offsets)*Int64SizeBytes
 }
 
-func (b *SliceBuffer) Nulls() []bool {
+func (b *ByteSliceBuffer) Nulls() []bool {
 	return b.nulls
 }
 
-func (b *SliceBuffer) AppendNull() {
+func (b *ByteSliceBuffer) AppendNull() {
 	b.nulls = append(b.nulls, true)
 	b.offsets = append(b.offsets, len(b.buf))
 }
 
-func (b *SliceBuffer) Nullable() bool {
+func (b *ByteSliceBuffer) Nullable() bool {
 	return b.nulls != nil
 }
 
-func (b *SliceBuffer) AppendSlice(s []byte) {
+func (b *ByteSliceBuffer) AppendSlice(s []byte) {
 
 	b.buf = append(b.buf, s...)
 	b.offsets = append(b.offsets, len(b.buf))
@@ -375,7 +375,7 @@ func (b *SliceBuffer) AppendSlice(s []byte) {
 
 }
 
-func (b *SliceBuffer) AppendString(s string) {
+func (b *ByteSliceBuffer) AppendString(s string) {
 
 	b.buf = append(b.buf, s...)
 	b.offsets = append(b.offsets, len(b.buf))
@@ -386,11 +386,11 @@ func (b *SliceBuffer) AppendString(s string) {
 
 }
 
-func (b *SliceBuffer) Append(i interface{}) {
+func (b *ByteSliceBuffer) Append(i interface{}) {
 	b.AppendString(i.(string))
 }
 
-func (b *SliceBuffer) AppendSliceBuffer(s *SliceBuffer) {
+func (b *ByteSliceBuffer) AppendSliceBuffer(s *ByteSliceBuffer) {
 
 	if b.nullable != s.nullable {
 		panic("schema mutation on ingestion not supported yet")
@@ -414,11 +414,11 @@ func (b *SliceBuffer) AppendSliceBuffer(s *SliceBuffer) {
 
 }
 
-func (b *SliceBuffer) AppendBuffer(buf interface{}) {
-	b.AppendSliceBuffer(buf.(*SliceBuffer))
+func (b *ByteSliceBuffer) AppendBuffer(buf interface{}) {
+	b.AppendSliceBuffer(buf.(*ByteSliceBuffer))
 }
 
-func (b *SliceBuffer) Get(i int) []byte {
+func (b *ByteSliceBuffer) Get(i int) []byte {
 
 	var start int
 
@@ -430,7 +430,7 @@ func (b *SliceBuffer) Get(i int) []byte {
 
 }
 
-func (b *SliceBuffer) Each(f func(int, []byte) bool) {
+func (b *ByteSliceBuffer) Each(f func(int, []byte) bool) {
 
 	for i, end := range b.offsets {
 
@@ -450,7 +450,7 @@ func (b *SliceBuffer) Each(f func(int, []byte) bool) {
 
 }
 
-func (b *SliceBuffer) writeTo(w io.Writer) {
+func (b *ByteSliceBuffer) writeTo(w io.Writer) {
 	panic("implement me")
 }
 
@@ -727,9 +727,9 @@ func NewTable(idx schema.IndexInfo) *Table {
 		case schema.FieldType_INT:
 			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
 		case schema.FieldType_STRING:
-			t.cols[f.Id] = NewSliceBuffer(f.Nullable, 0)
+			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
 		case schema.FieldType_TEXT:
-			t.cols[f.Id] = NewSliceBuffer(f.Nullable, 0)
+			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
 		case schema.FieldType_TIMESTAMP:
 			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
 		case schema.FieldType_BOOLEAN:

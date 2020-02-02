@@ -149,20 +149,16 @@ type TimeIndex interface {
 }
 
 type Stats struct {
-	Len         int
-	Size        int
+	Size        int // no compressed
 	Cardinality int
-	Compresed   int
+	Compresed   int // size compressed
 	Max         interface{}
 	Min         interface{}
 }
 
 type Vector interface {
 	Len() int
-	HasNulls() bool
-	Pos() []uint32
-	ValuesAsBytes() []byte
-	PosAsBytes() []byte
+	Rid() []uint32
 }
 
 type IntVector interface {
@@ -177,5 +173,75 @@ type FloatVector interface {
 
 type ByteSliceVector interface {
 	Vector
-	ValuesAsSlide() [][]byte
+	Data() []byte
+	Offsets() []int
+	Get(i int) []byte
+}
+
+type intVector struct {
+	vect []int
+	rid  []uint32
+}
+
+func (v intVector) Len() int {
+	return len(v.vect)
+}
+
+func (v intVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v intVector) ValuesAsInt() []int {
+	return v.vect
+}
+
+type floatVector struct {
+	vect []float64
+	rid  []uint32
+}
+
+func (v floatVector) Len() int {
+	return len(v.vect)
+}
+
+func (v floatVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v floatVector) ValuesAsFloat() []float64 {
+	return v.vect
+}
+
+type byteSliceVector struct {
+	rid     []uint32
+	data    []byte
+	offsets []int
+}
+
+func (v byteSliceVector) Len() int {
+	return len(v.offsets)
+}
+
+func (v byteSliceVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v byteSliceVector) Data() []byte {
+	return v.data
+}
+
+func (v byteSliceVector) Offsets() []int {
+	return v.offsets
+}
+
+func (v byteSliceVector) Get(i int) []byte {
+
+	var start int
+
+	if i > 0 {
+		start = v.offsets[i-1]
+	}
+
+	return v.data[start:v.offsets[i]]
+
 }

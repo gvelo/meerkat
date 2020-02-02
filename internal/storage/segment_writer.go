@@ -13,11 +13,49 @@
 
 package storage
 
-import (
-	"errors"
-	"meerkat/internal/buffer"
-	"sort"
-)
+type IndexWriter interface {
+	Flush() error
+}
+
+type IntIndexWriter interface {
+	Index(vector IntVector)
+}
+
+type UintIndexWriter interface {
+	Index(vector IntVector)
+}
+
+type FloatIndexWriter interface {
+	Index(vector FloatVector)
+}
+
+type ByteSliceIndexWriter interface {
+	Index(vector ByteSliceVector)
+}
+
+type PageIndexWriter interface {
+	IndexPages(vec IntVector)
+}
+
+type ValidityIndexWriter interface {
+	Index(rid []uint32)
+}
+
+type IntEncoder interface {
+	Encode(vec IntVector) error
+}
+
+type UintEncoder interface {
+	Encode(vec IntVector) error
+}
+
+type FloatEncoder interface {
+	Encode(vec FloatVector) error
+}
+
+type ByteSliceEncoder interface {
+	Encode(vec ByteSliceVector) error
+}
 
 const (
 	MagicNumber = "MK"
@@ -25,82 +63,86 @@ const (
 )
 
 // TODO(gvelo) change to []byte after schema refactor.
-var TSColID = "_ts"
-
-type SegmentWriter struct {
-	table *buffer.Table
-}
-
-func (sw *SegmentWriter) WriteSegment(table *buffer.Table) error {
-
-	// write segment head
-	sw.writeTSColumn()
-
-	// crear column source y pasarselo al writer
-	// write columns
-	// write stats
-
-}
-
-func (sw *SegmentWriter) writeTSColumn() ([]int, error) {
-
-	c, ok := sw.table.Col(TSColID)
-
-	if !ok {
-		return nil, errors.New("missing TS column")
-	}
-
-	tsColumn, ok := c.(*buffer.IntBuffer)
-
-	if !ok {
-		return nil, errors.New("wrong TS column type")
-	}
-
-	sorted := sort.IntsAreSorted(tsColumn.Int())
-
-	var pos []int
-
-	if !sorted {
-		pos = SortTSColumn(tsColumn.Int())
-	}
-
-	writeValues()
-
-}
-
-func SortTSColumn(values []int) []int {
-
-	pos := make([]int, len(values))
-
-	for i := 0; i < len(pos); i++ {
-		pos[i] = i
-	}
-
-	tsSlice := &TSSlice{
-		ts:  values,
-		pos: pos,
-	}
-
-	sort.Stable(tsSlice)
-
-	return pos
-
-}
-
-type TSSlice struct {
-	ts  []int
-	pos []int
-}
-
-func (t *TSSlice) Len() int {
-	return len(t.ts)
-}
-
-func (t *TSSlice) Less(i, j int) bool {
-	return t.ts[i] < t.ts[j]
-}
-
-func (t *TSSlice) Swap(i, j int) {
-	t.ts[i], t.ts[j] = t.ts[j], t.ts[i]
-	t.pos[i], t.pos[j] = t.pos[j], t.pos[i]
-}
+//var TSColID = "_ts"
+//
+//type SegmentWriter struct {
+//	table *buffer.Table
+//}
+//
+//func (sw *SegmentWriter) WriteSegment(table *buffer.Table) error {
+//
+//	// write segment head
+//	sw.writeTSColumn()
+//
+//	// crear column source y pasarselo al writer
+//	// write columns
+//	// write stats
+//
+//	return nil
+//
+//}
+//
+//func (sw *SegmentWriter) writeTSColumn() ([]int, error) {
+//
+//	c, ok := sw.table.Col(TSColID)
+//
+//	if !ok {
+//		return nil, errors.New("missing TS column")
+//	}
+//
+//	tsColumn, ok := c.(*buffer.IntBuffer)
+//
+//	if !ok {
+//		return nil, errors.New("wrong TS column type")
+//	}
+//
+//	sorted := sort.IntsAreSorted(tsColumn.Int())
+//
+//	var pos []int
+//
+//	if !sorted {
+//		pos = SortTSColumn(tsColumn.Int())
+//	}
+//
+//	//writeValues()
+//
+//	return nil,nil
+//
+//}
+//
+//func SortTSColumn(values []int) []int {
+//
+//	pos := make([]int, len(values))
+//
+//	for i := 0; i < len(pos); i++ {
+//		pos[i] = i
+//	}
+//
+//	tsSlice := &TSSlice{
+//		ts:  values,
+//		pos: pos,
+//	}
+//
+//	sort.Stable(tsSlice)
+//
+//	return pos
+//
+//}
+//
+//type TSSlice struct {
+//	ts  []int
+//	pos []int
+//}
+//
+//func (t *TSSlice) Len() int {
+//	return len(t.ts)
+//}
+//
+//func (t *TSSlice) Less(i, j int) bool {
+//	return t.ts[i] < t.ts[j]
+//}
+//
+//func (t *TSSlice) Swap(i, j int) {
+//	t.ts[i], t.ts[j] = t.ts[j], t.ts[i]
+//	t.pos[i], t.pos[j] = t.pos[j], t.pos[i]
+//}
