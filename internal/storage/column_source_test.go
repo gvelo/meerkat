@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"meerkat/internal/buffer"
+	"meerkat/internal/utils"
 	"testing"
 )
 
@@ -59,6 +60,32 @@ func TestTsColumnSource(t *testing.T) {
 
 }
 
+func TestByteColumnSource(t *testing.T) {
+
+	bufSize := 10000
+	pageSize := 1024
+
+	b, p, _ := createByteSliceBuffer(bufSize, false)
+
+	src := NewByteSliceColumnSource(b, pageSize, p)
+
+	testByteSliceColumnSource(t, src, b, p)
+
+}
+
+func TestNullableByteColumnSource(t *testing.T) {
+
+	bufSize := 10000
+	pageSize := 1024
+
+	b, p, _ := createByteSliceBuffer(bufSize, true)
+
+	src := NewByteSliceColumnSource(b, pageSize, p)
+
+	testByteSliceColumnSource(t, src, b, p)
+
+}
+
 func testIntColumnSource(t *testing.T,
 	src IntColumSource,
 	b *buffer.IntBuffer,
@@ -93,6 +120,23 @@ func testIntColumnSource(t *testing.T,
 
 }
 
+func testByteSliceColumnSource(t *testing.T,
+	src ByteSliceColumSource,
+	b *buffer.ByteSliceBuffer,
+	p []int) {
+
+	for src.HasNext() {
+
+		v := src.Next()
+
+		for i := 0; i < v.Len(); i++ {
+			assert.Equal(t, v.Get(i), b.Get(p[v.Rid()[i]]))
+		}
+
+	}
+
+}
+
 func createIntBuffer(bufSize int, nullable bool) (*buffer.IntBuffer, []int, int) {
 
 	b := buffer.NewIntBuffer(nullable, bufSize)
@@ -107,6 +151,26 @@ func createIntBuffer(bufSize int, nullable bool) (*buffer.IntBuffer, []int, int)
 			continue
 		}
 		b.AppendInt(i)
+	}
+
+	return b, p, nulls
+
+}
+
+func createByteSliceBuffer(bufSize int, nullable bool) (*buffer.ByteSliceBuffer, []int, int) {
+
+	b := buffer.NewByteSliceBuffer(nullable, 0)
+	p := make([]int, bufSize)
+	nulls := 0
+
+	for i := 0; i < bufSize; i++ {
+		p[i] = i
+		if nullable && rand.Intn(2) == 1 {
+			b.AppendNull()
+			nulls++
+			continue
+		}
+		b.AppendSlice([]byte(utils.RandomString(50)))
 	}
 
 	return b, p, nulls

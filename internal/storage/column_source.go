@@ -42,8 +42,6 @@ type ByteSliceColumSource interface {
 	Next() ByteSliceVector
 }
 
-// page size * N
-
 func NewIntColumnSource(buf *buffer.IntBuffer, dstSize int, permMap []int) IntColumSource {
 
 	return &intColumnSource{
@@ -150,13 +148,11 @@ func (cs *tsColumnSource) Next() IntVector {
 
 }
 
-//////////////////////// float
-
 func NewFloatColumnSource(buf *buffer.Float64Buffer, dstSize int, permMap []int) FloatColumSource {
 
 	return &floatColumnSource{
 		srcBuf:   buf.Values(),
-		dstBuf:   make([]int, dstSize),
+		dstBuf:   make([]float64, dstSize),
 		nulls:    buf.Nulls(),
 		rid:      make([]uint32, dstSize),
 		permMap:  permMap,
@@ -210,11 +206,18 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 }
 
-///////////////////////////// byteslice
+func NewByteSliceColumnSource(buff *buffer.ByteSliceBuffer, maxSize int, permMap []int) ByteSliceColumSource {
 
-func NewByteSliceColumnSource(buff buffer.ByteSliceBuffer, maxSize int, permMap []int) ByteSliceColumSource {
-
-	return &byteSliceColumnSource{}
+	return &byteSliceColumnSource{
+		bs:         buff,
+		maxSize:    maxSize,
+		dstBuf:     make([]byte, maxSize),
+		dstOffsets: make([]int, 0, maxSize/8),
+		nulls:      buff.Nulls(),
+		rid:        make([]uint32, 0, maxSize/8),
+		permMap:    permMap,
+		hasNulls:   buff.Nullable(),
+	}
 }
 
 type byteSliceColumnSource struct {
@@ -239,12 +242,10 @@ func (cs *byteSliceColumnSource) HasNulls() bool {
 
 func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 
-	cs.dstBuf = cs.dstBuf[:cs.maxSize]
 	cs.dstOffsets = cs.dstOffsets[0:0]
 	cs.rid = cs.rid[0:0]
 
-	dstStart := 0
-	dstEnd := 0
+	size := 0
 
 	for ; cs.pos < cs.bs.Len(); cs.pos++ {
 
@@ -254,34 +255,40 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 			continue
 		}
 
-		slice := cs.bs.Get(cs.pos)
+		slice := cs.bs.Get(j)
 
-		dstEnd = dstStart + len(slice)
+		available := cs.maxSize - size
 
-		if dstEnd > cs.maxSize {
+		if len(slice) > available {
 
 			// if there aren't enough room to accommodate the slice
-			// in an empty buffer, expand the buffer.
-			if dstStart == 0 {
-				cs.dstBuf = append(cs.dstBuf, slice...)
-				cs.dstOffsets = append(cs.dstOffsets, len(cs.dstBuf))
+			// in an empty buffer, allocate a new one.
+			if size == 0 {
+				if len(slice) > cap(cs.dstBuf) {
+					cs.dstBuf = make([]byte, len(slice))
+				}
+				copy(cs.dstBuf[0:], slice)
+				size = len(slice)
+				cs.dstOffsets = append(cs.dstOffsets, size)
 				cs.rid = append(cs.rid, uint32(cs.pos))
+				cs.pos++
+				break
 			}
 
 			break
 
 		}
 
-		copy(cs.dstBuf[dstStart:dstEnd], slice)
-		cs.dstOffsets = append(cs.dstOffsets, dstEnd)
+		copy(cs.dstBuf[size:], slice)
+		size = size + len(slice)
+		cs.dstOffsets = append(cs.dstOffsets, size)
 		cs.rid = append(cs.rid, uint32(cs.pos))
-		dstStart = dstEnd
 
 	}
 
 	return byteSliceVector{
 		rid:     cs.rid,
-		data:    cs.dstBuf[:dstEnd],
+		data:    cs.dstBuf[:size],
 		offsets: cs.dstOffsets,
 	}
 
