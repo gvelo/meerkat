@@ -3,6 +3,7 @@ package executor
 import (
 	"math"
 	"meerkat/internal/storage"
+	"unsafe"
 )
 
 type AggregationOperator struct {
@@ -44,7 +45,10 @@ type counter struct {
 }
 
 func NewCounter() Counter {
-	return &counter{max: math.MinInt64, min: math.MaxInt64}
+	return &counter{
+		max: math.MinInt64,
+		min: math.MaxInt64,
+	}
 }
 
 // Counter returns the number of values received.
@@ -207,9 +211,11 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 		mKey := make(map[string][]Counter)
 
 		for i := 0; i < n[0].Len(); i++ {
+			// For each item in first column
+			// TODO(sebad): check if this is ok.
 
 			// create the key
-			k := createKey(n, r.keyCols)
+			k := createKey(n, r.keyCols, i)
 
 			// check the key
 			if _, ok := mKey[string(k)]; ok != true {
@@ -222,14 +228,14 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 			}
 
 			// update values.
-			for i, it := range r.aCols {
+			for x, it := range r.aCols {
 				c := mKey[string(k)] // get the counters array
 				// TODO: ver los demas tipos de valores.
 				switch col := n[it.AgCol].(type) {
 				case storage.IntVector:
-					c[i].Update(col.ValuesAsInt()[i])
+					c[x].Update(col.ValuesAsInt()[i])
 				case storage.FloatVector:
-					c[i].Update(int(col.ValuesAsFloat()[i]))
+					c[x].Update(int(col.ValuesAsFloat()[i]))
 				}
 
 			}
@@ -244,11 +250,21 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 	return nil
 }
 
-func createKey(n []storage.Vector, gByCols []int) []byte {
+func createKey(n []storage.Vector, keyCols []int, index int) []byte {
 	k := make([]byte, 0)
-	for _, it := range gByCols {
-		k = append(k, n[it].ValuesAsBytes()...)
+	for _, it := range keyCols {
+		switch t := n[it].(type) {
+		case storage.ByteSliceVector:
+			k = append(k, t.Get(index)...)
+		case storage.IntVector:
+			b := (*[8]byte)(unsafe.Pointer(&t.ValuesAsInt()[index]))[:]
+			k = append(k, b...)
+		case storage.FloatVector:
+			b := (*[8]byte)(unsafe.Pointer(&t.ValuesAsFloat()[index]))[:]
+			k = append(k, b...)
+		}
 	}
+
 	return k
 }
 

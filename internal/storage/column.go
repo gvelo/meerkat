@@ -52,6 +52,7 @@ type Column interface {
 	Encoding() Encoding
 	Validity() *roaring.Bitmap
 	HasNulls() bool
+	Read(pos []uint32) (Vector, error)
 	Stats() *Stats
 }
 

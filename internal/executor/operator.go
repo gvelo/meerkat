@@ -142,22 +142,22 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewIndexScanOperator(ctx Context, op ComparisonOperation, value interface{}, fName string) BitmapOperator {
+func NewIndexScanOperator(ctx Context, op ComparisonOperation, value interface{}, fieldName string) BitmapOperator {
 	return &IndexScanOperator{
-		ctx:   ctx,
-		op:    op,
-		fName: fName,
-		value: value,
+		ctx:       ctx,
+		op:        op,
+		fieldName: fieldName,
+		value:     value,
 	}
 }
 
 // IndexScanOperator executes a search in a column and returns the bitmap of positions
 // that meet that condition.
 type IndexScanOperator struct {
-	ctx   Context
-	op    ComparisonOperation
-	fName string
-	value interface{}
+	ctx       Context
+	op        ComparisonOperation
+	fieldName string
+	value     interface{}
 }
 
 func (op *IndexScanOperator) Init() {
@@ -170,7 +170,7 @@ func (op *IndexScanOperator) Destroy() {
 
 func (op *IndexScanOperator) Next() *roaring.Bitmap {
 
-	c := op.ctx.Segment().Col([]byte(op.fName))
+	c := op.ctx.Segment().Col([]byte(op.fieldName))
 
 	switch col := c.(type) {
 	case storage.StringColumn:
@@ -215,13 +215,6 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 		case gt:
 			return col.Index().Gt(op.value.(float64))
 		}
-	case storage.BoolColumn:
-		switch op.op {
-		case ne:
-			return col.Index().Ne(op.value.(bool))
-		case eq:
-			return col.Index().Eq(op.value.(bool))
-		}
 
 	}
 
@@ -229,7 +222,7 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewColumnScanOperator(p []int, c interface{}) MultiVectorOperator {
+func NewColumnScanOperator(p []int, c storage.Column) MultiVectorOperator {
 	return &ColumnScanOperator{
 		c: c,
 	}
@@ -282,11 +275,11 @@ func (op *ByteArrayScanOperator) Next() *roaring.Bitmap {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewLimitOperator(ctx Context, c MultiVectorOperator, qty int) MultiVectorOperator {
+func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
 	return &LimitOperator{
 		ctx:   ctx,
-		child: c,
-		qty:   qty,
+		child: child,
+		limit: limit,
 	}
 }
 
@@ -296,7 +289,7 @@ func NewLimitOperator(ctx Context, c MultiVectorOperator, qty int) MultiVectorOp
 type LimitOperator struct {
 	ctx   Context
 	child MultiVectorOperator
-	qty   int
+	limit int
 }
 
 func (op *LimitOperator) Init() {
@@ -313,8 +306,12 @@ func (op *LimitOperator) Next() []storage.Vector {
 	return n
 }
 
-func NewReaderOperator(ctx Context, child BitmapOperator, col string) *ReaderOperator {
-	return &ReaderOperator{ctx: ctx, child: child, colName: col}
+func NewReaderOperator(ctx Context, child BitmapOperator, colName string) *ReaderOperator {
+	return &ReaderOperator{
+		ctx:     ctx,
+		child:   child,
+		colName: colName,
+	}
 }
 
 // ReaderOperator reads all positions in the bitmap
@@ -358,7 +355,6 @@ func (r *ReaderOperator) Next() storage.Vector {
 	}
 }
 
-// TODO: Volarlo, no sirve.
 func NewBufferOperator(ctx Context, children []VectorOperator) *BufferOperator {
 	return &BufferOperator{
 		ctx:      ctx,
@@ -402,8 +398,8 @@ func (r *BufferOperator) Next() []storage.Vector {
 // Decodifica el diccionario y lo manda....
 func NewMaterialize(ctx Context, child MultiVectorOperator) *MaterializeOperator {
 	return &MaterializeOperator{
-		ctx,
-		child,
+		ctx:   ctx,
+		child: child,
 	}
 }
 
@@ -438,7 +434,6 @@ func (r *MaterializeOperator) Next() []storage.Vector {
 
 			switch vec := n[i].(type) {
 
-			case storage.BoolVector: // Should exist?
 			case storage.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
 			case storage.FloatVector:
 				res[i] = vec
