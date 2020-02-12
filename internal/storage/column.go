@@ -52,7 +52,6 @@ type Column interface {
 	Encoding() Encoding
 	Validity() *roaring.Bitmap
 	HasNulls() bool
-	Read(pos []uint32) (Vector, error)
 	Stats() *Stats
 }
 
@@ -61,12 +60,6 @@ type IntColumn interface {
 	Dict() IntDict
 	Index() IntIndex
 	Iterator() IntIterator
-}
-
-type BoolColumn interface {
-	Column
-	Index() BoolIndex
-	Iterator() BoolIterator
 }
 
 type FloatColumn interface {
@@ -116,11 +109,6 @@ type ByteSliceIterator interface {
 	Next() (ByteSliceVector, error)
 }
 
-type BoolIterator interface {
-	Iterator
-	Next() (bool, error)
-}
-
 type IntDict interface {
 	DecodeInt(id int) (int, error)
 }
@@ -131,11 +119,6 @@ type FloatDict interface {
 
 type ByteSliceDict interface {
 	DecodeByteSlice(i int) ([]byte, error)
-}
-
-type BoolIndex interface {
-	Eq(b bool) *roaring.Bitmap
-	Ne(b bool) *roaring.Bitmap
 }
 
 type ByteSliceIndex interface {
@@ -168,8 +151,7 @@ type TimeIndex interface {
 }
 
 type Stats struct {
-	Len         int
-	Size        int
+	Size        int // no compressed
 	Cardinality int
 	Compressed  int
 	Max         interface{}
@@ -178,10 +160,7 @@ type Stats struct {
 
 type Vector interface {
 	Len() int
-	HasNulls() bool
-	Pos() []uint32
-	ValuesAsBytes() []byte
-	PosAsBytes() []byte
+	Rid() []uint32
 }
 
 type IntVector interface {
@@ -196,38 +175,75 @@ type FloatVector interface {
 
 type ByteSliceVector interface {
 	Vector
-	ValuesAsSlide() [][]byte
-}
-
-type BoolVector interface {
-	Vector
-	ValuesAsBoolean() []bool
+	Data() []byte
+	Offsets() []int
+	Get(i int) []byte
 }
 
 type intVector struct {
-	v []int
+	vect []int
+	rid  []uint32
 }
 
-func (i *intVector) Len() int {
-	return len(i.v)
+func (v intVector) Len() int {
+	return len(v.vect)
 }
 
-func (i *intVector) HasNulls() bool {
-	return false
+func (v intVector) Rid() []uint32 {
+	return v.rid
 }
 
-func (i *intVector) Pos() []int {
-	return nil
+func (v intVector) ValuesAsInt() []int {
+	return v.vect
 }
 
-func (i *intVector) ValuesAsBytes() []byte {
-	return nil
+type floatVector struct {
+	vect []float64
+	rid  []uint32
 }
 
-func (i *intVector) PosAsBytes() []byte {
-	return nil
+func (v floatVector) Len() int {
+	return len(v.vect)
 }
 
-func (i *intVector) ValuesAsInt() []int {
-	return i.v
+func (v floatVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v floatVector) ValuesAsFloat() []float64 {
+	return v.vect
+}
+
+type byteSliceVector struct {
+	rid     []uint32
+	data    []byte
+	offsets []int
+}
+
+func (v byteSliceVector) Len() int {
+	return len(v.offsets)
+}
+
+func (v byteSliceVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v byteSliceVector) Data() []byte {
+	return v.data
+}
+
+func (v byteSliceVector) Offsets() []int {
+	return v.offsets
+}
+
+func (v byteSliceVector) Get(i int) []byte {
+
+	var start int
+
+	if i > 0 {
+		start = v.offsets[i-1]
+	}
+
+	return v.data[start:v.offsets[i]]
+
 }
