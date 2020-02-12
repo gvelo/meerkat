@@ -13,52 +13,78 @@
 
 package storage
 
-type IndexWriter interface {
+type Flushable interface {
 	Flush() error
+}
+type IndexWriter interface {
+	Flushable
 }
 
 type IntIndexWriter interface {
+	IndexWriter
 	Index(vector IntVector)
+	Cardinality() int
 }
 
 type UintIndexWriter interface {
+	IndexWriter
 	Index(vector IntVector)
 }
 
 type FloatIndexWriter interface {
+	IndexWriter
 	Index(vector FloatVector)
 }
 
 type ByteSliceIndexWriter interface {
+	IndexWriter
 	Index(vector ByteSliceVector)
 }
 
 type PageIndexWriter interface {
+	IndexWriter
 	IndexPages(vec IntVector)
 }
 
+type PageWriter interface {
+	Flushable
+	//WritePage(vect ByteSliceVector)
+	WritePage(page []byte, endRid uint32)
+}
+
 type ValidityIndexWriter interface {
+	IndexWriter
 	Index(rid []uint32)
 }
 
+type Encoder interface {
+	Flushable
+	FlushData() error
+	Type() EncodingType
+}
+
 type IntEncoder interface {
+	Encoder
 	Encode(vec IntVector) error
 }
 
 type UintEncoder interface {
+	Encoder
 	Encode(vec IntVector) error
 }
 
 type FloatEncoder interface {
+	Encoder
 	Encode(vec FloatVector) error
 }
 
 type ByteSliceEncoder interface {
+	Encoder
 	Encode(vec ByteSliceVector) error
 }
 
 const (
-	MagicNumber = "MK"
+	MagicNumber = "MEERKAT"
 	Version     = 1
 )
 

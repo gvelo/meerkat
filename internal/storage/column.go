@@ -31,10 +31,10 @@ type SegmentRegistry interface {
 	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
 }
 
-type Encoding int
+type EncodingType int
 
 const (
-	Plain Encoding = iota
+	Plain EncodingType = iota
 	Dict
 	DictRleBitPacked
 	DeltaBitPacked

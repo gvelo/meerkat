@@ -13,23 +13,12 @@
 
 package storage
 
-import "meerkat/internal/storage/io"
-
-func NewTimeColumnWriter(values []int, bw *io.BinaryWriter) *TimeColumnWriter {
-	return &TimeColumnWriter{
-		values: values,
-		bw:     bw,
-	}
+type ColumnWriter interface {
+	Write() error
 }
 
-type TimeColumnWriter struct {
-	bw     *io.BinaryWriter
-	values []int
+type UintColumnWriter struct {
 }
 
-func (w *TimeColumnWriter) Write() error {
-
-	//err := w.bw.WriteByte(byte(Plain))
-	return nil
-
+type ByteSliceColumnWriter struct {
 }

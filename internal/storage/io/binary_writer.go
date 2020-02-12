@@ -41,48 +41,48 @@ func NewBinaryWriter(name string) (*BinaryWriter, error) {
 	return bw, nil
 }
 
-func (br *BinaryWriter) Close() error {
-	err := br.writer.Flush()
+func (bw *BinaryWriter) Close() error {
+	err := bw.writer.Flush()
 	if err != nil {
 		return err
 	}
-	err = br.file.Sync()
+	err = bw.file.Sync()
 	if err != nil {
 		return err
 	}
-	err = br.file.Close()
+	err = bw.file.Close()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (br *BinaryWriter) WriteByte(x byte) error {
-	br.writer.WriteByte(x)
-	br.Offset++
+func (bw *BinaryWriter) WriteByte(x byte) error {
+	bw.writer.WriteByte(x)
+	bw.Offset++
 	return nil
 }
 
-func (br *BinaryWriter) WriteVarInt(i int) error {
-	return br.WriteVarUint64(uint64(i))
+func (bw *BinaryWriter) WriteVarInt(i int) error {
+	return bw.WriteVarUint64(uint64(i))
 }
 
-func (br *BinaryWriter) WriteVarUInt32(i uint32) error {
-	return br.WriteVarUint64(uint64(i))
+func (bw *BinaryWriter) WriteVarUInt32(i uint32) error {
+	return bw.WriteVarUint64(uint64(i))
 }
 
 // EncodeVarint writes a varint-encoded integer to the Buffer.
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
-func (br *BinaryWriter) WriteVarUint64(x uint64) error {
+func (bw *BinaryWriter) WriteVarUint64(x uint64) error {
 	for x >= 1<<7 {
-		br.writer.WriteByte(uint8(x&0x7f | 0x80))
+		bw.writer.WriteByte(uint8(x&0x7f | 0x80))
 		x >>= 7
-		br.Offset += 1
+		bw.Offset += 1
 	}
-	br.writer.WriteByte(uint8(x))
-	br.Offset += 1
+	bw.writer.WriteByte(uint8(x))
+	bw.Offset += 1
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (br *BinaryWriter) WriteVarUint64(x uint64) error {
 // This is the format for the
 // int32, int64, uint32, uint64, bool, and enum
 // protocol buffer types.
-func (br *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
+func (bw *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
 	var s uint64 = 0
 	for x >= 1<<7 {
 		x >>= 7
@@ -100,86 +100,97 @@ func (br *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
 	return s
 }
 
-func (br *BinaryWriter) WriteFixedInt(i int) error {
-	return br.WriteFixedUint64(uint64(i))
+func (bw *BinaryWriter) WriteFixedInt(i int) error {
+	return bw.WriteFixedUint64(uint64(i))
 }
 
 // EncodeFixed64 writes a 64-bit integer to the Buffer.
 // This is the format for the
 // fixed64, sfixed64, and double protocol buffer types.
-func (br *BinaryWriter) WriteFixedUint64(x uint64) error {
-	br.writer.WriteByte(uint8(x))
-	br.writer.WriteByte(uint8(x >> 8))
-	br.writer.WriteByte(uint8(x >> 16))
-	br.writer.WriteByte(uint8(x >> 24))
-	br.writer.WriteByte(uint8(x >> 32))
-	br.writer.WriteByte(uint8(x >> 40))
-	br.writer.WriteByte(uint8(x >> 48))
-	br.writer.WriteByte(uint8(x >> 56))
-	br.Offset += 8
+func (bw *BinaryWriter) WriteFixedUint64(x uint64) error {
+	bw.writer.WriteByte(uint8(x))
+	bw.writer.WriteByte(uint8(x >> 8))
+	bw.writer.WriteByte(uint8(x >> 16))
+	bw.writer.WriteByte(uint8(x >> 24))
+	bw.writer.WriteByte(uint8(x >> 32))
+	bw.writer.WriteByte(uint8(x >> 40))
+	bw.writer.WriteByte(uint8(x >> 48))
+	bw.writer.WriteByte(uint8(x >> 56))
+	bw.Offset += 8
 	return nil
 }
 
 // EncodeFixed32 writes a 32-bit integer to the Buffer.
 // This is the format for the
 // fixed32, sfixed32, and float protocol buffer types.
-func (br *BinaryWriter) WriteFixedUint32(x uint64) error {
-	br.writer.WriteByte(uint8(x))
-	br.writer.WriteByte(uint8(x >> 8))
-	br.writer.WriteByte(uint8(x >> 16))
-	br.writer.WriteByte(uint8(x >> 24))
-	br.Offset += 4
+func (bw *BinaryWriter) WriteFixedUint32(x uint64) error {
+	bw.writer.WriteByte(uint8(x))
+	bw.writer.WriteByte(uint8(x >> 8))
+	bw.writer.WriteByte(uint8(x >> 16))
+	bw.writer.WriteByte(uint8(x >> 24))
+	bw.Offset += 4
 	return nil
 }
 
 // EncodeZigzag64 writes a zigzag-encoded 64-bit integer
 // to the Buffer.
 // This is the format used for the sint64 protocol buffer type.
-func (br *BinaryWriter) WriteZigzag64(x uint64) error {
+func (bw *BinaryWriter) WriteZigzag64(x uint64) error {
 	// use signed number to get arithmetic right shift.
-	br.Offset += 8
-	return br.WriteVarUint64(uint64((x << 1) ^ uint64(int64(x)>>63)))
+	bw.Offset += 8
+	return bw.WriteVarUint64(uint64((x << 1) ^ uint64(int64(x)>>63)))
 }
 
 // EncodeZigzag32 writes a zigzag-encoded 32-bit integer
 // to the Buffer.
 // This is the format used for the sint32 protocol buffer type.
-func (br *BinaryWriter) WriteZigzag32(x uint64) error {
+func (bw *BinaryWriter) WriteZigzag32(x uint64) error {
 	// use signed number to get arithmetic right shift.
-	br.Offset += 4
-	return br.WriteVarUint64(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
+	bw.Offset += 4
+	return bw.WriteVarUint64(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
 }
 
 // EncodeRawBytes writes a count-delimited byte buffer to the Buffer.
 // This is the format used for the bytes protocol buffer
 // type and for embedded messages.
-func (br *BinaryWriter) WriteBytes(b []byte) error {
-	err := br.WriteVarInt(len(b))
+func (bw *BinaryWriter) WriteBytes(b []byte) error {
+	err := bw.WriteVarInt(len(b))
 	if err != nil {
 		return err
 	}
-	_, err = br.Write(b)
+	_, err = bw.Write(b)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (br *BinaryWriter) Write(b []byte) (int, error) {
-	nn, err := br.writer.Write(b)
+func (bw *BinaryWriter) Write(b []byte) (int, error) {
+	nn, err := bw.writer.Write(b)
 	if err != nil {
 		return nn, err
 	}
-	br.Offset += nn
+	bw.Offset += nn
 	return nn, err
 }
 
 // EncodeStringBytes writes an encoded string to the Buffer.
 // This is the format used for the proto2 string type.
-func (br *BinaryWriter) WriteString(s string) error {
+func (bw *BinaryWriter) WriteString(s string) error {
 	l := len(s)
-	br.WriteVarInt(l)
-	br.writer.WriteString(s)
-	br.Offset += l
+	bw.WriteVarInt(l)
+	bw.writer.WriteString(s)
+	bw.Offset += l
 	return nil
+}
+
+func (bw *BinaryWriter) WriteVarIntSlice(slice []int) error {
+
+	for _, i := range slice {
+		err := bw.WriteVarInt(i)
+		if err != nil {
+			return err
+		}
+	}
+
 }
