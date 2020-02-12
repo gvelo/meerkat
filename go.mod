@@ -8,6 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.4.0
 	github.com/glycerine/goconvey v0.0.0-20190315024820-982ee783a72e // indirect
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/gopherjs/gopherjs v0.0.0-20190309154008-847fc94819f9 // indirect

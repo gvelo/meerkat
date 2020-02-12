@@ -1,16 +1,19 @@
 package executor
 
-import "math"
+import (
+	"math"
+	"meerkat/internal/storage"
+)
 
 type AggregationOperator struct {
 }
 
-// Type defines an aggregation function.
-type Type int
+// AggType defines an aggregation function.
+type AggType int
 
 // Supported aggregation types.
 const (
-	Min Type = iota
+	Min AggType = iota
 	Max
 	Mean
 	Count
@@ -19,38 +22,39 @@ const (
 	StdDev
 )
 
+// Should we use it??? change for functions.
 type Counter interface {
-	Count() int64
-	SumSq() int64
-	Sum() int64
+	Count() int
+	SumSq() int
+	Sum() int
 	Stdev() float64
 	Mean() float64
-	Min() int64
-	Update(i int64)
-	ValueOf(aggType Type) float64
+	Min() int
+	Update(i int)
+	ValueOf(aggType AggType) float64
 }
 
 type counter struct {
-	sum   int64
-	sumSq int64
-	count int64
-	max   int64
-	min   int64
-	t     Type
+	sum   int
+	sumSq int
+	count int
+	max   int
+	min   int
+	t     AggType
 }
 
-func NewCounter(t Type) Counter {
-	return &counter{t: t, max: math.MinInt64, min: math.MaxInt64}
+func NewCounter() Counter {
+	return &counter{max: math.MinInt64, min: math.MaxInt64}
 }
 
 // Counter returns the number of values received.
-func (c *counter) Count() int64 { return c.count }
+func (c *counter) Count() int { return c.count }
 
 // Sum returns the sum of Counter values.
-func (c *counter) Sum() int64 { return c.sum }
+func (c *counter) Sum() int { return c.sum }
 
 // SumSq returns the squared sum of Counter values.
-func (c *counter) SumSq() int64 { return c.sumSq }
+func (c *counter) SumSq() int { return c.sumSq }
 
 // Mean returns the mean Counter value.
 func (c *counter) Mean() float64 {
@@ -65,7 +69,7 @@ func (c *counter) Stdev() float64 {
 	return stdev(c.count, float64(c.sumSq), float64(c.sum))
 }
 
-func stdev(count int64, sumSq, sum float64) float64 {
+func stdev(count int, sumSq, sum float64) float64 {
 	div := count * (count - 1)
 	if div == 0 {
 		return 0.0
@@ -75,12 +79,12 @@ func stdev(count int64, sumSq, sum float64) float64 {
 }
 
 // Min returns the minimum Counter value.
-func (c *counter) Min() int64 { return c.min }
+func (c *counter) Min() int { return c.min }
 
 // Max returns the maximum Counter value.
-func (c *counter) Max() int64 { return c.min }
+func (c *counter) Max() int { return c.min }
 
-func (c *counter) Update(i int64) {
+func (c *counter) Update(i int) {
 
 	c.count++
 	c.sum = c.sum + i
@@ -100,7 +104,7 @@ func (c *counter) Update(i int64) {
 }
 
 // ValueOf returns the value for the aggregation type.
-func (c *counter) ValueOf(aggType Type) float64 {
+func (c *counter) ValueOf(aggType AggType) float64 {
 	switch aggType {
 	case Min:
 		return float64(c.Min())
@@ -141,11 +145,11 @@ func (c *counter) ValueOf(aggType Type) float64 {
 // 12:07:00
 //
 //
-func histogram(ts []int64) map[int64]int64 {
+func histogram(ts []int) map[int]int {
 
-	m := make(map[int64]int64)
+	m := make(map[int]int)
 	for i := 0; i < len(ts); i++ {
-		var s int64 = 1
+		var s int = 1
 		ant := ts[i]
 		for ; i < len(ts) && ant == ts[i]; i++ {
 			s++
@@ -154,4 +158,127 @@ func histogram(ts []int64) map[int64]int64 {
 	}
 
 	return m
+}
+
+func NewHashAggregateOperator(ctx Context, child MultiVectorOperator, aCols []Aggregation, gByCols []int) MultiVectorOperator {
+	return &HashAggregateOperator{
+		ctx:     ctx,
+		child:   child,
+		aCols:   aCols,
+		keyCols: gByCols,
+	}
+}
+
+type Aggregation struct {
+	AggType AggType
+	AgCol   int
+}
+
+// AggregateOperator
+//
+type HashAggregateOperator struct {
+	ctx       Context
+	child     MultiVectorOperator
+	aCols     []Aggregation // Aggregation columns
+	keyCols   []int         // Group by columns
+	resultVec []storage.Vector
+}
+
+func (r *HashAggregateOperator) Init() {
+	r.child.Init()
+	r.resultVec = make([]storage.Vector, 0)
+	// for each key col a create a result
+	for i := 0; i < len(r.keyCols); i++ {
+		// r.resultVec = append(r.resultVec, createVector() )
+	}
+
+}
+
+func (r *HashAggregateOperator) Destroy() {
+	r.child.Destroy()
+}
+
+func (r *HashAggregateOperator) Next() []storage.Vector {
+
+	n := r.child.Next() // Iterate over all vectors...
+
+	if n != nil && len(n) > 0 {
+
+		mKey := make(map[string][]Counter)
+
+		for i := 0; i < n[0].Len(); i++ {
+
+			// create the key
+			k := createKey(n, r.keyCols)
+
+			// check the key
+			if _, ok := mKey[string(k)]; ok != true {
+				//new key append counters.
+				c := make([]Counter, 0)
+				for range r.aCols {
+					c = append(c, NewCounter())
+				}
+				mKey[string(k)] = c
+			}
+
+			// update values.
+			for i, it := range r.aCols {
+				c := mKey[string(k)] // get the counters array
+				// TODO: ver los demas tipos de valores.
+				switch col := n[it.AgCol].(type) {
+				case storage.IntVector:
+					c[i].Update(col.ValuesAsInt()[i])
+				case storage.FloatVector:
+					c[i].Update(int(col.ValuesAsFloat()[i]))
+				}
+
+			}
+
+		}
+
+		// habria que ir agrupando los vectores y claves.... [c1][c2][c3]  para despues hacer -> (sum1) (sum3)
+		// o devolverlos a Nodo agrupador.
+		// paralelizar?
+		// Analizar como procesar esto de manera mas simple.
+	}
+	return nil
+}
+
+func createKey(n []storage.Vector, gByCols []int) []byte {
+	k := make([]byte, 0)
+	for _, it := range gByCols {
+		k = append(k, n[it].ValuesAsBytes()...)
+	}
+	return k
+}
+
+func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aCols []AggType, gByCol int) MultiVectorOperator {
+	return &SortedAggregateOperator{
+		ctx:    ctx,
+		child:  child,
+		aCols:  aCols,
+		gByCol: gByCol,
+	}
+}
+
+// AggregateOperator
+//
+type SortedAggregateOperator struct {
+	ctx    Context
+	child  MultiVectorOperator
+	aCols  []AggType
+	gByCol int
+}
+
+func (r *SortedAggregateOperator) Init() {
+	r.child.Init()
+}
+
+func (r *SortedAggregateOperator) Destroy() {
+	r.child.Destroy()
+}
+
+func (r *SortedAggregateOperator) Next() []storage.Vector {
+	r.child.Next()
+	return nil
 }

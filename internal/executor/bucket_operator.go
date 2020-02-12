@@ -114,11 +114,11 @@ func (op *BucketOperator) Next() storage.Vector {
 			}
 		}
 
-		return storage.NewIntVector(ts)
+		//return storage.NewIntVector(ts)
 	} else {
 		return nil
 	}
-
+	return nil
 }
 
 func getNextSpan(t, s int, d time.Duration) int {

@@ -14,66 +14,94 @@
 package executor
 
 import (
-	"github.com/RoaringBitmap/roaring"
-	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage"
 	"testing"
 )
 
-type BitmapIndexOperator struct {
-	i     storage.IntIndex
-	op    Operation
-	value interface{}
-}
+// TODO:  ARMAR LAS NOTIFICACIONES!!!
+// Select * From Index Where c1 = 12 and ts Between  F1 AND F2 limit 100
+// C1, F1 indexed
+// C2 = string
+// C3 = float
+func TestQuery1(t *testing.T) {
+	// a := assert.New(t)
 
-func (b BitmapIndexOperator) Init() {
-	panic("implement me")
-}
+	var s storage.Segment
 
-func (b BitmapIndexOperator) Destroy() {
-	panic("implement me")
-}
+	ctx := NewContext(s)
+	ctx.Value(ColumnIndexKeysKey, []string{"F", "C1", "C2", "C3"})
 
-func (b BitmapIndexOperator) Next() *roaring.Bitmap {
-	panic("implement me")
-}
+	op1 := NewIndexScanOperator(ctx, lt, 1, "ts") // ts > 1
+	op2 := NewIndexScanOperator(ctx, gt, 2, "ts") // ts < 2
 
-// Select * From Index Where c1 = 12 and ts Between  F1 AND F2
-// C1, F1, F2 indexed
-func TestBinaryBitmapOperator(t *testing.T) {
-	a := assert.New(t)
-	var ts storage.IntColumn
-	var c1 storage.IntColumn
+	op3 := NewBinaryBitmapOperator(ctx, and, op1, op2) // ts > 1 AND ts < 2
+	op4 := NewIndexScanOperator(ctx, eq, 12, "C1")     // C1 == 12
 
-	op1 := NewIntIndexScanOperator(lt, 1, ts) // ts > 1
-	op2 := NewIntIndexScanOperator(gt, 2, ts) // ts < 2
+	op5 := NewBinaryBitmapOperator(ctx, and, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
 
-	op3 := NewBinaryBitmapOperator(and, op1, op2) // ts > 1 AND ts < 2
-	op4 := NewIntIndexScanOperator(and, 12, c1)   // C1 == 12
+	// este operador va a ser el mas complejo, materializa bufferea, ect ect tiene que saber que hacer en todos los campos
+	// quizas los histogramas y demas los podemos mapear como liteners o cosas por el estilo.
+	// tenenmos que ver si pasar un contexto, para abajo para compltar cosas, ejemplo Limit. ...
 
-	op5 := NewBinaryBitmapOperator(gt, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
+	op6 := NewReaderOperator(ctx, op5, "F")
+	op7 := NewReaderOperator(ctx, op5, "C1")
+	op8 := NewReaderOperator(ctx, op5, "C2")
+	op9 := NewReaderOperator(ctx, op5, "C3")
 
-	op6 := NewReaderOperator(op5) // definir columna o mejor este tiene que saber que hacer en todos los campos
+	op10 := NewBufferOperator(ctx, []VectorOperator{op6, op7, op8, op9})
+
+	op11 := NewMaterialize(ctx, op10)
+
+	// TODO: Check where to put this operator. it should be set in the Query node.
+	// op12 := NewLimitOperator(ctx, op11, 100)
+
+	// op12.Next() // Should return the values [F] [C1] [C2] [C3]
+	// limits the request.
+	op11.Next()
 	// op5 := Decompress
 
 }
 
-func NewReaderOperator(child BitmapOperator) *ReaderOperator {
-	return &ReaderOperator{child}
-}
+// Hacer un agrupado!
+// Select max(C3), C1, C2 From Index Where ts Between F1 AND F2
+// Group by C1, C2
+// C1, ts indexed
+func TestQuery2(t *testing.T) {
+	// a := assert.New(t)
 
-type ReaderOperator struct {
-	child BitmapOperator // (Positions to review)
-}
+	var s storage.Segment
 
-func (r *ReaderOperator) Init() {
+	ctx := NewContext(s)
+	ctx.Value(ColumnIndexKeysKey, []string{"_ts"})
 
-}
+	op1 := NewIndexScanOperator(ctx, lt, 1, "_ts") // _ts > 1
+	op2 := NewIndexScanOperator(ctx, gt, 2, "_ts") // _ts < 2
 
-func (r *ReaderOperator) Destroy() {
+	op3 := NewBinaryBitmapOperator(ctx, and, op1, op2) // _ts > 1 AND _ts < 2
 
-}
+	// este operador va a ser el mas complejo, materializa bufferea, ect ect tiene que saber que hacer en todos los campos
+	// quizas los histogramas y demas los podemos mapear como liteners o cosas por el estilo.
+	// tenenmos que ver si pasar un contexto, para abajo para compltar cosas, ejemplo Limit. ...
 
-func (r *ReaderOperator) Next() storage.Vector {
-	return nil
+	col := []string{"_ts", "F", "C1", "C2", "C4"}
+	vo := make([]VectorOperator, 0)
+	for _, it := range col[1:] {
+		op := NewReaderOperator(ctx, op3, it)
+		vo = append(vo, op)
+	}
+
+	op10 := NewBufferOperator(ctx, vo)
+
+	agList := make([]Aggregation, 0)
+	agList = append(agList, Aggregation{Max, 3})
+
+	op11 := NewHashAggregateOperator(ctx, op10, agList, []int{1, 2})
+
+	op12 := NewMaterialize(ctx, op11)
+
+	op12.Next() // Should return the values [F] [C1] [C2] [C3]
+	// limits the request.
+
+	// op5 := Decompress
+
 }

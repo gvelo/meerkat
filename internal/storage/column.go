@@ -28,7 +28,14 @@ type Segment interface {
 }
 
 type SegmentRegistry interface {
-	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
+	Segment(indexId []byte, from time.Time, to time.Time) []Segment
+}
+
+type LocalSegmentRegistry struct {
+}
+
+func (sr LocalSegmentRegistry) Segment(indexId []byte, from time.Time, to time.Time) []Segment {
+	return nil
 }
 
 type Encoding int
@@ -45,6 +52,7 @@ type Column interface {
 	Encoding() Encoding
 	Validity() *roaring.Bitmap
 	HasNulls() bool
+	Read(pos []uint32) (Vector, error)
 	Stats() *Stats
 }
 
@@ -52,15 +60,19 @@ type IntColumn interface {
 	Column
 	Dict() IntDict
 	Index() IntIndex
-	Read(pos []uint32) (IntVector, error)
 	Iterator() IntIterator
+}
+
+type BoolColumn interface {
+	Column
+	Index() BoolIndex
+	Iterator() BoolIterator
 }
 
 type FloatColumn interface {
 	Column
 	Dict() FloatDict
 	Index() FloatIndex
-	Read(pos []uint32) (FloatVector, error)
 	Iterator() FloatIterator
 }
 
@@ -69,7 +81,6 @@ type StringColumn interface {
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
 	ReadDictEnc(pos []uint32) (IntVector, error)
-	Read(pos []uint32) (ByteSliceVector, error)
 	DictEncodedIterator() IntIterator
 	Iterator() ByteSliceIterator
 }
@@ -77,14 +88,12 @@ type StringColumn interface {
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
-	Read(pos []uint32) (ByteSliceVector, error)
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []uint32) (IntVector, error)
 	Iterator() IntIterator
 }
 
@@ -107,6 +116,11 @@ type ByteSliceIterator interface {
 	Next() (ByteSliceVector, error)
 }
 
+type BoolIterator interface {
+	Iterator
+	Next() (bool, error)
+}
+
 type IntDict interface {
 	DecodeInt(id int) (int, error)
 }
@@ -117,6 +131,11 @@ type FloatDict interface {
 
 type ByteSliceDict interface {
 	DecodeByteSlice(i int) ([]byte, error)
+}
+
+type BoolIndex interface {
+	Eq(b bool) *roaring.Bitmap
+	Ne(b bool) *roaring.Bitmap
 }
 
 type ByteSliceIndex interface {
@@ -180,14 +199,13 @@ type ByteSliceVector interface {
 	ValuesAsSlide() [][]byte
 }
 
-type intVector struct {
-	v []int
+type BoolVector interface {
+	Vector
+	ValuesAsBoolean() []bool
 }
 
-func NewIntVector(v []int) IntVector {
-	return &intVector{
-		v: v,
-	}
+type intVector struct {
+	v []int
 }
 
 func (i *intVector) Len() int {

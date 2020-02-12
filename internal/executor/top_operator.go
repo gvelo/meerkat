@@ -98,6 +98,6 @@ func (op *TopOperator) Next() []storage.Vector {
 		v = append(v, m[kl[i]])
 	}
 
-	return []storage.Vector{storage.NewIntVector(k), storage.NewIntVector(v)}
+	return nil // []storage.Vector{storage.NewIntVector(k), storage.NewIntVector(v)}
 
 }

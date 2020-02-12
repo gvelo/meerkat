@@ -40,9 +40,9 @@ func (op *TestOperator) Init() {
 
 func (op *TestOperator) Next() storage.Vector {
 	if op.i < len(op.val) {
-		sc := storage.NewIntVector(op.val[op.i])
+		// sc := storage.NewIntVector(op.val[op.i])
 		op.i++
-		return sc
+		return nil
 	}
 	return nil
 }

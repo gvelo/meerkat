@@ -18,14 +18,27 @@ import (
 	"meerkat/internal/storage"
 )
 
-// Operation represents an operation between two expressions
-type Operation int
+// BinaryOperation represents an operation between two expressions
+type BinaryOperation int
 
 const (
-	and Operation = iota
+	and BinaryOperation = iota
 	or
 	xor
-	eq
+)
+
+// ComparisonOperation represents an comparison between two expressions
+type ComparisonOperation int
+
+const (
+	eq ComparisonOperation = iota
+	lt
+	le
+	gt
+	ge
+	ne
+	rex
+	pref
 )
 
 // Operator represents an Operator of a physical plan execution.
@@ -40,6 +53,12 @@ type Operator interface {
 	// Destroy will cascade calling the Destroy method on all it's
 	// children operators.
 	Destroy()
+}
+
+// ColumnOperator represents an Operator which acts to a column
+// GetName returns the column name.
+type ColumnOperator interface {
+	GetName() []byte
 }
 
 // BitmapOperator is an Operator that produces bitmaps as output
@@ -76,8 +95,9 @@ type MultiVectorOperator interface {
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewBinaryBitmapOperator(op Operation, left BitmapOperator, right BitmapOperator) *BinaryBitmapOperator {
+func NewBinaryBitmapOperator(ctx Context, op BinaryOperation, left BitmapOperator, right BitmapOperator) *BinaryBitmapOperator {
 	return &BinaryBitmapOperator{
+		ctx:   ctx,
 		op:    op,
 		left:  left,
 		right: right,
@@ -87,7 +107,8 @@ func NewBinaryBitmapOperator(op Operation, left BitmapOperator, right BitmapOper
 // BinaryBitmapOperator executes a binary operation between two bitmaps
 // and returns a new bitmap.
 type BinaryBitmapOperator struct {
-	op    Operation
+	ctx   Context
+	op    BinaryOperation
 	left  BitmapOperator
 	right BitmapOperator
 }
@@ -121,38 +142,95 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewIntIndexScanOperator(op Operation, value int, idx storage.IntIndex) BitmapOperator {
-	return &IntIndexScanOperator{
-		op:  op,
-		idx: idx,
+func NewIndexScanOperator(ctx Context, op ComparisonOperation, value interface{}, fName string) BitmapOperator {
+	return &IndexScanOperator{
+		ctx:   ctx,
+		op:    op,
+		fName: fName,
+		value: value,
 	}
 }
 
-// IndexScanOperator executes a binary operation between two bitmaps
-// and returns a new bitmap.
-type IntIndexScanOperator struct {
-	op  Operation
-	idx storage.Column
+// IndexScanOperator executes a search in a column and returns the bitmap of positions
+// that meet that condition.
+type IndexScanOperator struct {
+	ctx   Context
+	op    ComparisonOperation
+	fName string
+	value interface{}
 }
 
-func (op *IntIndexScanOperator) Init() {
-
+func (op *IndexScanOperator) Init() {
+	// Nothing to do yet.
 }
 
-func (op *IntIndexScanOperator) Destroy() {
-
+func (op *IndexScanOperator) Destroy() {
+	// Nothing to do yet.
 }
 
-func (op *IntIndexScanOperator) Next() *roaring.Bitmap {
+func (op *IndexScanOperator) Next() *roaring.Bitmap {
 
-	//TODO: What do we return in this case?
+	c := op.ctx.Segment().Col([]byte(op.fName))
+
+	switch col := c.(type) {
+	case storage.StringColumn:
+	case storage.TextColumn:
+		switch op.op {
+		case eq:
+			return col.Index().Search(op.value.([]byte))
+		case rex:
+			return col.Index().Regex(op.value.([]byte))
+		case pref:
+			return col.Index().Prefix(op.value.([]byte))
+		}
+
+	case storage.IntColumn:
+		switch op.op {
+		case ne:
+			return col.Index().Ne(op.value.(int))
+		case eq:
+			return col.Index().Eq(op.value.(int))
+		case lt:
+			return col.Index().Lt(op.value.(int))
+		case le:
+			return col.Index().Le(op.value.(int))
+		case ge:
+			return col.Index().Ge(op.value.(int))
+		case gt:
+			return col.Index().Gt(op.value.(int))
+		}
+
+	case storage.FloatColumn:
+		switch op.op {
+		case ne:
+			return col.Index().Ne(op.value.(float64))
+		case eq:
+			return col.Index().Eq(op.value.(float64))
+		case lt:
+			return col.Index().Lt(op.value.(float64))
+		case le:
+			return col.Index().Le(op.value.(float64))
+		case ge:
+			return col.Index().Ge(op.value.(float64))
+		case gt:
+			return col.Index().Gt(op.value.(float64))
+		}
+	case storage.BoolColumn:
+		switch op.op {
+		case ne:
+			return col.Index().Ne(op.value.(bool))
+		case eq:
+			return col.Index().Eq(op.value.(bool))
+		}
+
+	}
+
 	return nil
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
 func NewColumnScanOperator(p []int, c interface{}) MultiVectorOperator {
 	return &ColumnScanOperator{
-		p: p,
 		c: c,
 	}
 }
@@ -168,7 +246,8 @@ func NewColumnScanOperator(p []int, c interface{}) MultiVectorOperator {
 // if the arrays of positions is empty it scan all
 //
 type ColumnScanOperator struct {
-	c interface{}
+	ctx Context
+	c   interface{}
 }
 
 func (op *ColumnScanOperator) Init() {
@@ -187,6 +266,7 @@ func (op *ColumnScanOperator) Next() []storage.Vector {
 // registers and returns the bitmap that meets that condition.
 //
 type ByteArrayScanOperator struct {
+	ctx Context
 	pos []int
 }
 
@@ -198,5 +278,184 @@ func (op *ByteArrayScanOperator) Destroy() {
 
 func (op *ByteArrayScanOperator) Next() *roaring.Bitmap {
 	//TODO: What do we return in this case?
+	return nil
+}
+
+// NewColumnScanOperator creates a ColumnScanOperator
+func NewLimitOperator(ctx Context, c MultiVectorOperator, qty int) MultiVectorOperator {
+	return &LimitOperator{
+		ctx:   ctx,
+		child: c,
+		qty:   qty,
+	}
+}
+
+// LimitOperator scans a non indexed column, search for the []pos
+// registers and returns the bitmap that meets that condition.
+//
+type LimitOperator struct {
+	ctx   Context
+	child MultiVectorOperator
+	qty   int
+}
+
+func (op *LimitOperator) Init() {
+	op.child.Init()
+}
+
+func (op *LimitOperator) Destroy() {
+	op.child.Destroy()
+}
+
+func (op *LimitOperator) Next() []storage.Vector {
+	n := op.child.Next()
+
+	return n
+}
+
+func NewReaderOperator(ctx Context, child BitmapOperator, col string) *ReaderOperator {
+	return &ReaderOperator{ctx: ctx, child: child, colName: col}
+}
+
+// ReaderOperator reads all positions in the bitmap
+type ReaderOperator struct {
+	ctx     Context
+	child   BitmapOperator
+	colName string
+	it      roaring.ManyIntIterable
+}
+
+func (r *ReaderOperator) Init() {
+	r.child.Init()
+	n := r.child.Next()
+	if n != nil {
+		r.it = n.ManyIterator()
+	}
+}
+
+func (r *ReaderOperator) GetName() string {
+	return r.colName
+}
+
+func (r *ReaderOperator) Destroy() {
+	r.child.Destroy()
+}
+
+func (r *ReaderOperator) Next() storage.Vector {
+
+	if r.it == nil {
+		return nil
+	}
+
+	buff := make([]uint32, 0, 1000)
+	s := r.it.NextMany(buff)
+	if s != 0 {
+		c := r.ctx.Segment().Col([]byte(r.colName))
+		v, _ := c.Read(buff) // Check error?
+		return v
+	} else {
+		return nil
+	}
+}
+
+// TODO: Volarlo, no sirve.
+func NewBufferOperator(ctx Context, children []VectorOperator) *BufferOperator {
+	return &BufferOperator{
+		ctx:      ctx,
+		children: children,
+	}
+}
+
+// BufferOperator reads all positions in the bitmap
+// and other and
+type BufferOperator struct {
+	ctx      Context
+	vKeys    [][]byte
+	children []VectorOperator
+}
+
+func (r *BufferOperator) Init() {
+	r.vKeys = make([][]byte, 0)
+	for i, c := range r.children {
+		r.vKeys[i] = c.(ColumnOperator).GetName()
+		c.Init()
+	}
+	r.ctx.Value(ColumnIndexKeysKey, r.vKeys)
+}
+
+func (r *BufferOperator) Destroy() {
+	for _, c := range r.children {
+		c.Destroy()
+	}
+}
+
+func (r *BufferOperator) Next() []storage.Vector {
+	op := make([]storage.Vector, 0, len(r.children))
+	for i, c := range r.children {
+		// Paralelize
+		op[i] = c.Next()
+
+	}
+	return op
+}
+
+// Decodifica el diccionario y lo manda....
+func NewMaterialize(ctx Context, child MultiVectorOperator) *MaterializeOperator {
+	return &MaterializeOperator{
+		ctx,
+		child,
+	}
+}
+
+// MaterializeOperator operator
+type MaterializeOperator struct {
+	ctx   Context
+	child MultiVectorOperator
+}
+
+func (r *MaterializeOperator) Init() {
+	r.child.Init()
+}
+
+func (r *MaterializeOperator) Destroy() {
+	r.child.Destroy()
+}
+
+func (r *MaterializeOperator) Next() []storage.Vector {
+	n := r.child.Next()
+	var keys [][]byte
+	v, ok := r.ctx.Get(ColumnIndexKeysKey)
+	if ok {
+		keys = v.([][]byte)
+	} else {
+		panic("No ColumnIndexKeysKey")
+	}
+
+	// Aca tengo los valores de los objetos... que son null o no segun el vector lo tengo que validar
+	if n != nil {
+		res := make([]storage.Vector, 0, len(n))
+		for i, _ := range n {
+
+			switch vec := n[i].(type) {
+
+			case storage.BoolVector: // Should exist?
+			case storage.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
+			case storage.FloatVector:
+				res[i] = vec
+			case storage.IntVector:
+				fName := keys[i]
+				col := r.ctx.Segment().Col(fName)
+				_, ok := col.(storage.StringColumn) // c
+				if ok {                             // Its a string col, we should dict decode here.
+					// Here we sould create a vector
+					// b, err := c.Dict().DecodeByteSlice()
+					res[i] = vec
+				} else {
+					res[i] = vec
+				}
+			}
+		}
+		return res
+	}
 	return nil
 }
