@@ -18,15 +18,15 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-func NewIntColumnWriter(fieldType schema.FieldType,
-	src IntColumSource,
-	encoder IntEncoder,
-	index IntIndexWriter,
+func NewByteSliceColumnWriter(fieldType schema.FieldType,
+	src ByteSliceColumSource,
+	encoder ByteSliceEncoder,
+	index ByteSliceIndexWriter,
 	pageIndex PageIndexWriter,
 	validityIndex ValidityIndexWriter,
-	bw *io.BinaryWriter) *IntColumnWriter {
+	bw *io.BinaryWriter) *ByteSliceColumnWriter {
 
-	return &IntColumnWriter{
+	return &ByteSliceColumnWriter{
 		fieldType: fieldType,
 		src:       src,
 		bw:        bw,
@@ -38,12 +38,12 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 
 }
 
-type IntColumnWriter struct {
+type ByteSliceColumnWriter struct {
 	fieldType      schema.FieldType
 	bw             *io.BinaryWriter
-	src            IntColumSource
-	encoder        IntEncoder
-	index          IntIndexWriter
+	src            ByteSliceColumSource
+	encoder        ByteSliceEncoder
+	index          ByteSliceIndexWriter
 	pageIndex      PageIndexWriter
 	validity       ValidityIndexWriter
 	numOfValues    int
@@ -56,7 +56,7 @@ type IntColumnWriter struct {
 	validityOffset int
 }
 
-func (w *IntColumnWriter) Write() error {
+func (w *ByteSliceColumnWriter) Write() error {
 
 	w.startOffset = w.bw.Offset
 
@@ -144,7 +144,7 @@ func (w *IntColumnWriter) Write() error {
 
 }
 
-func (w *IntColumnWriter) WriteMetadata() error {
+func (w *ByteSliceColumnWriter) WriteMetadata() error {
 
 	metadata := []int{
 		int(w.fieldType),

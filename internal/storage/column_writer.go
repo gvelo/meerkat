@@ -13,12 +13,96 @@
 
 package storage
 
+import (
+	"meerkat/internal/buffer"
+	"meerkat/internal/schema"
+	"meerkat/internal/storage/io"
+)
+
+type Flushable interface {
+	Flush() error
+}
+type IndexWriter interface {
+	Flushable
+	Cardinality() int
+}
+
+type IntIndexWriter interface {
+	IndexWriter
+	Index(vector IntVector)
+}
+
+type UintIndexWriter interface {
+	IndexWriter
+	Index(vector IntVector)
+}
+
+type FloatIndexWriter interface {
+	IndexWriter
+	Index(vector FloatVector)
+}
+
+type ByteSliceIndexWriter interface {
+	IndexWriter
+	Index(vector ByteSliceVector)
+}
+
+type PageIndexWriter interface {
+	IndexWriter
+	IndexPages(vec IntVector)
+}
+
+type PageWriter interface {
+	Flushable
+	//WritePage(vect ByteSliceVector)
+	WritePage(page []byte, endRid uint32)
+}
+
+type ValidityIndexWriter interface {
+	IndexWriter
+	Index(rid []uint32)
+}
+
+type Encoder interface {
+	Flushable
+	FlushData() error
+	Type() EncodingType
+}
+
+type IntEncoder interface {
+	Encoder
+	Encode(vec IntVector) error
+}
+
+type UintEncoder interface {
+	Encoder
+	Encode(vec IntVector) error
+}
+
+type FloatEncoder interface {
+	Encoder
+	Encode(vec FloatVector) error
+}
+
+type ByteSliceEncoder interface {
+	Encoder
+	Encode(vec ByteSliceVector) error
+}
+
 type ColumnWriter interface {
 	Write() error
 }
 
-type UintColumnWriter struct {
+func NewColumWriter(fieldType schema.FieldType, buf *buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+	return nil
 }
 
-type ByteSliceColumnWriter struct {
+func NewTSColumnWriter(buf *buffer.IntBuffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+
+	// TODO: here should be the logic of the column writer factory.
+	//  The factory will build the src using an appropriate page size
+	//  to feed the encoder.
+
+	return nil
+
 }
