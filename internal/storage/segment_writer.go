@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	MagicNumber = "MEERKAT"
-	Version     = 1
-	TSColID     = "_ts" // TODO(gvelo) change to []byte
+	MagicNumber    = "MEERKAT"
+	SegmentVersion = 1
+	TSColID        = "_ts" // TODO(gvelo) change to []byte
 )
 
 func NewSegmentWriter(path string, id uuid.UUID, table *buffer.Table) *SegmentWriter {
@@ -167,7 +167,13 @@ func (sw *SegmentWriter) writeMetadata() error {
 
 	metadataStart := sw.bw.Offset
 
-	_, err := sw.bw.Write(sw.id[:])
+	err := sw.bw.WriteByte(byte(SegmentVersion))
+
+	if err != nil {
+		return err
+	}
+
+	_, err = sw.bw.Write(sw.id[:])
 
 	if err != nil {
 		return err

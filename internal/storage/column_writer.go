@@ -55,7 +55,7 @@ type PageIndexWriter interface {
 type PageWriter interface {
 	Flushable
 	//WritePage(vect ByteSliceVector)
-	WritePage(page []byte, endRid uint32)
+	WritePage(page []byte, endRid uint32) error
 }
 
 type ValidityIndexWriter interface {
@@ -65,7 +65,7 @@ type ValidityIndexWriter interface {
 
 type Encoder interface {
 	Flushable
-	FlushData() error
+	FlushPages() error
 	Type() EncodingType
 }
 

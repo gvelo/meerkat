@@ -82,7 +82,7 @@ func (w *ByteSliceColumnWriter) Write() error {
 
 	}
 
-	err := w.encoder.FlushData()
+	err := w.encoder.FlushPages()
 
 	if err != nil {
 		return err

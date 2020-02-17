@@ -42,7 +42,7 @@ const (
 )
 
 type Column interface {
-	Encoding() Encoding
+	Encoding() EncodingType
 	Validity() *roaring.Bitmap
 	HasNulls() bool
 	Stats() *Stats
