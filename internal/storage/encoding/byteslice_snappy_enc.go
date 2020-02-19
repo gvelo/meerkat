@@ -15,43 +15,45 @@ package encoding
 
 import (
 	"encoding/binary"
+	"github.com/golang/snappy"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/io"
 )
 
-const (
-	maxSlicesPerPage = 1024 * 2
-)
-
-type ByteSlicePlainEncoder struct {
+type ByteSliceSnappyEncoder struct {
 	pw        storage.PageWriter
 	buf       *io.EncoderBuffer
 	offsetBuf []int
 }
 
-func NewByteSlicePlainEncodeer(pw storage.PageWriter) *ByteSlicePlainEncoder {
-	return &ByteSlicePlainEncoder{
+func NewByteSliceSnappyEncodeer(pw storage.PageWriter) *ByteSliceSnappyEncoder {
+	return &ByteSliceSnappyEncoder{
 		pw:        pw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
 		offsetBuf: make([]int, maxSlicesPerPage),
 	}
 }
 
-func (e *ByteSlicePlainEncoder) Flush() error {
+func (e *ByteSliceSnappyEncoder) Flush() error {
 	return nil
 }
 
-func (e *ByteSlicePlainEncoder) FlushPages() error {
+func (e *ByteSliceSnappyEncoder) FlushPages() error {
+	// TODO(gvelo): check if we need a flusher interface
+	//  on the page writer.
 	return e.pw.Flush()
 }
 
-func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {
-	return storage.Plain
+func (e *ByteSliceSnappyEncoder) Type() storage.EncodingType {
+	return storage.Snappy
 }
 
-func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
+func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) error {
 
-	size := binary.MaxVarintLen64*(vec.Len()+2) + len(vec.Data())
+	// make sure that the buffer has enough space to accommodate
+	// the offsets slice plus the encoded data. We need to avoid
+	// allocation inside the snappy encoder.
+	size := binary.MaxVarintLen64*(vec.Len()+2) + snappy.MaxEncodedLen(len(vec.Data()))
 
 	e.buf.Reset(size)
 
@@ -61,8 +63,11 @@ func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
 	// page length encoded as uvarint
 	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
 
-	// write the vector data
-	e.buf.WriteBytes(vec.Data())
+	// as we have enough room in the dst buffer the encoder will not
+	// allocate a new slice. See MaxEncodedLen(srcLen int) int
+	r := snappy.Encode(e.buf.Free(), vec.Data())
+
+	e.buf.SetLen(e.buf.Len() + len(r))
 
 	pageSize := e.buf.Len() - binary.MaxVarintLen64
 

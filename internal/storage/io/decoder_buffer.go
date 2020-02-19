@@ -82,3 +82,7 @@ func (d *DecoderBuffer) ReadVarUintSlice(dst []int) int {
 func (d *DecoderBuffer) ReadBytes(b []byte) int {
 	return copy(b, d.buf[d.index:])
 }
+
+func (d *DecoderBuffer) Remaining() []byte {
+	return d.buf[d.index:]
+}

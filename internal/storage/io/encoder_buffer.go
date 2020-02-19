@@ -33,6 +33,10 @@ func (b *EncoderBuffer) Bytes() []byte {
 	return b.buf[0:b.len]
 }
 
+func (b *EncoderBuffer) Free() []byte {
+	return b.buf[b.len:]
+}
+
 func (b *EncoderBuffer) Reset(size int) {
 
 	if cap(b.buf) < size {
@@ -108,6 +112,10 @@ func (b *EncoderBuffer) WriteVarUintSliceAt(offset int, x []int) {
 
 func (b *EncoderBuffer) Len() int {
 	return b.len
+}
+
+func (b *EncoderBuffer) SetLen(l int) {
+	b.len = l
 }
 
 // SizeVarint returns the varint encoding size of an integer.

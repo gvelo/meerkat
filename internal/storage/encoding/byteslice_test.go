@@ -20,6 +20,8 @@ import (
 	"testing"
 )
 
+type EncFactory func(pw storage.PageWriter) storage.ByteSliceEncoder
+
 type pageWriterMock struct {
 	page []byte
 	rid  uint32
@@ -35,7 +37,23 @@ func (w *pageWriterMock) WritePage(page []byte, endRid uint32) error {
 	return nil
 }
 
-func TestByteSlicePlain(t *testing.T) {
+func Test(t *testing.T) {
+
+	t.Run("plain", func(t *testing.T) {
+		testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
+			return NewByteSlicePlainEncodeer(pw)
+		}, NewByteSlicePlainDecoder())
+	})
+
+	t.Run("snappy", func(t *testing.T) {
+		testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
+			return NewByteSliceSnappyEncodeer(pw)
+		}, NewByteSliceSnappyDecoder())
+	})
+
+}
+
+func testByteSliceEnc(t *testing.T, ef EncFactory, d storage.ByteSliceDecoder) {
 
 	s := 1024
 
@@ -43,7 +61,7 @@ func TestByteSlicePlain(t *testing.T) {
 
 	v := createRandomSliceVec(s)
 
-	e := NewByteSlicePlainEncodeer(pw)
+	e := ef(pw)
 
 	err := e.Encode(v)
 
@@ -52,13 +70,10 @@ func TestByteSlicePlain(t *testing.T) {
 		return
 	}
 
-	d := NewByteSlicePlainDecoder()
-
-	data := make([]byte, len(v.Data()))
+	data := make([]byte, len(v.Data())*2)
 	offsets := make([]int, s)
 
 	data, offsets, err = d.Decode(pw.page, data, offsets)
-
 	assert.Equal(t, v.Data(), data, "decoded data doesn't match")
 	assert.Equal(t, v.Offsets(), offsets, "decoded offsets doesn't match")
 
