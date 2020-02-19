@@ -18,7 +18,6 @@ import (
 	"io"
 	"log"
 	"meerkat/internal/schema"
-	"reflect"
 	"unsafe"
 )
 
@@ -28,16 +27,6 @@ const (
 	// Int64SizeBytes specifies the number of bytes required to store a single int64 in memory
 	Int64SizeBytes = int(unsafe.Sizeof(int64(0)))
 )
-
-func CastToBytes(size int, p unsafe.Pointer) []byte {
-	h := (*reflect.SliceHeader)(p)
-	var res []byte
-	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
-	s.Data = h.Data
-	s.Len = h.Len * size
-	s.Cap = h.Cap * size
-	return res
-}
 
 type Buffer interface {
 	Len() int

@@ -74,6 +74,10 @@ type IntEncoder interface {
 	Encode(vec IntVector) error
 }
 
+type IntDecoder interface {
+	Decode(page []byte, buf []int) ([]int, error)
+}
+
 type UintEncoder interface {
 	Encoder
 	Encode(vec IntVector) error

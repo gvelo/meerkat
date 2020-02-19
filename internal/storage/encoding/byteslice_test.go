@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-type EncFactory func(pw storage.PageWriter) storage.ByteSliceEncoder
+type SliceEncFactory func(pw storage.PageWriter) storage.ByteSliceEncoder
 
 type pageWriterMock struct {
 	page []byte
@@ -37,23 +37,19 @@ func (w *pageWriterMock) WritePage(page []byte, endRid uint32) error {
 	return nil
 }
 
-func Test(t *testing.T) {
-
-	t.Run("plain", func(t *testing.T) {
-		testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
-			return NewByteSlicePlainEncodeer(pw)
-		}, NewByteSlicePlainDecoder())
-	})
-
-	t.Run("snappy", func(t *testing.T) {
-		testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
-			return NewByteSliceSnappyEncodeer(pw)
-		}, NewByteSliceSnappyDecoder())
-	})
-
+func TestByteSliceSnappyEnc(t *testing.T) {
+	testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
+		return NewByteSliceSnappyEncodeer(pw)
+	}, NewByteSliceSnappyDecoder())
 }
 
-func testByteSliceEnc(t *testing.T, ef EncFactory, d storage.ByteSliceDecoder) {
+func TestByteSlicePlainEnc(t *testing.T) {
+	testByteSliceEnc(t, func(pw storage.PageWriter) storage.ByteSliceEncoder {
+		return NewByteSlicePlainEncodeer(pw)
+	}, NewByteSlicePlainDecoder())
+}
+
+func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d storage.ByteSliceDecoder) {
 
 	s := 1024
 

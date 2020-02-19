@@ -15,6 +15,7 @@ package storage
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"meerkat/internal/utils"
 	"time"
 )
 
@@ -159,21 +160,21 @@ type Stats struct {
 type Vector interface {
 	Len() int
 	Rid() []uint32
+	Data() []byte
 }
 
 type IntVector interface {
 	Vector
-	ValuesAsInt() []int
+	Values() []int
 }
 
 type FloatVector interface {
 	Vector
-	ValuesAsFloat() []float64
+	Values() []float64
 }
 
 type ByteSliceVector interface {
 	Vector
-	Data() []byte
 	Offsets() []int
 	Get(i int) []byte
 }
@@ -181,6 +182,13 @@ type ByteSliceVector interface {
 type intVector struct {
 	vect []int
 	rid  []uint32
+}
+
+func NewIntVector(data []int, rid []uint32) IntVector {
+	return &intVector{
+		vect: data,
+		rid:  rid,
+	}
 }
 
 func (v intVector) Len() int {
@@ -191,8 +199,12 @@ func (v intVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v intVector) ValuesAsInt() []int {
+func (v intVector) Values() []int {
 	return v.vect
+}
+
+func (v intVector) Data() []byte {
+	return utils.IntAsByte(v.vect)
 }
 
 type floatVector struct {
@@ -208,8 +220,12 @@ func (v floatVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v floatVector) ValuesAsFloat() []float64 {
+func (v floatVector) Values() []float64 {
 	return v.vect
+}
+
+func (v floatVector) Data() []byte {
+	return utils.Float64AsByte(v.vect)
 }
 
 type byteSliceVector struct {

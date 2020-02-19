@@ -12,3 +12,20 @@
 // limitations under the License.
 
 package encoding
+
+import "meerkat/internal/utils"
+
+type IntPlainDecoder struct {
+}
+
+func NewIntPlainDecoder() *IntPlainDecoder {
+	return &IntPlainDecoder{}
+}
+
+func (d *IntPlainDecoder) Decode(page []byte, buf []int) ([]int, error) {
+
+	data := utils.BytesAsInt(page)
+
+	return data, nil
+
+}
