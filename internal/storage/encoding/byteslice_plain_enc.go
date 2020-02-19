@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encoders
+package encoding
 
 import (
 	"encoding/binary"
@@ -19,39 +19,48 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-type ByteSlicePlain struct {
-	pw  storage.PageWriter
-	buf *io.EncoderBuffer
+const (
+	maxSlicesPerPage = 1024 * 2
+)
+
+type ByteSlicePlainEncoder struct {
+	pw        storage.PageWriter
+	buf       *io.EncoderBuffer
+	offsetBuf []int
 }
 
-func NewByteSlicePlain(pw storage.PageWriter) *ByteSlicePlain {
-	return &ByteSlicePlain{
-		pw:  pw,
-		buf: io.NewEncoderBuffer(32 * 1024),
+func NewByteSlicePlainEncodeer(pw storage.PageWriter) *ByteSlicePlainEncoder {
+	return &ByteSlicePlainEncoder{
+		pw: pw,
+		//TODO(gvelo) use max page size for the enc.
+		buf:       io.NewEncoderBuffer(32 * 1024),
+		offsetBuf: make([]int, maxSlicesPerPage),
 	}
 }
 
-func (e *ByteSlicePlain) Flush() error {
+func (e *ByteSlicePlainEncoder) Flush() error {
 	return nil
 }
 
-func (e *ByteSlicePlain) FlushPages() error {
+func (e *ByteSlicePlainEncoder) FlushPages() error {
 	return e.pw.Flush()
 }
 
-func (e *ByteSlicePlain) Type() storage.EncodingType {
+func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {
 	return storage.Plain
 }
 
-func (e *ByteSlicePlain) Encode(vec storage.ByteSliceVector) error {
+func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	size := binary.MaxVarintLen64*(vec.Len()+2) + len(vec.Data())
 
 	e.buf.Reset(size)
 
+	DeltaEncode(vec.Offsets(), e.offsetBuf)
+
 	// left enough room at the beginning of the page to write the
 	// page length encoded as uvarint
-	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, vec.Offsets())
+	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
 
 	// write the vector data
 	e.buf.WriteBytes(vec.Data())
@@ -64,6 +73,6 @@ func (e *ByteSlicePlain) Encode(vec storage.ByteSliceVector) error {
 
 	page := e.buf.Bytes()[offset:]
 
-	return e.pw.WritePage(page, vec.Rid()[len(vec.Rid())])
+	return e.pw.WritePage(page, vec.Rid()[len(vec.Rid())-1])
 
 }

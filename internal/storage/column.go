@@ -218,6 +218,14 @@ type byteSliceVector struct {
 	offsets []int
 }
 
+func NewByteSliceVector(rid []uint32, data []byte, offsets []int) ByteSliceVector {
+	return byteSliceVector{
+		offsets: offsets,
+		data:    data,
+		rid:     rid,
+	}
+}
+
 func (v byteSliceVector) Len() int {
 	return len(v.offsets)
 }

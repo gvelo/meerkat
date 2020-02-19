@@ -13,7 +13,9 @@
 
 package io
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 type EncoderBuffer struct {
 	buf []byte
@@ -66,8 +68,8 @@ func (b *EncoderBuffer) WriteUvarint64At(offset int, x uint64) {
 
 	n := binary.PutUvarint(b.buf[offset:], x)
 
-	if b.len < n {
-		b.len = n
+	if b.len < offset {
+		b.len = offset + n
 	}
 
 }

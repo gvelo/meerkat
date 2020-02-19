@@ -12,3 +12,55 @@
 // limitations under the License.
 
 package io
+
+import (
+	"encoding/binary"
+	"github.com/stretchr/testify/assert"
+	"math/rand"
+	"testing"
+)
+
+const (
+	numOfValues = 1024 * 2
+	bufCap      = binary.MaxVarintLen64 * numOfValues
+)
+
+func TestDecoderBuffer_Uvarint(t *testing.T) {
+
+	values := RandomUVarInt(numOfValues)
+
+	e := NewEncoderBuffer(bufCap)
+
+	for _, v := range values {
+		e.WriteUvarint(v)
+	}
+
+	d := NewDecoderBuffer()
+
+	d.SetBytes(e.Bytes())
+
+	for i := 0; i < numOfValues; i++ {
+		n := d.ReadUvarint()
+
+		assert.Equal(t, values[i], n, "wrong int values")
+
+	}
+
+}
+
+func RandomUVarInt(size int) []int {
+
+	var r []int
+
+	for j := 0; j < size; j++ {
+		n := uint64(0)
+		s := rand.Intn(8) + 1
+		for i := 0; i < s; i++ {
+			n = n | uint64(byte(rand.Int()))<<uint(8*i)
+		}
+		r = append(r, int(n))
+	}
+
+	return r
+
+}

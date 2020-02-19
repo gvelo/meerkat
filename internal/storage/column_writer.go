@@ -89,11 +89,15 @@ type ByteSliceEncoder interface {
 	Encode(vec ByteSliceVector) error
 }
 
+type ByteSliceDecoder interface {
+	Decode(page []byte, data []byte, offsets []int) ([]byte, []int, error)
+}
+
 type ColumnWriter interface {
 	Write() error
 }
 
-func NewColumWriter(fieldType schema.FieldType, buf *buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
 	return nil
 }
 

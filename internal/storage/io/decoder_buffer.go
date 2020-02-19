@@ -20,8 +20,17 @@ type DecoderBuffer struct {
 	index int
 }
 
+func NewDecoderBuffer() *DecoderBuffer {
+	return &DecoderBuffer{}
+}
+
 func (d *DecoderBuffer) Bytes() []byte {
 	return d.buf
+}
+
+func (d *DecoderBuffer) SetBytes(b []byte) {
+	d.buf = b
+	d.index = 0
 }
 
 func (d *DecoderBuffer) ReadUvarint64() uint64 {
@@ -37,8 +46,8 @@ func (d *DecoderBuffer) ReadUvarint64() uint64 {
 	return u
 }
 
-func (d *DecoderBuffer) ReadUvarint() uint {
-	return uint(d.ReadUvarint64())
+func (d *DecoderBuffer) ReadUvarint() int {
+	return int(d.ReadUvarint64())
 }
 
 func (d *DecoderBuffer) ReadVarint64() int64 {
@@ -56,4 +65,20 @@ func (d *DecoderBuffer) ReadVarint64() int64 {
 
 func (d *DecoderBuffer) ReadVarint() int {
 	return int(d.ReadVarint64())
+}
+
+func (d *DecoderBuffer) ReadVarUintSlice(dst []int) int {
+
+	l := d.ReadUvarint()
+
+	for i := 0; i < l; i++ {
+		dst[i] = d.ReadUvarint()
+	}
+
+	return l
+
+}
+
+func (d *DecoderBuffer) ReadBytes(b []byte) int {
+	return copy(b, d.buf[d.index:])
 }

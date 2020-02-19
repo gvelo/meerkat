@@ -193,4 +193,6 @@ func (bw *BinaryWriter) WriteVarIntSlice(slice []int) error {
 		}
 	}
 
+	return nil
+
 }

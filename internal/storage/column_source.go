@@ -73,7 +73,8 @@ func (cs *intColumnSource) HasNulls() bool {
 	return cs.hasNulls
 }
 
-// vect valid until next call
+// The underlying array point to an internal buffer that will be
+// overwritten by a subsequent call to Next().
 func (cs *intColumnSource) Next() IntVector {
 
 	var i int
@@ -206,6 +207,7 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 }
 
+// TODO(gvelo) add a max amount of string per page ie 2048.
 func NewByteSliceColumnSource(buff *buffer.ByteSliceBuffer, maxSize int, permMap []int) ByteSliceColumSource {
 
 	return &byteSliceColumnSource{
