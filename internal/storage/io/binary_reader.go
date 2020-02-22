@@ -44,6 +44,10 @@ func (br *BinaryReader) SetBytes(b []byte) {
 	br.Size = len(b)
 }
 
+func (br *BinaryReader) Bytes() []byte {
+	return br.bytes
+}
+
 func (br *BinaryReader) decodeVarintSlow() (x uint64, err error) {
 	for shift := uint(0); shift < 64; shift += 7 {
 		if br.Offset >= len(br.bytes) {
@@ -274,4 +278,28 @@ func (br *BinaryReader) ReadString() (s string, err error) {
 		return
 	}
 	return string(buf), nil
+}
+
+func (br *BinaryReader) ReadVarUintSlice() (s []int, err error) {
+
+	l, err := br.ReadVarInt()
+
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]int, l)
+
+	for i := 0; i < l; i++ {
+
+		b[i], err = br.ReadVarInt()
+
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return b, nil
+
 }

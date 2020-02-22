@@ -48,13 +48,12 @@ type ByteSliceIndexWriter interface {
 }
 
 type PageIndexWriter interface {
-	IndexWriter
-	IndexPages(vec IntVector)
+	Flushable
+	IndexPages(page []byte, rid uint32)
 }
 
 type PageWriter interface {
 	Flushable
-	//WritePage(vect ByteSliceVector)
 	WritePage(page []byte, endRid uint32) error
 }
 

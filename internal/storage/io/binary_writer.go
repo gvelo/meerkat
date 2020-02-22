@@ -64,6 +64,7 @@ func (bw *BinaryWriter) WriteByte(x byte) error {
 }
 
 func (bw *BinaryWriter) WriteVarInt(i int) error {
+	// TODO(gvelo) fix , cannot write a signed here.
 	return bw.WriteVarUint64(uint64(i))
 }
 

@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	// Int64SizeBytes specifies the number of bytes required to store a single int64 in memory
 	Int64SizeBytes = int(unsafe.Sizeof(int64(0)))
+	Int32SizeBytes = int(unsafe.Sizeof(int32(0)))
 )
 
 func asByteSlice(size int, p unsafe.Pointer) []byte {
@@ -37,17 +37,34 @@ func IntAsByte(s []int) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
+func UInt64AsByte(s []uint64) []byte {
+	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
+}
+
+func UInt32AsByte(s []uint32) []byte {
+	return asByteSlice(Int32SizeBytes, unsafe.Pointer(&s))
+}
+
 func Float64AsByte(s []float64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
 func BytesAsInt(b []byte) []int {
-
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	var res []int
 	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
 	s.Data = h.Data
 	s.Len = h.Len / Int64SizeBytes
 	s.Cap = h.Cap / Int64SizeBytes
+	return res
+}
+
+func BytesAsUInt32(b []byte) []uint32 {
+	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	var res []uint32
+	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
+	s.Data = h.Data
+	s.Len = h.Len / Int32SizeBytes
+	s.Cap = h.Cap / Int32SizeBytes
 	return res
 }

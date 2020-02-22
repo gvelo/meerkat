@@ -53,6 +53,8 @@ type IntColumn interface {
 	Column
 	Dict() IntDict
 	Index() IntIndex
+	// TODO(gvelo): hint the reader about index use.
+	//  ie. avoid index use in low selectivity search.
 	Read(pos []uint32) (IntVector, error)
 	Iterator() IntIterator
 }
