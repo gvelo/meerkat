@@ -16,12 +16,12 @@ package encoding
 import "meerkat/internal/storage"
 
 type IntPlainEncoder struct {
-	pw storage.PageWriter
+	bw storage.BlockWriter
 }
 
-func NewIntPlainEncoder(pw storage.PageWriter) *IntPlainEncoder {
+func NewIntPlainEncoder(bw storage.BlockWriter) *IntPlainEncoder {
 	return &IntPlainEncoder{
-		pw: pw,
+		bw: bw,
 	}
 }
 
@@ -29,8 +29,8 @@ func (e *IntPlainEncoder) Flush() error {
 	return nil
 }
 
-func (e *IntPlainEncoder) FlushPages() error {
-	return nil
+func (e *IntPlainEncoder) FlushBlocks() error {
+	return e.bw.Flush()
 }
 
 func (e *IntPlainEncoder) Type() storage.EncodingType {
@@ -38,5 +38,5 @@ func (e *IntPlainEncoder) Type() storage.EncodingType {
 }
 
 func (e *IntPlainEncoder) Encode(vec storage.IntVector) error {
-	return e.pw.WritePage(vec.Data(), vec.Rid()[vec.Len()-1])
+	return e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
 }

@@ -18,19 +18,19 @@ import (
 	"meerkat/internal/utils"
 )
 
-type pageIndexReader struct {
+type blockIndexReader struct {
 	levelOffsets []int
 	leafLevel    int
 	br           *io.BinaryReader
 }
 
-func NewPageIndexReader(br *io.BinaryReader) *pageIndexReader {
-	return &pageIndexReader{
+func NewBlockIndexReader(br *io.BinaryReader) *blockIndexReader {
+	return &blockIndexReader{
 		br: br,
 	}
 }
 
-func (p *pageIndexReader) read() error {
+func (p *blockIndexReader) read() error {
 
 	var err error
 
@@ -46,20 +46,20 @@ func (p *pageIndexReader) read() error {
 
 }
 
-func (p *pageIndexReader) lookup(level int, blockNum int, rid uint32) (uint32, int) {
+func (p *blockIndexReader) lookup(level int, pos int, rid uint32) (uint32, int) {
 
 	if level == p.leafLevel {
 
-		rids, offsets := p.readLeaf(blockNum)
+		ridList, offsets := p.readLeaf(pos)
 
-		f := findFloor(rids, rid)
-		return rids[f], offsets[f]
+		f := findFloor(ridList, rid)
+		return ridList[f], offsets[f]
 
 	}
 
-	rids := p.readNode(level, blockNum)
+	ridList := p.readNode(level, pos)
 
-	f := findFloor(rids, rid)
+	f := findFloor(ridList, rid)
 
 	level++
 
@@ -87,32 +87,32 @@ func findFloor(s []uint32, rid uint32) int {
 	return i
 }
 
-func (p *pageIndexReader) readLeaf(node int) ([]uint32, []int) {
+func (p *blockIndexReader) readLeaf(pos int) ([]uint32, []int) {
 
-	pageBase := p.levelOffsets[p.leafLevel] + (node * indexPageSize)
+	pageOffset := p.levelOffsets[p.leafLevel] + (pos * pageSize)
 
-	page := p.br.Bytes()[pageBase : pageBase+indexPageSize-1]
+	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
 
-	rid := utils.BytesAsUInt32(page[0:ridLeafSize])
+	ridList := utils.BytesAsUInt32(page[0:ridLeafSize])
 	offsets := utils.BytesAsInt(page[ridLeafSize : ridLeafSize+offsetLeafSize])
 
-	return rid, offsets
+	return ridList, offsets
 
 }
 
-func (p *pageIndexReader) readNode(level int, node int) []uint32 {
+func (p *blockIndexReader) readNode(level int, pos int) []uint32 {
 
-	pageBase := p.levelOffsets[level] + (node * indexPageSize)
+	pageOffset := p.levelOffsets[level] + (pos * pageSize)
 
-	page := p.br.Bytes()[pageBase : pageBase+indexPageSize-1]
+	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
 
-	rid := utils.BytesAsUInt32(page)
+	ridList := utils.BytesAsUInt32(page)
 
-	return rid
+	return ridList
 
 }
 
-func (p *pageIndexReader) Lookup(rid uint32) (uint32, int) {
+func (p *blockIndexReader) Lookup(rid uint32) (uint32, int) {
 
 	return p.lookup(0, 0, rid)
 

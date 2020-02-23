@@ -20,12 +20,12 @@ import (
 	"testing"
 )
 
-type IntEncFactory func(pw storage.PageWriter) storage.IntEncoder
+type IntEncFactory func(bw storage.BlockWriter) storage.IntEncoder
 
 func TestIntEncoding(t *testing.T) {
 
-	testIntEncoding(t, func(pw storage.PageWriter) storage.IntEncoder {
-		return NewIntPlainEncoder(pw)
+	testIntEncoding(t, func(bw storage.BlockWriter) storage.IntEncoder {
+		return NewIntPlainEncoder(bw)
 	}, NewIntPlainDecoder())
 
 }
@@ -34,11 +34,11 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d storage.IntDecoder) {
 
 	s := 1024
 
-	pw := &pageWriterMock{}
+	bw := &blockWriterMock{}
 
 	v := createRandomIntVec(s)
 
-	e := f(pw)
+	e := f(bw)
 
 	err := e.Encode(v)
 
@@ -49,7 +49,7 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d storage.IntDecoder) {
 
 	data := make([]int, len(v.Data())*2)
 
-	data, err = d.Decode(pw.page, data)
+	data, err = d.Decode(bw.block, data)
 	assert.Equal(t, v.Values(), data, "decoded data doesn't match")
 
 }

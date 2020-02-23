@@ -47,14 +47,14 @@ type ByteSliceIndexWriter interface {
 	Index(vector ByteSliceVector)
 }
 
-type PageIndexWriter interface {
+type BlockIndexWriter interface {
 	Flushable
-	IndexPages(page []byte, rid uint32)
+	IndexBlock(block []byte, baseRID uint32)
 }
 
-type PageWriter interface {
+type BlockWriter interface {
 	Flushable
-	WritePage(page []byte, endRid uint32) error
+	WriteBlock(block []byte, baseRid uint32) error
 }
 
 type ValidityIndexWriter interface {
@@ -64,7 +64,7 @@ type ValidityIndexWriter interface {
 
 type Encoder interface {
 	Flushable
-	FlushPages() error
+	FlushBlocks() error
 	Type() EncodingType
 }
 
@@ -74,7 +74,7 @@ type IntEncoder interface {
 }
 
 type IntDecoder interface {
-	Decode(page []byte, buf []int) ([]int, error)
+	Decode(block []byte, buf []int) ([]int, error)
 }
 
 type UintEncoder interface {
@@ -93,7 +93,7 @@ type ByteSliceEncoder interface {
 }
 
 type ByteSliceDecoder interface {
-	Decode(page []byte, data []byte, offsets []int) ([]byte, []int, error)
+	Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error)
 }
 
 type ColumnWriter interface {

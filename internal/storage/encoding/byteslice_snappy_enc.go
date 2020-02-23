@@ -21,16 +21,16 @@ import (
 )
 
 type ByteSliceSnappyEncoder struct {
-	pw        storage.PageWriter
+	bw        storage.BlockWriter
 	buf       *io.EncoderBuffer
 	offsetBuf []int
 }
 
-func NewByteSliceSnappyEncodeer(pw storage.PageWriter) *ByteSliceSnappyEncoder {
+func NewByteSliceSnappyEncodeer(bw storage.BlockWriter) *ByteSliceSnappyEncoder {
 	return &ByteSliceSnappyEncoder{
-		pw:        pw,
+		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
-		offsetBuf: make([]int, maxSlicesPerPage),
+		offsetBuf: make([]int, maxSlicesPerBlock),
 	}
 }
 
@@ -38,10 +38,8 @@ func (e *ByteSliceSnappyEncoder) Flush() error {
 	return nil
 }
 
-func (e *ByteSliceSnappyEncoder) FlushPages() error {
-	// TODO(gvelo): check if we need a flusher interface
-	//  on the page writer.
-	return e.pw.Flush()
+func (e *ByteSliceSnappyEncoder) FlushBlocks() error {
+	return e.bw.Flush()
 }
 
 func (e *ByteSliceSnappyEncoder) Type() storage.EncodingType {
@@ -59,8 +57,8 @@ func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	DeltaEncode(vec.Offsets(), e.offsetBuf)
 
-	// left enough room at the beginning of the page to write the
-	// page length encoded as uvarint
+	// left enough room at the beginning of the block to write the
+	// block length encoded as uvarint
 	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
 
 	// as we have enough room in the dst buffer the encoder will not
@@ -69,14 +67,14 @@ func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	e.buf.SetLen(e.buf.Len() + len(r))
 
-	pageSize := e.buf.Len() - binary.MaxVarintLen64
+	blockSize := e.buf.Len() - binary.MaxVarintLen64
 
-	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(pageSize))
+	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
 
-	e.buf.WriteUvarintAt(offset, pageSize)
+	e.buf.WriteUvarintAt(offset, blockSize)
 
-	page := e.buf.Bytes()[offset:]
+	block := e.buf.Bytes()[offset:]
 
-	return e.pw.WritePage(page, vec.Rid()[len(vec.Rid())-1])
+	return e.bw.WriteBlock(block, vec.Rid()[0])
 
 }

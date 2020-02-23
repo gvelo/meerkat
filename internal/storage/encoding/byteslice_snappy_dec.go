@@ -26,15 +26,15 @@ type ByteSliceSnappyDecoder struct {
 func NewByteSliceSnappyDecoder() *ByteSliceSnappyDecoder {
 	return &ByteSliceSnappyDecoder{
 		buf:        io.NewDecoderBuffer(),
-		offsetsBuf: make([]int, maxSlicesPerPage),
+		offsetsBuf: make([]int, maxSlicesPerBlock),
 	}
 }
 
-func (d *ByteSliceSnappyDecoder) Decode(page []byte, data []byte, offsets []int) ([]byte, []int, error) {
+func (d *ByteSliceSnappyDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error) {
 
-	d.buf.SetBytes(page)
+	d.buf.SetBytes(block)
 
-	// discard the page length
+	// discard the block length
 	_ = d.buf.ReadUvarint()
 
 	// read the offsets

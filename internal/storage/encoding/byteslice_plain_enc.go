@@ -20,20 +20,20 @@ import (
 )
 
 const (
-	maxSlicesPerPage = 1024 * 2
+	maxSlicesPerBlock = 1024 * 2
 )
 
 type ByteSlicePlainEncoder struct {
-	pw        storage.PageWriter
+	bw        storage.BlockWriter
 	buf       *io.EncoderBuffer
 	offsetBuf []int
 }
 
-func NewByteSlicePlainEncodeer(pw storage.PageWriter) *ByteSlicePlainEncoder {
+func NewByteSlicePlainEncodeer(bw storage.BlockWriter) *ByteSlicePlainEncoder {
 	return &ByteSlicePlainEncoder{
-		pw:        pw,
+		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
-		offsetBuf: make([]int, maxSlicesPerPage),
+		offsetBuf: make([]int, maxSlicesPerBlock),
 	}
 }
 
@@ -41,8 +41,8 @@ func (e *ByteSlicePlainEncoder) Flush() error {
 	return nil
 }
 
-func (e *ByteSlicePlainEncoder) FlushPages() error {
-	return e.pw.Flush()
+func (e *ByteSlicePlainEncoder) FlushBlocks() error {
+	return e.bw.Flush()
 }
 
 func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {
@@ -57,21 +57,21 @@ func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	DeltaEncode(vec.Offsets(), e.offsetBuf)
 
-	// left enough room at the beginning of the page to write the
-	// page length encoded as uvarint
+	// left enough room at the beginning of the block to write the
+	// block length encoded as uvarint
 	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
 
 	// write the vector data
 	e.buf.WriteBytes(vec.Data())
 
-	pageSize := e.buf.Len() - binary.MaxVarintLen64
+	blockSize := e.buf.Len() - binary.MaxVarintLen64
 
-	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(pageSize))
+	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
 
-	e.buf.WriteUvarintAt(offset, pageSize)
+	e.buf.WriteUvarintAt(offset, blockSize)
 
-	page := e.buf.Bytes()[offset:]
+	block := e.buf.Bytes()[offset:]
 
-	return e.pw.WritePage(page, vec.Rid()[len(vec.Rid())-1])
+	return e.bw.WriteBlock(block, vec.Rid()[0])
 
 }

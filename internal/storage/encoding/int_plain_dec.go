@@ -22,9 +22,9 @@ func NewIntPlainDecoder() *IntPlainDecoder {
 	return &IntPlainDecoder{}
 }
 
-func (d *IntPlainDecoder) Decode(page []byte, buf []int) ([]int, error) {
+func (d *IntPlainDecoder) Decode(block []byte, buf []int) ([]int, error) {
 
-	data := utils.BytesAsInt(page)
+	data := utils.BytesAsInt(block)
 
 	return data, nil
 

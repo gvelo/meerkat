@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	path       = "/tmp/pageindex"
+	path       = "/tmp/blockindex" //TODO(gvelo) use a tmp file.
 	testLength = 100000
 )
 
-func TestPageIndex(t *testing.T) {
+func TestBlockIndex(t *testing.T) {
 
 	var buff []byte
 
@@ -37,17 +37,17 @@ func TestPageIndex(t *testing.T) {
 		return
 	}
 
-	pw := NewPageIndexWriter(bw)
+	pw := NewBlockIndexWriter(bw)
 
-	maxPageSize := 16 * 1024
+	maxBlockSize := 16 * 1024
 
-	page := make([]byte, maxPageSize)
+	block := make([]byte, maxBlockSize)
 
 	for i := 0; i < testLength; i++ {
-		l := rand.Intn(maxPageSize-8) + 8
-		binary.LittleEndian.PutUint64(page, uint64(i))
-		pw.IndexPages(page[:l], uint32(i))
-		buff = append(buff, page[:l]...)
+		l := rand.Intn(maxBlockSize-8) + 8
+		binary.LittleEndian.PutUint64(block, uint64(i))
+		pw.IndexBlock(block[:l], uint32(i))
+		buff = append(buff, block[:l]...)
 	}
 
 	e, err := pw.Flush()
@@ -76,7 +76,7 @@ func TestPageIndex(t *testing.T) {
 
 	br.Offset = e
 
-	pr := NewPageIndexReader(br)
+	pr := NewBlockIndexReader(br)
 
 	err = pr.read()
 
@@ -88,7 +88,7 @@ func TestPageIndex(t *testing.T) {
 	for i := 0; i < testLength; i++ {
 		rid, offset := pr.Lookup(uint32(i))
 		n := binary.LittleEndian.Uint64(buff[offset:])
-		assert.Equal(t, uint64(rid), n, "page rid doesn't match")
+		assert.Equal(t, uint64(rid), n, "block rid doesn't match")
 	}
 
 }

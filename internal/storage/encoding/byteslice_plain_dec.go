@@ -25,15 +25,15 @@ type ByteSlicePlainDecoder struct {
 func NewByteSlicePlainDecoder() *ByteSlicePlainDecoder {
 	return &ByteSlicePlainDecoder{
 		buf:        io.NewDecoderBuffer(),
-		offsetsBuf: make([]int, maxSlicesPerPage),
+		offsetsBuf: make([]int, maxSlicesPerBlock),
 	}
 }
 
-func (d *ByteSlicePlainDecoder) Decode(page []byte, data []byte, offsets []int) ([]byte, []int, error) {
+func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error) {
 
-	d.buf.SetBytes(page)
+	d.buf.SetBytes(block)
 
-	// discard the page length
+	// discard the block length
 	_ = d.buf.ReadUvarint()
 
 	// read the offsets

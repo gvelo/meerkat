@@ -21,19 +21,19 @@ import (
 func NewByteSliceColumnWriter(fieldType schema.FieldType,
 	src ByteSliceColumSource,
 	encoder ByteSliceEncoder,
-	index ByteSliceIndexWriter,
-	pageIndex PageIndexWriter,
+	colIndex ByteSliceIndexWriter,
+	blockIndex BlockIndexWriter,
 	validityIndex ValidityIndexWriter,
 	bw *io.BinaryWriter) *ByteSliceColumnWriter {
 
 	return &ByteSliceColumnWriter{
-		fieldType: fieldType,
-		src:       src,
-		bw:        bw,
-		encoder:   encoder,
-		index:     index,
-		pageIndex: pageIndex,
-		validity:  validityIndex,
+		fieldType:  fieldType,
+		src:        src,
+		bw:         bw,
+		encoder:    encoder,
+		colIndex:   colIndex,
+		blockIndex: blockIndex,
+		validity:   validityIndex,
 	}
 
 }
@@ -43,16 +43,16 @@ type ByteSliceColumnWriter struct {
 	bw             *io.BinaryWriter
 	src            ByteSliceColumSource
 	encoder        ByteSliceEncoder
-	index          ByteSliceIndexWriter
-	pageIndex      PageIndexWriter
+	colIndex       ByteSliceIndexWriter
+	blockIndex     BlockIndexWriter
 	validity       ValidityIndexWriter
 	numOfValues    int
 	cardinality    int
 	startOffset    int
-	pageOffset     int
-	pageIdxOffset  int
+	blocksOffset   int
+	blockIdxOffset int
 	encOffset      int
-	indexOffset    int
+	colIndexOffset int
 	validityOffset int
 }
 
@@ -72,8 +72,8 @@ func (w *ByteSliceColumnWriter) Write() error {
 			return err
 		}
 
-		if w.index != nil {
-			w.index.Index(vec)
+		if w.colIndex != nil {
+			w.colIndex.Index(vec)
 		}
 
 		if w.src.HasNulls() {
@@ -82,13 +82,13 @@ func (w *ByteSliceColumnWriter) Write() error {
 
 	}
 
-	err := w.encoder.FlushPages()
+	err := w.encoder.FlushBlocks()
 
 	if err != nil {
 		return err
 	}
 
-	w.pageOffset = w.bw.Offset
+	w.blocksOffset = w.bw.Offset
 
 	err = w.encoder.Flush()
 
@@ -98,27 +98,27 @@ func (w *ByteSliceColumnWriter) Write() error {
 
 	w.encOffset = w.bw.Offset
 
-	err = w.pageIndex.Flush()
+	err = w.blockIndex.Flush()
 
 	if err != nil {
 		return err
 	}
 
-	w.pageIdxOffset = w.bw.Offset
+	w.blockIdxOffset = w.bw.Offset
 
 	// TODO(gvelo) if the column is not indexed estimate
 	// cardinality anyways using datasketches.
-	if w.index != nil {
+	if w.colIndex != nil {
 
-		err = w.index.Flush()
+		err = w.colIndex.Flush()
 
 		if err != nil {
 			return err
 		}
 
-		w.indexOffset = w.bw.Offset
+		w.colIndexOffset = w.bw.Offset
 
-		w.cardinality = w.index.Cardinality()
+		w.cardinality = w.colIndex.Cardinality()
 
 	}
 
@@ -150,10 +150,10 @@ func (w *ByteSliceColumnWriter) WriteMetadata() error {
 		int(w.fieldType),
 		int(w.encoder.Type()),
 		w.startOffset,
-		w.pageOffset,
+		w.blocksOffset,
 		w.encOffset,
-		w.pageIdxOffset,
-		w.indexOffset,
+		w.blockIdxOffset,
+		w.colIndexOffset,
 		w.validityOffset,
 		w.numOfValues,
 		w.cardinality,

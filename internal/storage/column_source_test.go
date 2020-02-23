@@ -105,7 +105,7 @@ func testIntColumnSource(t *testing.T,
 		v := src.Next()
 
 		for i := 0; i < v.Len(); i++ {
-			assert.Equal(t, v.ValuesAsInt()[i], b.Values()[p[v.Rid()[i]]])
+			assert.Equal(t, v.Values()[i], b.Values()[p[v.Rid()[i]]])
 		}
 
 		if currPage < numOfPages {
