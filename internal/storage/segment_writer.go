@@ -65,6 +65,9 @@ func (sw *SegmentWriter) Write() error {
 
 	sw.writeFooter()
 
+	// TODO unwrap panic
+	return nil
+
 }
 
 func (sw *SegmentWriter) writeHeader() {
@@ -91,7 +94,7 @@ func (sw *SegmentWriter) writeTSColumn() []int {
 
 	// set the date range
 	sw.fromDate = tsColumn.Values()[0]
-	sw.toDate = tsColumn.Values()[tsColumn.Len()]
+	sw.toDate = tsColumn.Values()[tsColumn.Len()-1]
 
 	cw := NewTSColumnWriter(tsColumn, sw.bw)
 

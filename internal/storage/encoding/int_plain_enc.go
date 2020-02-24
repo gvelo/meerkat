@@ -13,13 +13,15 @@
 
 package encoding
 
-import "meerkat/internal/storage"
+import (
+	"meerkat/internal/storage/vector"
+)
 
 type IntPlainEncoder struct {
-	bw storage.BlockWriter
+	bw BlockWriter
 }
 
-func NewIntPlainEncoder(bw storage.BlockWriter) *IntPlainEncoder {
+func NewIntPlainEncoder(bw BlockWriter) *IntPlainEncoder {
 	return &IntPlainEncoder{
 		bw: bw,
 	}
@@ -29,13 +31,12 @@ func (e *IntPlainEncoder) Flush() {
 }
 
 func (e *IntPlainEncoder) FlushBlocks() {
-	e.bw.Flush()
 }
 
-func (e *IntPlainEncoder) Type() storage.EncodingType {
-	return storage.Plain
+func (e *IntPlainEncoder) Type() EncodingType {
+	return Plain
 }
 
-func (e *IntPlainEncoder) Encode(vec storage.IntVector) {
+func (e *IntPlainEncoder) Encode(vec vector.IntVector) {
 	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
 }

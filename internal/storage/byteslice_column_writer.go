@@ -15,15 +15,17 @@ package storage
 
 import (
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
 func NewByteSliceColumnWriter(fieldType schema.FieldType,
 	src ByteSliceColumSource,
-	encoder ByteSliceEncoder,
-	colIndex ByteSliceIndexWriter,
-	blockIndex BlockIndexWriter,
-	validityIndex ValidityIndexWriter,
+	encoder encoding.ByteSliceEncoder,
+	colIndex index.ByteSliceIndexWriter,
+	blockIndex index.BlockIndexWriter,
+	validityIndex index.ValidityIndexWriter,
 	bw *io.BinaryWriter) *ByteSliceColumnWriter {
 
 	return &ByteSliceColumnWriter{
@@ -42,10 +44,10 @@ type ByteSliceColumnWriter struct {
 	fieldType   schema.FieldType
 	bw          *io.BinaryWriter
 	src         ByteSliceColumSource
-	encoder     ByteSliceEncoder
-	colIndex    ByteSliceIndexWriter
-	blockIndex  BlockIndexWriter
-	validity    ValidityIndexWriter
+	encoder     encoding.ByteSliceEncoder
+	colIndex    index.ByteSliceIndexWriter
+	blockIndex  index.BlockIndexWriter
+	validity    index.ValidityIndexWriter
 	numOfValues int
 	cardinality int
 
@@ -132,10 +134,10 @@ func (w *ByteSliceColumnWriter) writeFooter() {
 
 func NewUUIDColumnWriter(fieldType schema.FieldType,
 	src UUIDColumSource,
-	encoder ByteSliceEncoder,
-	colIndex ByteSliceIndexWriter,
-	blockIndex BlockIndexWriter,
-	validityIndex ValidityIndexWriter,
+	encoder encoding.UUIDEncoder,
+	colIndex index.UUIDIndexWriter,
+	blockIndex index.BlockIndexWriter,
+	validityIndex index.ValidityIndexWriter,
 	bw *io.BinaryWriter) *UUIDColumnWriter {
 
 	return &UUIDColumnWriter{
@@ -154,10 +156,10 @@ type UUIDColumnWriter struct {
 	fieldType   schema.FieldType
 	bw          *io.BinaryWriter
 	src         UUIDColumSource
-	encoder     ByteSliceEncoder
-	colIndex    ByteSliceIndexWriter
-	blockIndex  BlockIndexWriter
-	validity    ValidityIndexWriter
+	encoder     encoding.UUIDEncoder
+	colIndex    index.UUIDIndexWriter
+	blockIndex  index.BlockIndexWriter
+	validity    index.ValidityIndexWriter
 	numOfValues int
 	cardinality int
 

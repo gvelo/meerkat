@@ -15,12 +15,12 @@ package encoding
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"meerkat/internal/utils"
 	"testing"
 )
 
-type SliceEncFactory func(bw storage.BlockWriter) storage.ByteSliceEncoder
+type SliceEncFactory func(bw BlockWriter) ByteSliceEncoder
 
 type blockWriterMock struct {
 	block []byte
@@ -36,18 +36,18 @@ func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) {
 }
 
 func TestByteSliceSnappyEnc(t *testing.T) {
-	testByteSliceEnc(t, func(bw storage.BlockWriter) storage.ByteSliceEncoder {
+	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
 		return NewByteSliceSnappyEncodeer(bw)
 	}, NewByteSliceSnappyDecoder())
 }
 
 func TestByteSlicePlainEnc(t *testing.T) {
-	testByteSliceEnc(t, func(bw storage.BlockWriter) storage.ByteSliceEncoder {
+	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
 		return NewByteSlicePlainEncodeer(bw)
 	}, NewByteSlicePlainDecoder())
 }
 
-func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d storage.ByteSliceDecoder) {
+func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d ByteSliceDecoder) {
 
 	s := 1024
 
@@ -68,7 +68,7 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d storage.ByteSliceDecod
 
 }
 
-func createRandomSliceVec(size int) storage.ByteSliceVector {
+func createRandomSliceVec(size int) vector.ByteSliceVector {
 
 	var data []byte
 	var offsets []int
@@ -80,6 +80,6 @@ func createRandomSliceVec(size int) storage.ByteSliceVector {
 		rid = append(rid, uint32(i))
 	}
 
-	return storage.NewByteSliceVector(rid, data, offsets)
+	return vector.NewByteSliceVector(rid, data, offsets)
 
 }

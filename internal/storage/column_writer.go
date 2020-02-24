@@ -21,82 +21,6 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-type Flushable interface {
-	Flush()
-}
-type IndexWriter interface {
-	Flushable
-	Cardinality() int
-}
-
-type IntIndexWriter interface {
-	IndexWriter
-	Index(vector IntVector)
-}
-
-type UintIndexWriter interface {
-	IndexWriter
-	Index(vector IntVector)
-}
-
-type FloatIndexWriter interface {
-	IndexWriter
-	Index(vector FloatVector)
-}
-
-type ByteSliceIndexWriter interface {
-	IndexWriter
-	Index(vector ByteSliceVector)
-}
-
-type BlockIndexWriter interface {
-	Flushable
-	IndexBlock(block []byte, baseRID uint32)
-}
-
-type BlockWriter interface {
-	WriteBlock(block []byte, baseRid uint32)
-}
-
-type ValidityIndexWriter interface {
-	IndexWriter
-	Index(rid []uint32)
-}
-
-type Encoder interface {
-	Flushable
-	FlushBlocks()
-	Type() EncodingType
-}
-
-type IntEncoder interface {
-	Encoder
-	Encode(vec IntVector)
-}
-
-type IntDecoder interface {
-	Decode(block []byte, buf []int) []int
-}
-
-type UintEncoder interface {
-	Encoder
-	Encode(vec IntVector)
-}
-
-type FloatEncoder interface {
-	Encoder
-	Encode(vec FloatVector)
-}
-
-type ByteSliceEncoder interface {
-	Encoder
-	Encode(vec ByteSliceVector)
-}
-
-type ByteSliceDecoder interface {
-	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
-}
-
 type ColumnWriter interface {
 	Write()
 }
@@ -119,7 +43,7 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 
 	case schema.FieldType_UUID:
 		src := NewUUIDColumnSource(buf.(*buffer.UUIDBuffer), 512, perm)
-		enc := encoding.NewByteSlicePlainEncodeer(blkWriter)
+		enc := encoding.NewUUIDPlainEncoder(blkWriter)
 		return NewUUIDColumnWriter(schema.FieldType_UUID, src, enc, nil, blkIdx, nil, bw)
 
 	default:

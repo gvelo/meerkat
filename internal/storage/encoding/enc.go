@@ -13,6 +13,65 @@
 
 package encoding
 
+import "meerkat/internal/storage/vector"
+
+type EncodingType int
+
+const (
+	Plain EncodingType = iota
+	Dict
+	DictRleBitPacked
+	DeltaBitPacked
+	Snappy
+)
+
+type BlockWriter interface {
+	WriteBlock(block []byte, baseRid uint32)
+}
+
+type Encoder interface {
+	Flush()
+	FlushBlocks()
+	Type() EncodingType
+}
+
+type IntEncoder interface {
+	Encoder
+	Encode(vec vector.IntVector)
+}
+
+type IntDecoder interface {
+	Decode(block []byte, buf []int) []int
+}
+
+type UintEncoder interface {
+	Encoder
+	Encode(vec vector.IntVector)
+}
+
+type FloatEncoder interface {
+	Encoder
+	Encode(vec vector.FloatVector)
+}
+
+type ByteSliceEncoder interface {
+	Encoder
+	Encode(vec vector.ByteSliceVector)
+}
+
+type UUIDEncoder interface {
+	Encoder
+	Encode(vec vector.UUIDVector)
+}
+
+type ByteSliceDecoder interface {
+	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
+}
+
+type UUIDDecoder interface {
+	Decode(block []byte, data []byte) []byte
+}
+
 func DeltaEncode(src []int, dst []int) {
 
 	dst[0] = src[0]

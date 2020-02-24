@@ -16,21 +16,21 @@ package encoding
 import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"testing"
 )
 
-type IntEncFactory func(bw storage.BlockWriter) storage.IntEncoder
+type IntEncFactory func(bw BlockWriter) IntEncoder
 
 func TestIntEncoding(t *testing.T) {
 
-	testIntEncoding(t, func(bw storage.BlockWriter) storage.IntEncoder {
+	testIntEncoding(t, func(bw BlockWriter) IntEncoder {
 		return NewIntPlainEncoder(bw)
 	}, NewIntPlainDecoder())
 
 }
 
-func testIntEncoding(t *testing.T, f IntEncFactory, d storage.IntDecoder) {
+func testIntEncoding(t *testing.T, f IntEncFactory, d IntDecoder) {
 
 	s := 1024
 
@@ -50,7 +50,7 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d storage.IntDecoder) {
 
 }
 
-func createRandomIntVec(size int) storage.IntVector {
+func createRandomIntVec(size int) vector.IntVector {
 
 	var data []int
 	var rid []uint32
@@ -60,6 +60,6 @@ func createRandomIntVec(size int) storage.IntVector {
 		rid = append(rid, uint32(i))
 	}
 
-	return storage.NewIntVector(data, rid)
+	return vector.NewIntVector(data, rid)
 
 }

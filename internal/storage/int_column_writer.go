@@ -15,15 +15,17 @@ package storage
 
 import (
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
 func NewIntColumnWriter(fieldType schema.FieldType,
 	src IntColumSource,
-	encoder IntEncoder,
-	colIndex IntIndexWriter,
-	blockIndex BlockIndexWriter,
-	validityIndex ValidityIndexWriter,
+	encoder encoding.IntEncoder,
+	colIndex index.IntIndexWriter,
+	blockIndex index.BlockIndexWriter,
+	validityIndex index.ValidityIndexWriter,
 	bw *io.BinaryWriter) *IntColumnWriter {
 
 	return &IntColumnWriter{
@@ -42,10 +44,10 @@ type IntColumnWriter struct {
 	fieldType   schema.FieldType
 	bw          *io.BinaryWriter
 	src         IntColumSource
-	encoder     IntEncoder
-	colIndex    IntIndexWriter
-	blockIndex  BlockIndexWriter
-	validity    ValidityIndexWriter
+	encoder     encoding.IntEncoder
+	colIndex    index.IntIndexWriter
+	blockIndex  index.BlockIndexWriter
+	validity    index.ValidityIndexWriter
 	numOfValues int
 	cardinality int
 

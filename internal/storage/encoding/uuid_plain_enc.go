@@ -13,25 +13,28 @@
 
 package encoding
 
-import "meerkat/internal/utils"
+import "meerkat/internal/storage/vector"
 
-type IntPlainDecoder struct {
+type UUIDPlainEncoder struct {
+	bw BlockWriter
 }
 
-func NewIntPlainDecoder() *IntPlainDecoder {
-	return &IntPlainDecoder{}
-}
-
-func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
-
-	data := utils.BytesAsInt(block)
-
-	if len(buf) < len(data) {
-		panic("there isn't enough space to decode integer values")
+func NewUUIDPlainEncoder(bw BlockWriter) *UUIDPlainEncoder {
+	return &UUIDPlainEncoder{
+		bw: bw,
 	}
+}
 
-	n := copy(buf, data)
+func (e *UUIDPlainEncoder) Flush() {
+}
 
-	return buf[:n]
+func (e *UUIDPlainEncoder) FlushBlocks() {
+}
 
+func (e *UUIDPlainEncoder) Type() EncodingType {
+	return Plain
+}
+
+func (e *UUIDPlainEncoder) Encode(vec vector.UUIDVector) {
+	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
 }

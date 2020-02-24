@@ -15,6 +15,7 @@ package storage
 
 import (
 	"meerkat/internal/buffer"
+	"meerkat/internal/storage/vector"
 )
 
 type ColumnSource interface {
@@ -24,27 +25,27 @@ type ColumnSource interface {
 
 type IntColumSource interface {
 	ColumnSource
-	Next() IntVector
+	Next() vector.IntVector
 }
 
 type UintColumSource interface {
 	ColumnSource
-	Next() IntVector
+	Next() vector.IntVector
 }
 
 type FloatColumSource interface {
 	ColumnSource
-	Next() FloatVector
+	Next() vector.FloatVector
 }
 
 type ByteSliceColumSource interface {
 	ColumnSource
-	Next() ByteSliceVector
+	Next() vector.ByteSliceVector
 }
 
 type UUIDColumSource interface {
 	ColumnSource
-	Next() UUIDVector
+	Next() vector.UUIDVector
 }
 
 func NewIntColumnSource(buf *buffer.IntBuffer, dstSize int, permMap []int) IntColumSource {
@@ -80,7 +81,7 @@ func (cs *intColumnSource) HasNulls() bool {
 
 // The underlying array point to an internal buffer that will be
 // overwritten by a subsequent call to Next().
-func (cs *intColumnSource) Next() IntVector {
+func (cs *intColumnSource) Next() vector.IntVector {
 
 	var i int
 
@@ -99,10 +100,7 @@ func (cs *intColumnSource) Next() IntVector {
 
 	}
 
-	return intVector{
-		vect: cs.dstBuf[:i],
-		rid:  cs.rid[:i],
-	}
+	return vector.NewIntVector(cs.dstBuf[:i], cs.rid[:i])
 
 }
 
@@ -131,7 +129,7 @@ func (cs *tsColumnSource) HasNulls() bool {
 	return false
 }
 
-func (cs *tsColumnSource) Next() IntVector {
+func (cs *tsColumnSource) Next() vector.IntVector {
 
 	cs.start = cs.end
 	cs.end = cs.start + cs.dstSize
@@ -147,10 +145,7 @@ func (cs *tsColumnSource) Next() IntVector {
 		cs.pos++
 	}
 
-	return intVector{
-		vect: cs.srcBuf[cs.start:cs.end],
-		rid:  cs.rid[0:dstLen],
-	}
+	return vector.NewIntVector(cs.srcBuf[cs.start:cs.end], cs.rid[0:dstLen])
 
 }
 
@@ -186,7 +181,7 @@ func (cs *floatColumnSource) HasNulls() bool {
 }
 
 // vect valid until next call
-func (cs *floatColumnSource) Next() FloatVector {
+func (cs *floatColumnSource) Next() vector.FloatVector {
 
 	var i int
 
@@ -205,10 +200,7 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 	}
 
-	return floatVector{
-		vect: cs.dstBuf[:i],
-		rid:  cs.rid[:i],
-	}
+	return vector.NewFloatVector(cs.dstBuf[:i], cs.rid[:i])
 
 }
 
@@ -247,7 +239,7 @@ func (cs *byteSliceColumnSource) HasNulls() bool {
 	return cs.bs.Nullable()
 }
 
-func (cs *byteSliceColumnSource) Next() ByteSliceVector {
+func (cs *byteSliceColumnSource) Next() vector.ByteSliceVector {
 
 	cs.dstOffsets = cs.dstOffsets[0:0]
 	cs.rid = cs.rid[0:0]
@@ -293,11 +285,7 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 
 	}
 
-	return byteSliceVector{
-		rid:     cs.rid,
-		data:    cs.dstBuf[:size],
-		offsets: cs.dstOffsets,
-	}
+	return vector.NewByteSliceVector(cs.dstBuf[:size], cs.rid, cs.dstOffsets)
 
 }
 
@@ -335,7 +323,7 @@ func (cs *uuidColumnSource) HasNulls() bool {
 	return cs.bs.Nullable()
 }
 
-func (cs *uuidColumnSource) Next() UUIDVector {
+func (cs *uuidColumnSource) Next() vector.UUIDVector {
 
 	cs.rid = cs.rid[0:0]
 
@@ -361,9 +349,6 @@ func (cs *uuidColumnSource) Next() UUIDVector {
 
 	}
 
-	return byteSliceVector{
-		rid:  cs.rid,
-		data: cs.dstBuf[:l],
-	}
+	return vector.NewUUIDVector(cs.dstBuf[:l], cs.rid)
 
 }

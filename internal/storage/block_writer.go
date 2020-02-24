@@ -13,14 +13,17 @@
 
 package storage
 
-import "meerkat/internal/storage/io"
+import (
+	"meerkat/internal/storage/index"
+	"meerkat/internal/storage/io"
+)
 
 type blockWriter struct {
 	bw *io.BinaryWriter
-	bi BlockIndexWriter
+	bi index.BlockIndexWriter
 }
 
-func NewBlockWriter(bw *io.BinaryWriter, bi BlockIndexWriter) *blockWriter {
+func NewBlockWriter(bw *io.BinaryWriter, bi index.BlockIndexWriter) *blockWriter {
 	return &blockWriter{
 		bw: bw,
 		bi: bi,

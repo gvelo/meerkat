@@ -15,7 +15,8 @@ package storage
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/utils"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/vector"
 	"time"
 )
 
@@ -32,18 +33,8 @@ type SegmentRegistry interface {
 	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
 }
 
-type EncodingType int
-
-const (
-	Plain EncodingType = iota
-	Dict
-	DictRleBitPacked
-	DeltaBitPacked
-	Snappy
-)
-
 type Column interface {
-	Encoding() EncodingType
+	Encoding() encoding.EncodingType
 	Validity() *roaring.Bitmap
 	HasNulls() bool
 	Stats() *Stats
@@ -55,7 +46,7 @@ type IntColumn interface {
 	Index() IntIndex
 	// TODO(gvelo): hint the reader about index use.
 	//  ie. avoid index use in low selectivity search.
-	Read(pos []uint32) IntVector
+	Read(pos []uint32) vector.IntVector
 	Iterator() IntIterator
 }
 
@@ -63,7 +54,7 @@ type FloatColumn interface {
 	Column
 	Dict() FloatDict
 	Index() FloatIndex
-	Read(pos []uint32) FloatVector
+	Read(pos []uint32) vector.FloatVector
 	Iterator() FloatIterator
 }
 
@@ -71,8 +62,8 @@ type StringColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	ReadDictEnc(pos []uint32) IntVector
-	Read(pos []uint32) ByteSliceVector
+	ReadDictEnc(pos []uint32) vector.IntVector
+	Read(pos []uint32) vector.ByteSliceVector
 	DictEncodedIterator() IntIterator
 	Iterator() ByteSliceIterator
 }
@@ -80,14 +71,14 @@ type StringColumn interface {
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
-	Read(pos []uint32) ByteSliceVector
+	Read(pos []uint32) vector.ByteSliceVector
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []uint32) IntVector
+	Read(pos []uint32) vector.IntVector
 	Iterator() IntIterator
 }
 
@@ -97,17 +88,17 @@ type Iterator interface {
 
 type IntIterator interface {
 	Iterator
-	Next() IntVector
+	Next() vector.IntVector
 }
 
 type FloatIterator interface {
 	Iterator
-	Next() FloatVector
+	Next() vector.FloatVector
 }
 
 type ByteSliceIterator interface {
 	Iterator
-	Next() ByteSliceVector
+	Next() vector.ByteSliceVector
 }
 
 type IntDict interface {
@@ -157,151 +148,4 @@ type Stats struct {
 	Compresed   int // size compressed
 	Max         interface{}
 	Min         interface{}
-}
-
-type Vector interface {
-	Len() int
-	Rid() []uint32
-	Data() []byte
-}
-
-type IntVector interface {
-	Vector
-	Values() []int
-}
-
-type FloatVector interface {
-	Vector
-	Values() []float64
-}
-
-type ByteSliceVector interface {
-	Vector
-	Offsets() []int
-	Get(i int) []byte
-}
-
-type UUIDVector interface {
-	Vector
-	Get(i int) []byte
-}
-
-type intVector struct {
-	vect []int
-	rid  []uint32
-}
-
-func NewIntVector(data []int, rid []uint32) IntVector {
-	return &intVector{
-		vect: data,
-		rid:  rid,
-	}
-}
-
-func (v intVector) Len() int {
-	return len(v.vect)
-}
-
-func (v intVector) Rid() []uint32 {
-	return v.rid
-}
-
-func (v intVector) Values() []int {
-	return v.vect
-}
-
-func (v intVector) Data() []byte {
-	return utils.IntAsByte(v.vect)
-}
-
-type floatVector struct {
-	vect []float64
-	rid  []uint32
-}
-
-func (v floatVector) Len() int {
-	return len(v.vect)
-}
-
-func (v floatVector) Rid() []uint32 {
-	return v.rid
-}
-
-func (v floatVector) Values() []float64 {
-	return v.vect
-}
-
-func (v floatVector) Data() []byte {
-	return utils.Float64AsByte(v.vect)
-}
-
-type byteSliceVector struct {
-	rid     []uint32
-	data    []byte
-	offsets []int
-}
-
-func NewByteSliceVector(rid []uint32, data []byte, offsets []int) ByteSliceVector {
-	return byteSliceVector{
-		offsets: offsets,
-		data:    data,
-		rid:     rid,
-	}
-}
-
-func (v byteSliceVector) Len() int {
-	return len(v.offsets)
-}
-
-func (v byteSliceVector) Rid() []uint32 {
-	return v.rid
-}
-
-func (v byteSliceVector) Data() []byte {
-	return v.data
-}
-
-func (v byteSliceVector) Offsets() []int {
-	return v.offsets
-}
-
-func (v byteSliceVector) Get(i int) []byte {
-
-	var start int
-
-	if i > 0 {
-		start = v.offsets[i-1]
-	}
-
-	return v.data[start:v.offsets[i]]
-
-}
-
-type uuidVector struct {
-	rid  []uint32
-	data []byte
-}
-
-func (v uuidVector) Len() int {
-	return len(v.data) / 16
-}
-
-func (v uuidVector) Rid() []uint32 {
-	return v.rid
-}
-
-func (v uuidVector) Data() []byte {
-	return v.data
-}
-
-func (v uuidVector) Get(i int) []byte {
-	o := i << 4
-	return v.data[o : o+16]
-}
-
-func NewByteSliceVector(rid []uint32, data []byte) UUIDVector {
-	return uuidVector{
-		data: data,
-		rid:  rid,
-	}
 }

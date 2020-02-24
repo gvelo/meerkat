@@ -16,17 +16,17 @@ package encoding
 import (
 	"encoding/binary"
 	"github.com/golang/snappy"
-	"meerkat/internal/storage"
 	"meerkat/internal/storage/io"
+	"meerkat/internal/storage/vector"
 )
 
 type ByteSliceSnappyEncoder struct {
-	bw        storage.BlockWriter
+	bw        BlockWriter
 	buf       *io.EncoderBuffer
 	offsetBuf []int
 }
 
-func NewByteSliceSnappyEncodeer(bw storage.BlockWriter) *ByteSliceSnappyEncoder {
+func NewByteSliceSnappyEncodeer(bw BlockWriter) *ByteSliceSnappyEncoder {
 	return &ByteSliceSnappyEncoder{
 		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
@@ -40,11 +40,11 @@ func (e *ByteSliceSnappyEncoder) Flush() {
 func (e *ByteSliceSnappyEncoder) FlushBlocks() {
 }
 
-func (e *ByteSliceSnappyEncoder) Type() storage.EncodingType {
-	return storage.Snappy
+func (e *ByteSliceSnappyEncoder) Type() EncodingType {
+	return Snappy
 }
 
-func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) {
+func (e *ByteSliceSnappyEncoder) Encode(vec vector.ByteSliceVector) {
 
 	// make sure that the buffer has enough space to accommodate
 	// the offsets slice plus the encoded data. We need to avoid

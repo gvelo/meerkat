@@ -15,8 +15,8 @@ package encoding
 
 import (
 	"encoding/binary"
-	"meerkat/internal/storage"
 	"meerkat/internal/storage/io"
+	"meerkat/internal/storage/vector"
 )
 
 const (
@@ -24,12 +24,12 @@ const (
 )
 
 type ByteSlicePlainEncoder struct {
-	bw        storage.BlockWriter
+	bw        BlockWriter
 	buf       *io.EncoderBuffer
 	offsetBuf []int
 }
 
-func NewByteSlicePlainEncodeer(bw storage.BlockWriter) *ByteSlicePlainEncoder {
+func NewByteSlicePlainEncodeer(bw BlockWriter) *ByteSlicePlainEncoder {
 	return &ByteSlicePlainEncoder{
 		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
@@ -43,11 +43,11 @@ func (e *ByteSlicePlainEncoder) Flush() {
 func (e *ByteSlicePlainEncoder) FlushBlocks() {
 }
 
-func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {
-	return storage.Plain
+func (e *ByteSlicePlainEncoder) Type() EncodingType {
+	return Plain
 }
 
-func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) {
+func (e *ByteSlicePlainEncoder) Encode(vec vector.ByteSliceVector) {
 
 	size := binary.MaxVarintLen64*(vec.Len()+2) + len(vec.Data())
 

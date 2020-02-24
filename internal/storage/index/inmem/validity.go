@@ -15,11 +15,11 @@ package inmem
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
-func NewValidityBitmapIndex(bw *io.BinaryWriter) storage.ValidityIndexWriter {
+func NewValidityBitmapIndex(bw *io.BinaryWriter) index.ValidityIndexWriter {
 	return &ValidityBitmapIndex{
 		bitmap: roaring.NewBitmap(),
 		bw:     bw,

@@ -13,24 +13,20 @@
 
 package encoding
 
-import "meerkat/internal/utils"
-
-type IntPlainDecoder struct {
+type UUIDPlainDecoder struct {
 }
 
-func NewIntPlainDecoder() *IntPlainDecoder {
-	return &IntPlainDecoder{}
+func NewUUIDPlainDecoder() *UUIDPlainDecoder {
+	return &UUIDPlainDecoder{}
 }
 
-func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
+func (d *UUIDPlainDecoder) Decode(block []byte, buf []byte) []byte {
 
-	data := utils.BytesAsInt(block)
-
-	if len(buf) < len(data) {
+	if len(buf) < len(block) {
 		panic("there isn't enough space to decode integer values")
 	}
 
-	n := copy(buf, data)
+	n := copy(buf, block)
 
 	return buf[:n]
 
