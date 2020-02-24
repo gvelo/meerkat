@@ -37,19 +37,18 @@ func NewByteSlicePlainEncodeer(bw storage.BlockWriter) *ByteSlicePlainEncoder {
 	}
 }
 
-func (e *ByteSlicePlainEncoder) Flush() error {
-	return nil
+func (e *ByteSlicePlainEncoder) Flush() {
 }
 
-func (e *ByteSlicePlainEncoder) FlushBlocks() error {
-	return e.bw.Flush()
+func (e *ByteSlicePlainEncoder) FlushBlocks() {
+	e.bw.Flush()
 }
 
 func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {
 	return storage.Plain
 }
 
-func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
+func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) {
 
 	size := binary.MaxVarintLen64*(vec.Len()+2) + len(vec.Data())
 
@@ -72,6 +71,6 @@ func (e *ByteSlicePlainEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	block := e.buf.Bytes()[offset:]
 
-	return e.bw.WriteBlock(block, vec.Rid()[0])
+	e.bw.WriteBlock(block, vec.Rid()[0])
 
 }

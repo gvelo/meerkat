@@ -27,14 +27,12 @@ type blockWriterMock struct {
 	rid   uint32
 }
 
-func (w *blockWriterMock) Flush() error {
-	return nil
+func (w *blockWriterMock) Flush() {
 }
 
-func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) error {
+func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) {
 	w.block = block
 	w.rid = baseRid
-	return nil
 }
 
 func TestByteSliceSnappyEnc(t *testing.T) {
@@ -59,17 +57,12 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d storage.ByteSliceDecod
 
 	e := ef(pw)
 
-	err := e.Encode(v)
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	e.Encode(v)
 
 	data := make([]byte, len(v.Data())*2)
 	offsets := make([]int, s)
 
-	data, offsets, err = d.Decode(pw.block, data, offsets)
+	data, offsets = d.Decode(pw.block, data, offsets)
 	assert.Equal(t, v.Data(), data, "decoded data doesn't match")
 	assert.Equal(t, v.Offsets(), offsets, "decoded offsets doesn't match")
 

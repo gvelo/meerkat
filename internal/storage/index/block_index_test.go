@@ -50,18 +50,9 @@ func TestBlockIndex(t *testing.T) {
 		buff = append(buff, block[:l]...)
 	}
 
-	e, err := pw.Flush()
+	pw.Flush()
 
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = bw.Close()
-
-	if err != nil {
-		t.Error(err)
-	}
+	bw.Close()
 
 	// read
 
@@ -74,16 +65,15 @@ func TestBlockIndex(t *testing.T) {
 
 	br := f.NewBinaryReader()
 
-	br.Offset = e
+	br.SetOffset(bw.Offset() - 8)
+
+	entry := br.ReadFixed64()
+
+	br.SetOffset(entry)
 
 	pr := NewBlockIndexReader(br)
 
-	err = pr.read()
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	pr.read()
 
 	for i := 0; i < testLength; i++ {
 		rid, offset := pr.Lookup(uint32(i))

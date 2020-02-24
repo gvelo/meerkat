@@ -30,7 +30,7 @@ func NewByteSliceSnappyDecoder() *ByteSliceSnappyDecoder {
 	}
 }
 
-func (d *ByteSliceSnappyDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error) {
+func (d *ByteSliceSnappyDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int) {
 
 	d.buf.SetBytes(block)
 
@@ -47,9 +47,9 @@ func (d *ByteSliceSnappyDecoder) Decode(block []byte, data []byte, offsets []int
 	r, err := snappy.Decode(data, d.buf.Remaining())
 
 	if err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 
-	return r, offsets[:ol], nil
+	return r, offsets[:ol]
 
 }

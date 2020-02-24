@@ -68,3 +68,7 @@ func BytesAsUInt32(b []byte) []uint32 {
 	s.Cap = h.Cap / Int32SizeBytes
 	return res
 }
+
+func ByteSlice2String(bs []byte) string {
+	return *(*string)(unsafe.Pointer(&bs))
+}

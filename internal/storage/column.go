@@ -55,7 +55,7 @@ type IntColumn interface {
 	Index() IntIndex
 	// TODO(gvelo): hint the reader about index use.
 	//  ie. avoid index use in low selectivity search.
-	Read(pos []uint32) (IntVector, error)
+	Read(pos []uint32) IntVector
 	Iterator() IntIterator
 }
 
@@ -63,7 +63,7 @@ type FloatColumn interface {
 	Column
 	Dict() FloatDict
 	Index() FloatIndex
-	Read(pos []uint32) (FloatVector, error)
+	Read(pos []uint32) FloatVector
 	Iterator() FloatIterator
 }
 
@@ -71,8 +71,8 @@ type StringColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	ReadDictEnc(pos []uint32) (IntVector, error)
-	Read(pos []uint32) (ByteSliceVector, error)
+	ReadDictEnc(pos []uint32) IntVector
+	Read(pos []uint32) ByteSliceVector
 	DictEncodedIterator() IntIterator
 	Iterator() ByteSliceIterator
 }
@@ -80,14 +80,14 @@ type StringColumn interface {
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
-	Read(pos []uint32) (ByteSliceVector, error)
+	Read(pos []uint32) ByteSliceVector
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []uint32) (IntVector, error)
+	Read(pos []uint32) IntVector
 	Iterator() IntIterator
 }
 
@@ -97,29 +97,29 @@ type Iterator interface {
 
 type IntIterator interface {
 	Iterator
-	Next() (IntVector, error)
+	Next() IntVector
 }
 
 type FloatIterator interface {
 	Iterator
-	Next() (FloatVector, error)
+	Next() FloatVector
 }
 
 type ByteSliceIterator interface {
 	Iterator
-	Next() (ByteSliceVector, error)
+	Next() ByteSliceVector
 }
 
 type IntDict interface {
-	DecodeInt(id int) (int, error)
+	DecodeInt(id int) int
 }
 
 type FloatDict interface {
-	DecodeFloat(id int) (float64, error)
+	DecodeFloat(id int) float64
 }
 
 type ByteSliceDict interface {
-	DecodeByteSlice(i int) ([]byte, error)
+	DecodeByteSlice(i int) []byte
 }
 
 type ByteSliceIndex interface {

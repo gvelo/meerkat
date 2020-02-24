@@ -24,7 +24,7 @@ type PostingStore struct {
 
 func (ps PostingStore) Read(offset int) (*roaring.Bitmap, error) {
 
-	b := ps.file.NewBinaryReader().SliceAt(offset)
+	b := ps.file.NewBinaryReader().SliceFrom(offset)
 
 	//TODO reuse Bitmaps.
 	bitmap := roaring.NewBitmap()

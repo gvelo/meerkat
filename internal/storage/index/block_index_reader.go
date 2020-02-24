@@ -30,19 +30,10 @@ func NewBlockIndexReader(br *io.BinaryReader) *blockIndexReader {
 	}
 }
 
-func (p *blockIndexReader) read() error {
+func (p *blockIndexReader) read() {
 
-	var err error
-
-	p.levelOffsets, err = p.br.ReadVarUintSlice()
-
-	if err != nil {
-		return err
-	}
-
+	p.levelOffsets = p.br.ReadVarUintSlice()
 	p.leafLevel = len(p.levelOffsets) - 1
-
-	return nil
 
 }
 

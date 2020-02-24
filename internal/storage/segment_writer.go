@@ -204,7 +204,7 @@ func (sw *SegmentWriter) writeMetadata() error {
 		return err
 	}
 
-	err = sw.bw.WriteVarInt(sw.table.Len())
+	err = sw.bw.WriteUvarint(sw.table.Len())
 
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func (sw *SegmentWriter) writeMetadata() error {
 			return err
 		}
 
-		err = sw.bw.WriteVarInt(sw.offsets[f.Id])
+		err = sw.bw.WriteUvarint(sw.offsets[f.Id])
 
 		if err != nil {
 			return err

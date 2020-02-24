@@ -48,29 +48,21 @@ type ByteSliceColumnWriter struct {
 	validity       ValidityIndexWriter
 	numOfValues    int
 	cardinality    int
-	startOffset    int
-	blocksOffset   int
 	blockIdxOffset int
 	encOffset      int
 	colIndexOffset int
 	validityOffset int
 }
 
-func (w *ByteSliceColumnWriter) Write() error {
-
-	w.startOffset = w.bw.Offset
+func (w *ByteSliceColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
 		vec := w.src.Next()
 
-		w.numOfValues = w.numOfValues + vec.Len()
+		w.numOfValues += vec.Len()
 
-		err := w.encoder.Encode(vec)
-
-		if err != nil {
-			return err
-		}
+		w.encoder.Encode(vec)
 
 		if w.colIndex != nil {
 			w.colIndex.Index(vec)
@@ -82,41 +74,23 @@ func (w *ByteSliceColumnWriter) Write() error {
 
 	}
 
-	err := w.encoder.FlushBlocks()
+	w.encoder.FlushBlocks()
 
-	if err != nil {
-		return err
-	}
+	w.encoder.Flush()
 
-	w.blocksOffset = w.bw.Offset
+	w.encOffset = w.bw.Offset()
 
-	err = w.encoder.Flush()
+	w.blockIndex.Flush()
 
-	if err != nil {
-		return err
-	}
-
-	w.encOffset = w.bw.Offset
-
-	err = w.blockIndex.Flush()
-
-	if err != nil {
-		return err
-	}
-
-	w.blockIdxOffset = w.bw.Offset
+	w.blockIdxOffset = w.bw.Offset()
 
 	// TODO(gvelo) if the column is not indexed estimate
 	// cardinality anyways using datasketches.
 	if w.colIndex != nil {
 
-		err = w.colIndex.Flush()
+		w.colIndex.Flush()
 
-		if err != nil {
-			return err
-		}
-
-		w.colIndexOffset = w.bw.Offset
+		w.colIndexOffset = w.bw.Offset()
 
 		w.cardinality = w.colIndex.Cardinality()
 
@@ -124,32 +98,21 @@ func (w *ByteSliceColumnWriter) Write() error {
 
 	if w.src.HasNulls() {
 
-		err = w.validity.Flush()
+		w.validity.Flush()
 
-		if err != nil {
-			return err
-		}
-
-		w.validityOffset = w.bw.Offset
+		w.validityOffset = w.bw.Offset()
 
 	}
 
-	err = w.WriteMetadata()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	w.writeMetadata()
 
 }
 
-func (w *ByteSliceColumnWriter) WriteMetadata() error {
+func (w *ByteSliceColumnWriter) writeMetadata() {
 
 	metadata := []int{
 		int(w.fieldType),
 		int(w.encoder.Type()),
-		w.startOffset,
 		w.blocksOffset,
 		w.encOffset,
 		w.blockIdxOffset,
@@ -159,20 +122,10 @@ func (w *ByteSliceColumnWriter) WriteMetadata() error {
 		w.cardinality,
 	}
 
-	metadataStart := w.bw.Offset
+	metadataStart := w.bw.Offset()
 
-	err := w.bw.WriteVarIntSlice(metadata)
+	w.bw.WriteUVarIntSlice(metadata)
 
-	if err != nil {
-		return err
-	}
-
-	err = w.bw.WriteFixedInt(metadataStart)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	w.bw.WriteFixedInt(metadataStart)
 
 }

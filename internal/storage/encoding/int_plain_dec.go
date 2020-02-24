@@ -22,10 +22,10 @@ func NewIntPlainDecoder() *IntPlainDecoder {
 	return &IntPlainDecoder{}
 }
 
-func (d *IntPlainDecoder) Decode(block []byte, buf []int) ([]int, error) {
+func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
 
 	data := utils.BytesAsInt(block)
 
-	return data, nil
+	return data
 
 }

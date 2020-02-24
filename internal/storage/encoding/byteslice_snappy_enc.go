@@ -34,19 +34,18 @@ func NewByteSliceSnappyEncodeer(bw storage.BlockWriter) *ByteSliceSnappyEncoder 
 	}
 }
 
-func (e *ByteSliceSnappyEncoder) Flush() error {
-	return nil
+func (e *ByteSliceSnappyEncoder) Flush() {
 }
 
-func (e *ByteSliceSnappyEncoder) FlushBlocks() error {
-	return e.bw.Flush()
+func (e *ByteSliceSnappyEncoder) FlushBlocks() {
+	e.bw.Flush()
 }
 
 func (e *ByteSliceSnappyEncoder) Type() storage.EncodingType {
 	return storage.Snappy
 }
 
-func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) error {
+func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) {
 
 	// make sure that the buffer has enough space to accommodate
 	// the offsets slice plus the encoded data. We need to avoid
@@ -75,6 +74,6 @@ func (e *ByteSliceSnappyEncoder) Encode(vec storage.ByteSliceVector) error {
 
 	block := e.buf.Bytes()[offset:]
 
-	return e.bw.WriteBlock(block, vec.Rid()[0])
+	e.bw.WriteBlock(block, vec.Rid()[0])
 
 }

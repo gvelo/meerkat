@@ -16,7 +16,6 @@ package utils
 import (
 	"math/rand"
 	"strings"
-	"unsafe"
 )
 
 var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
@@ -30,8 +29,4 @@ func RandomString(maxLenght int) string {
 		b.WriteRune(chars[rand.Intn(len(chars))])
 	}
 	return b.String()
-}
-
-func ByteSlice2String(bs []byte) string {
-	return *(*string)(unsafe.Pointer(&bs))
 }

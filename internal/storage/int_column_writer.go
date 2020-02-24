@@ -161,7 +161,7 @@ func (w *IntColumnWriter) WriteMetadata() error {
 
 	metadataStart := w.bw.Offset
 
-	err := w.bw.WriteVarIntSlice(metadata)
+	err := w.bw.WriteUVarIntSlice(metadata)
 
 	if err != nil {
 		return err

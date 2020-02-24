@@ -20,7 +20,7 @@ import (
 )
 
 type Flushable interface {
-	Flush() error
+	Flush()
 }
 type IndexWriter interface {
 	Flushable
@@ -54,7 +54,7 @@ type BlockIndexWriter interface {
 
 type BlockWriter interface {
 	Flushable
-	WriteBlock(block []byte, baseRid uint32) error
+	WriteBlock(block []byte, baseRid uint32)
 }
 
 type ValidityIndexWriter interface {
@@ -64,40 +64,40 @@ type ValidityIndexWriter interface {
 
 type Encoder interface {
 	Flushable
-	FlushBlocks() error
+	FlushBlocks()
 	Type() EncodingType
 }
 
 type IntEncoder interface {
 	Encoder
-	Encode(vec IntVector) error
+	Encode(vec IntVector)
 }
 
 type IntDecoder interface {
-	Decode(block []byte, buf []int) ([]int, error)
+	Decode(block []byte, buf []int) []int
 }
 
 type UintEncoder interface {
 	Encoder
-	Encode(vec IntVector) error
+	Encode(vec IntVector)
 }
 
 type FloatEncoder interface {
 	Encoder
-	Encode(vec FloatVector) error
+	Encode(vec FloatVector)
 }
 
 type ByteSliceEncoder interface {
 	Encoder
-	Encode(vec ByteSliceVector) error
+	Encode(vec ByteSliceVector)
 }
 
 type ByteSliceDecoder interface {
-	Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error)
+	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
 }
 
 type ColumnWriter interface {
-	Write() error
+	Write()
 }
 
 func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {

@@ -25,6 +25,7 @@ func TestDeltaEnc(t *testing.T) {
 
 	src := make([]int, s)
 	dst := make([]int, s)
+
 	r := make([]int, s)
 
 	src[0] = 10

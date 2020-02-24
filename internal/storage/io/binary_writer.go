@@ -15,6 +15,7 @@ package io
 
 import (
 	"bufio"
+	"encoding/binary"
 	"os"
 )
 
@@ -25,175 +26,139 @@ const (
 type BinaryWriter struct {
 	file   *os.File
 	writer *bufio.Writer
-	Offset int
+	offset int
+	buf    []byte
 }
 
 func NewBinaryWriter(name string) (*BinaryWriter, error) {
+
 	f, err := os.Create(name)
+
 	if err != nil {
 		return nil, err
 	}
+
 	bw := &BinaryWriter{
 		file:   f,
 		writer: bufio.NewWriterSize(f, bufSize),
-		Offset: 0,
+		offset: 0,
+		buf:    make([]byte, binary.MaxVarintLen64),
 	}
+
 	return bw, nil
 }
 
-func (bw *BinaryWriter) Close() error {
+func (bw *BinaryWriter) Close() {
+
 	err := bw.writer.Flush()
+
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	err = bw.file.Sync()
+
 	if err != nil {
-		return err
+		panic(err)
 	}
+
 	err = bw.file.Close()
+
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return nil
+
 }
 
-func (bw *BinaryWriter) WriteByte(x byte) error {
-	bw.writer.WriteByte(x)
-	bw.Offset++
-	return nil
+func (bw *BinaryWriter) Offset() int {
+	return bw.offset
 }
 
-func (bw *BinaryWriter) WriteVarInt(i int) error {
-	// TODO(gvelo) fix , cannot write a signed here.
-	return bw.WriteVarUint64(uint64(i))
-}
-
-func (bw *BinaryWriter) WriteVarUInt32(i uint32) error {
-	return bw.WriteVarUint64(uint64(i))
-}
-
-// EncodeVarint writes a varint-encoded integer to the Buffer.
-// This is the format for the
-// int32, int64, uint32, uint64, bool, and enum
-// protocol buffer types.
-func (bw *BinaryWriter) WriteVarUint64(x uint64) error {
-	for x >= 1<<7 {
-		bw.writer.WriteByte(uint8(x&0x7f | 0x80))
-		x >>= 7
-		bw.Offset += 1
-	}
-	bw.writer.WriteByte(uint8(x))
-	bw.Offset += 1
-	return nil
-}
-
-// EncodeVarint writes a varint-encoded integer to the Buffer.
-// This is the format for the
-// int32, int64, uint32, uint64, bool, and enum
-// protocol buffer types.
-func (bw *BinaryWriter) EncodedVarintLen(x uint64) uint64 {
-	var s uint64 = 0
-	for x >= 1<<7 {
-		x >>= 7
-		s += 1
-	}
-	s += 1
-	return s
-}
-
-func (bw *BinaryWriter) WriteFixedInt(i int) error {
-	return bw.WriteFixedUint64(uint64(i))
-}
-
-// EncodeFixed64 writes a 64-bit integer to the Buffer.
-// This is the format for the
-// fixed64, sfixed64, and double protocol buffer types.
-func (bw *BinaryWriter) WriteFixedUint64(x uint64) error {
-	bw.writer.WriteByte(uint8(x))
-	bw.writer.WriteByte(uint8(x >> 8))
-	bw.writer.WriteByte(uint8(x >> 16))
-	bw.writer.WriteByte(uint8(x >> 24))
-	bw.writer.WriteByte(uint8(x >> 32))
-	bw.writer.WriteByte(uint8(x >> 40))
-	bw.writer.WriteByte(uint8(x >> 48))
-	bw.writer.WriteByte(uint8(x >> 56))
-	bw.Offset += 8
-	return nil
-}
-
-// EncodeFixed32 writes a 32-bit integer to the Buffer.
-// This is the format for the
-// fixed32, sfixed32, and float protocol buffer types.
-func (bw *BinaryWriter) WriteFixedUint32(x uint64) error {
-	bw.writer.WriteByte(uint8(x))
-	bw.writer.WriteByte(uint8(x >> 8))
-	bw.writer.WriteByte(uint8(x >> 16))
-	bw.writer.WriteByte(uint8(x >> 24))
-	bw.Offset += 4
-	return nil
-}
-
-// EncodeZigzag64 writes a zigzag-encoded 64-bit integer
-// to the Buffer.
-// This is the format used for the sint64 protocol buffer type.
-func (bw *BinaryWriter) WriteZigzag64(x uint64) error {
-	// use signed number to get arithmetic right shift.
-	bw.Offset += 8
-	return bw.WriteVarUint64(uint64((x << 1) ^ uint64(int64(x)>>63)))
-}
-
-// EncodeZigzag32 writes a zigzag-encoded 32-bit integer
-// to the Buffer.
-// This is the format used for the sint32 protocol buffer type.
-func (bw *BinaryWriter) WriteZigzag32(x uint64) error {
-	// use signed number to get arithmetic right shift.
-	bw.Offset += 4
-	return bw.WriteVarUint64(uint64((uint32(x) << 1) ^ uint32((int32(x) >> 31))))
-}
-
-// EncodeRawBytes writes a count-delimited byte buffer to the Buffer.
-// This is the format used for the bytes protocol buffer
-// type and for embedded messages.
-func (bw *BinaryWriter) WriteBytes(b []byte) error {
-	err := bw.WriteVarInt(len(b))
+func (bw *BinaryWriter) WriteByte(x byte) {
+	err := bw.writer.WriteByte(x)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	_, err = bw.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
+	bw.offset++
 }
 
-func (bw *BinaryWriter) Write(b []byte) (int, error) {
-	nn, err := bw.writer.Write(b)
-	if err != nil {
-		return nn, err
-	}
-	bw.Offset += nn
-	return nn, err
+// WriteUvarint write an int as an unsigned varint
+func (bw *BinaryWriter) WriteUvarint(i int) {
+	bw.WriteUVarint64(uint64(i))
 }
 
-// EncodeStringBytes writes an encoded string to the Buffer.
-// This is the format used for the proto2 string type.
-func (bw *BinaryWriter) WriteString(s string) error {
+// unsigned
+func (bw *BinaryWriter) WriteUVarint64(x uint64) {
+
+	n := binary.PutUvarint(bw.buf, x)
+
+	n, err := bw.writer.Write(bw.buf[:n])
+
+	if err != nil {
+		panic(err)
+	}
+
+	bw.offset += n
+
+}
+
+func (bw *BinaryWriter) WriteFixedInt(i int) {
+	bw.WriteFixedUint64(uint64(i))
+}
+
+func (bw *BinaryWriter) WriteFixedUint64(x uint64) {
+
+	binary.LittleEndian.PutUint64(bw.buf, x)
+
+	_, err := bw.writer.Write(bw.buf[:8])
+
+	if err != nil {
+		panic(err)
+	}
+
+	bw.offset += 8
+
+}
+
+func (bw *BinaryWriter) WriteBytes(b []byte) {
+
+	bw.WriteUvarint(len(b))
+	bw.Write(b)
+
+}
+
+func (bw *BinaryWriter) Write(b []byte) {
+
+	n, err := bw.writer.Write(b)
+
+	if err != nil {
+		panic(err)
+	}
+
+	bw.offset += n
+
+}
+
+func (bw *BinaryWriter) WriteString(s string) {
+
 	l := len(s)
-	bw.WriteVarInt(l)
-	bw.writer.WriteString(s)
-	bw.Offset += l
-	return nil
+
+	bw.WriteUvarint(l)
+
+	_, err := bw.writer.WriteString(s)
+
+	if err != nil {
+		panic(err)
+	}
+
+	bw.offset += l
+
 }
 
-func (bw *BinaryWriter) WriteVarIntSlice(slice []int) error {
+func (bw *BinaryWriter) WriteUVarIntSlice(slice []int) {
 
 	for _, i := range slice {
-		err := bw.WriteVarInt(i)
-		if err != nil {
-			return err
-		}
+		bw.WriteUvarint(i)
 	}
-
-	return nil
 
 }

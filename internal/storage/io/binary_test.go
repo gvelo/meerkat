@@ -16,7 +16,6 @@ package io
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
-	"io"
 	"math/rand"
 	"os"
 	"path"
@@ -38,8 +37,8 @@ func Test(t *testing.T) {
 			test: &TestBytes{},
 		},
 		{
-			name: "testVarInt",
-			test: &TestVarInt{},
+			name: "testUVarInt",
+			test: &TestUVarInt{},
 		},
 	}
 
@@ -57,18 +56,9 @@ func Test(t *testing.T) {
 				return
 			}
 
-			err = testCase.test.TestWrite(t, writer)
+			testCase.test.TestWrite(t, writer)
 
-			if err != nil {
-				return
-			}
-
-			err = writer.Close()
-
-			if err != nil {
-				t.Error(err)
-				return
-			}
+			writer.Close()
 
 			mf, err := MMap(fileName)
 
@@ -87,7 +77,7 @@ func Test(t *testing.T) {
 }
 
 type BinaryStreamTest interface {
-	TestWrite(t *testing.T, writer *BinaryWriter) error
+	TestWrite(t *testing.T, writer *BinaryWriter)
 	TestRead(t *testing.T, reader *BinaryReader)
 }
 
@@ -95,20 +85,14 @@ type TestBytes struct {
 	values [][]byte
 }
 
-func (tb *TestBytes) TestWrite(t *testing.T, w *BinaryWriter) error {
+func (tb *TestBytes) TestWrite(t *testing.T, w *BinaryWriter) {
 
 	tb.values = make([][]byte, testSize)
 
 	for i := 0; i < testSize; i++ {
 		tb.values[i] = randomBytes()
-		err := w.WriteBytes(tb.values[i])
-		if err != nil {
-			t.Error(err)
-			return err
-		}
+		w.WriteBytes(tb.values[i])
 	}
-
-	return nil
 
 }
 
@@ -116,66 +100,41 @@ func (tb *TestBytes) TestRead(t *testing.T, reader *BinaryReader) {
 
 	for i := 0; i < testSize; i++ {
 
-		b, err := reader.ReadBytes()
+		b := reader.ReadBytes()
 
-		if err != nil {
-			t.Error(err)
-			return
-		}
 		if !assert.True(t, bytes.Equal(tb.values[i], b), "read bytes doesn't match") {
 			return
 		}
+
 	}
-
-	_, err := reader.ReadBytes()
-
-	assert.Equal(t, err, io.ErrUnexpectedEOF, "")
-
-	return
 
 }
 
-type TestVarInt struct {
+type TestUVarInt struct {
 	values []int
 }
 
-func (tv *TestVarInt) TestWrite(t *testing.T, w *BinaryWriter) error {
+func (tv *TestUVarInt) TestWrite(t *testing.T, w *BinaryWriter) {
 
 	tv.values = make([]int, testSize)
 
 	for i := 0; i < testSize; i++ {
 		tv.values[i] = rand.Int()
-		err := w.WriteVarInt(tv.values[i])
-		if err != nil {
-			t.Error(err)
-			return err
-		}
+		w.WriteUvarint(tv.values[i])
 	}
-
-	return nil
 
 }
 
-func (tv *TestVarInt) TestRead(t *testing.T, reader *BinaryReader) {
+func (tv *TestUVarInt) TestRead(t *testing.T, reader *BinaryReader) {
 
 	for i := 0; i < testSize; i++ {
 
-		r, err := reader.ReadVarInt()
+		r := reader.ReadUVarint()
 
-		if err != nil {
-			t.Error(err)
-			return
-		}
 		if !assert.Equal(t, tv.values[i], r, "read int doesn't match") {
 			return
 		}
 	}
-
-	_, err := reader.ReadVarInt()
-
-	assert.Equal(t, err, io.ErrUnexpectedEOF, "")
-
-	return
 
 }
 

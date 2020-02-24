@@ -20,7 +20,7 @@ import (
 
 const (
 	// 8k pages
-	pageSize = 8192
+	pageSize = 8 * 1024
 
 	// 682 items per leaf node (8k/(size uint32 + size int64)) 1 int64 remainder
 	leafNodeLen = pageSize / (8 + 4)
@@ -32,13 +32,13 @@ const (
 	offsetLeafSize = 8 * leafNodeLen
 
 	// try to keep chunks of blocks 8k aligned on disk.
-	maxChunkSize = 8192
+	maxChunkSize = 8 * 1024
 )
 
 var padding [pageSize]byte
 
 // nodeWriter writes a node into a index page
-type nodeWriter func(start, end int) error
+type nodeWriter func(start, end int)
 
 type blockIndexWriter struct {
 	chunkOffsetList []int
@@ -57,19 +57,15 @@ func NewBlockIndexWriter(bw *io.BinaryWriter) *blockIndexWriter {
 	}
 }
 
-func (w *blockIndexWriter) Flush() (int, error) {
+func (w *blockIndexWriter) Flush() {
 
 	if w.chunkSize != 0 {
 		w.appendBlock()
 	}
 
-	err := w.writeLevels()
+	w.writeLevels()
 
-	if err != nil {
-		return -1, err
-	}
-
-	return w.writeMetadata()
+	w.writeMetadata()
 
 }
 
@@ -82,7 +78,7 @@ func (w *blockIndexWriter) IndexBlock(block []byte, baseRID uint32) {
 
 	blockSize := len(block)
 
-	w.chunkSize = w.chunkSize + blockSize
+	w.chunkSize += blockSize
 
 	if w.chunkSize >= maxChunkSize {
 		w.appendBlock()
@@ -98,52 +94,37 @@ func (w *blockIndexWriter) appendBlock() {
 	w.chunkSize = 0
 }
 
-func (w *blockIndexWriter) writeMetadata() (int, error) {
+func (w *blockIndexWriter) writeMetadata() {
 
-	entry := w.bw.Offset
+	entry := w.bw.Offset()
 
-	err := w.bw.WriteVarInt(len(w.levelOffset))
-
-	if err != nil {
-		return 0, err
-	}
+	w.bw.WriteUvarint(len(w.levelOffset))
 
 	for i := len(w.levelOffset) - 1; i >= 0; i-- {
-
-		err = w.bw.WriteVarInt(w.levelOffset[i])
-
-		if err != nil {
-			return 0, err
-		}
-
+		w.bw.WriteUvarint(w.levelOffset[i])
 	}
 
-	return entry, nil
+	w.bw.WriteFixedInt(entry)
 
 }
 
-func (w *blockIndexWriter) writeLevels() error {
+func (w *blockIndexWriter) writeLevels() {
 
 	level := 0
 
 	for {
 
 		var nextLevel []uint32
-		var err error
 
 		if level == 0 {
-			nextLevel, err = w.writeLevel(leafNodeLen, w.leafNodeWriter)
+			nextLevel = w.writeLevel(leafNodeLen, w.leafNodeWriter)
 		} else {
 
 			if len(w.baseRIDList) == 1 {
 				break
 			}
 
-			nextLevel, err = w.writeLevel(nodeLen, w.nodeWriter)
-		}
-
-		if err != nil {
-			return err
+			nextLevel = w.writeLevel(nodeLen, w.nodeWriter)
 		}
 
 		w.baseRIDList = nextLevel
@@ -151,21 +132,19 @@ func (w *blockIndexWriter) writeLevels() error {
 
 	}
 
-	return nil
-
 }
 
-func (w *blockIndexWriter) leafNodeWriter(start, end int) error {
-	return w.writeLeafNode(w.baseRIDList[start:end], w.chunkOffsetList[start:end])
+func (w *blockIndexWriter) leafNodeWriter(start, end int) {
+	w.writeLeafNode(w.baseRIDList[start:end], w.chunkOffsetList[start:end])
 }
 
-func (w *blockIndexWriter) nodeWriter(start, end int) error {
-	return w.writeNode(w.baseRIDList[start:end])
+func (w *blockIndexWriter) nodeWriter(start, end int) {
+	w.writeNode(w.baseRIDList[start:end])
 }
 
-func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) ([]uint32, error) {
+func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) []uint32 {
 
-	w.levelOffset = append(w.levelOffset, w.bw.Offset)
+	w.levelOffset = append(w.levelOffset, w.bw.Offset())
 
 	n := 0
 
@@ -177,11 +156,7 @@ func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) ([]ui
 			end = len(w.baseRIDList)
 		}
 
-		err := writer(i, end)
-
-		if err != nil {
-			return nil, err
-		}
+		writer(i, end)
 
 		w.baseRIDList[n] = w.baseRIDList[i]
 
@@ -189,74 +164,42 @@ func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) ([]ui
 
 	}
 
-	return w.baseRIDList[:n], nil
+	return w.baseRIDList[:n]
 
 }
 
-func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) error {
+func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) {
 
 	ridBytes := utils.UInt32AsByte(rid)
 
-	_, err := w.bw.Write(ridBytes)
-
-	if err != nil {
-		return err
-	}
+	w.bw.Write(ridBytes)
 
 	padLen := ridLeafSize - len(ridBytes)
 
 	if padLen > 0 {
-
-		_, err = w.bw.Write(padding[:padLen])
-
-		if err != nil {
-			return err
-		}
-
+		w.bw.Write(padding[:padLen])
 	}
 
 	offsetBytes := utils.IntAsByte(offsets)
 
-	_, err = w.bw.Write(offsetBytes)
-
-	if err != nil {
-		return err
-	}
+	w.bw.Write(offsetBytes)
 
 	padLen = pageSize - (ridLeafSize + len(offsetBytes))
 
-	_, err = w.bw.Write(padding[:padLen])
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	w.bw.Write(padding[:padLen])
 
 }
 
-func (w *blockIndexWriter) writeNode(rid []uint32) error {
+func (w *blockIndexWriter) writeNode(rid []uint32) {
 
 	ridBytes := utils.UInt32AsByte(rid)
 
-	_, err := w.bw.Write(ridBytes)
-
-	if err != nil {
-		return err
-	}
+	w.bw.Write(ridBytes)
 
 	padLen := pageSize - len(ridBytes)
 
 	if padLen > 0 {
-
-		_, err = w.bw.Write(padding[:padLen])
-
-		if err != nil {
-			return err
-		}
-
+		w.bw.Write(padding[:padLen])
 	}
-
-	return nil
 
 }

@@ -40,16 +40,12 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d storage.IntDecoder) {
 
 	e := f(bw)
 
-	err := e.Encode(v)
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	e.Encode(v)
 
 	data := make([]int, len(v.Data())*2)
 
-	data, err = d.Decode(bw.block, data)
+	data = d.Decode(bw.block, data)
+
 	assert.Equal(t, v.Values(), data, "decoded data doesn't match")
 
 }

@@ -25,18 +25,17 @@ func NewIntPlainEncoder(bw storage.BlockWriter) *IntPlainEncoder {
 	}
 }
 
-func (e *IntPlainEncoder) Flush() error {
-	return nil
+func (e *IntPlainEncoder) Flush() {
 }
 
-func (e *IntPlainEncoder) FlushBlocks() error {
-	return e.bw.Flush()
+func (e *IntPlainEncoder) FlushBlocks() {
+	e.bw.Flush()
 }
 
 func (e *IntPlainEncoder) Type() storage.EncodingType {
 	return storage.Plain
 }
 
-func (e *IntPlainEncoder) Encode(vec storage.IntVector) error {
-	return e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
+func (e *IntPlainEncoder) Encode(vec storage.IntVector) {
+	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
 }

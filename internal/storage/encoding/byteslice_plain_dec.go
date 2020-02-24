@@ -29,7 +29,7 @@ func NewByteSlicePlainDecoder() *ByteSlicePlainDecoder {
 	}
 }
 
-func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int, error) {
+func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int) {
 
 	d.buf.SetBytes(block)
 
@@ -45,6 +45,6 @@ func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int)
 	// read data
 	dl := d.buf.ReadBytes(data)
 
-	return data[:dl], offsets[:ol], nil
+	return data[:dl], offsets[:ol]
 
 }
