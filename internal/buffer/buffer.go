@@ -521,17 +521,10 @@ func (b *UUIDBuffer) AppendBuffer(buf interface{}) {
 	b.AppendUUIDBuffer(buf.(*UUIDBuffer))
 }
 
-func (b *UUIDBuffer) Get(i int) uuid.UUID {
-
+func (b *UUIDBuffer) Get(i int) []byte {
 	start := i << 4
 	end := start + 16
-
-	var uid [16]byte
-
-	copy(uid[:], b.buf[start:end])
-
-	return uid
-
+	return b.buf[start:end]
 }
 
 func (b *UUIDBuffer) Each(f func(int, uuid.UUID) bool) {

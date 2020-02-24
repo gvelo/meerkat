@@ -39,38 +39,32 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 }
 
 type IntColumnWriter struct {
-	fieldType      schema.FieldType
-	bw             *io.BinaryWriter
-	src            IntColumSource
-	encoder        IntEncoder
-	colIndex       IntIndexWriter
-	blockIndex     BlockIndexWriter
-	validity       ValidityIndexWriter
-	numOfValues    int
-	cardinality    int
-	startOffset    int
-	blocksOffset   int
-	blockIdxOffset int
-	encOffset      int
-	colIndexOffset int
-	validityOffset int
+	fieldType   schema.FieldType
+	bw          *io.BinaryWriter
+	src         IntColumSource
+	encoder     IntEncoder
+	colIndex    IntIndexWriter
+	blockIndex  BlockIndexWriter
+	validity    ValidityIndexWriter
+	numOfValues int
+	cardinality int
+
+	blkEnd         int
+	blkIdxEnd      int
+	encoderEnd     int
+	colIdxEnd      int
+	validityIdxEnd int
 }
 
-func (w *IntColumnWriter) Write() error {
-
-	w.startOffset = w.bw.Offset
+func (w *IntColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
 		vec := w.src.Next()
 
-		w.numOfValues = w.numOfValues + vec.Len()
+		w.numOfValues += vec.Len()
 
-		err := w.encoder.Encode(vec)
-
-		if err != nil {
-			return err
-		}
+		w.encoder.Encode(vec)
 
 		if w.colIndex != nil {
 			w.colIndex.Index(vec)
@@ -82,41 +76,25 @@ func (w *IntColumnWriter) Write() error {
 
 	}
 
-	err := w.encoder.FlushBlocks()
+	w.encoder.FlushBlocks()
 
-	if err != nil {
-		return err
-	}
+	w.blkEnd = w.bw.Offset()
 
-	w.blocksOffset = w.bw.Offset
+	w.blockIndex.Flush()
 
-	err = w.encoder.Flush()
+	w.blkIdxEnd = w.bw.Offset()
 
-	if err != nil {
-		return err
-	}
+	w.encoder.Flush()
 
-	w.encOffset = w.bw.Offset
-
-	err = w.blockIndex.Flush()
-
-	if err != nil {
-		return err
-	}
-
-	w.blockIdxOffset = w.bw.Offset
+	w.encoderEnd = w.bw.Offset()
 
 	// TODO(gvelo) if the column is not indexed estimate
 	// cardinality anyways using datasketches.
 	if w.colIndex != nil {
 
-		err = w.colIndex.Flush()
+		w.colIndex.Flush()
 
-		if err != nil {
-			return err
-		}
-
-		w.colIndexOffset = w.bw.Offset
+		w.colIdxEnd = w.bw.Offset()
 
 		w.cardinality = w.colIndex.Cardinality()
 
@@ -124,55 +102,30 @@ func (w *IntColumnWriter) Write() error {
 
 	if w.src.HasNulls() {
 
-		err = w.validity.Flush()
+		w.validity.Flush()
 
-		if err != nil {
-			return err
-		}
-
-		w.validityOffset = w.bw.Offset
+		w.validityIdxEnd = w.bw.Offset()
 
 	}
 
-	err = w.WriteMetadata()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	w.writeFooter()
 
 }
 
-func (w *IntColumnWriter) WriteMetadata() error {
+func (w *IntColumnWriter) writeFooter() {
 
-	metadata := []int{
-		int(w.fieldType),
-		int(w.encoder.Type()),
-		w.startOffset,
-		w.blocksOffset,
-		w.encOffset,
-		w.blockIdxOffset,
-		w.colIndexOffset,
-		w.validityOffset,
-		w.numOfValues,
-		w.cardinality,
-	}
+	entry := w.bw.Offset()
 
-	metadataStart := w.bw.Offset
+	w.bw.WriteUvarint(int(w.fieldType))
+	w.bw.WriteUvarint(int(w.encoder.Type()))
+	w.bw.WriteUvarint(w.blkEnd)
+	w.bw.WriteUvarint(w.blkIdxEnd)
+	w.bw.WriteUvarint(w.encoderEnd)
+	w.bw.WriteUvarint(w.colIdxEnd)
+	w.bw.WriteUvarint(w.validityIdxEnd)
+	w.bw.WriteUvarint(w.numOfValues)
+	w.bw.WriteUvarint(w.cardinality)
 
-	err := w.bw.WriteUVarIntSlice(metadata)
-
-	if err != nil {
-		return err
-	}
-
-	err = w.bw.WriteFixedInt(metadataStart)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	w.bw.WriteFixedInt(entry)
 
 }

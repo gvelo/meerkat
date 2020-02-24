@@ -42,6 +42,11 @@ type ByteSliceColumSource interface {
 	Next() ByteSliceVector
 }
 
+type UUIDColumSource interface {
+	ColumnSource
+	Next() UUIDVector
+}
+
 func NewIntColumnSource(buf *buffer.IntBuffer, dstSize int, permMap []int) IntColumSource {
 
 	return &intColumnSource{
@@ -292,6 +297,73 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 		rid:     cs.rid,
 		data:    cs.dstBuf[:size],
 		offsets: cs.dstOffsets,
+	}
+
+}
+
+// TODO(gvelo) uuid are fixed lenght. Create a specialized source.
+
+func NewUUIDColumnSource(buff *buffer.UUIDBuffer, dstLen int, permMap []int) UUIDColumSource {
+
+	return &uuidColumnSource{
+		bs:       buff,
+		dstLen:   dstLen,
+		dstBuf:   make([]byte, dstLen*16),
+		nulls:    buff.Nulls(),
+		rid:      make([]uint32, 0, dstLen),
+		permMap:  permMap,
+		hasNulls: buff.Nullable(),
+	}
+}
+
+type uuidColumnSource struct {
+	bs       *buffer.UUIDBuffer
+	dstLen   int
+	dstBuf   []byte
+	nulls    []bool
+	rid      []uint32
+	permMap  []int
+	hasNulls bool
+	pos      int
+}
+
+func (cs *uuidColumnSource) HasNext() bool {
+	return cs.pos < cs.bs.Len()
+}
+
+func (cs *uuidColumnSource) HasNulls() bool {
+	return cs.bs.Nullable()
+}
+
+func (cs *uuidColumnSource) Next() UUIDVector {
+
+	cs.rid = cs.rid[0:0]
+
+	l := 0
+
+	for ; cs.pos < cs.bs.Len(); cs.pos++ {
+
+		j := cs.permMap[cs.pos]
+
+		if cs.hasNulls && cs.nulls[j] {
+			continue
+		}
+
+		uuid := cs.bs.Get(j)
+
+		copy(cs.dstBuf[l:], uuid)
+		cs.rid = append(cs.rid, uint32(cs.pos))
+		l += 16
+
+		if l == len(cs.dstBuf) {
+			break
+		}
+
+	}
+
+	return byteSliceVector{
+		rid:  cs.rid,
+		data: cs.dstBuf[:l],
 	}
 
 }

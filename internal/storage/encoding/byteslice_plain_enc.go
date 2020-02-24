@@ -41,7 +41,6 @@ func (e *ByteSlicePlainEncoder) Flush() {
 }
 
 func (e *ByteSlicePlainEncoder) FlushBlocks() {
-	e.bw.Flush()
 }
 
 func (e *ByteSlicePlainEncoder) Type() storage.EncodingType {

@@ -181,6 +181,11 @@ type ByteSliceVector interface {
 	Get(i int) []byte
 }
 
+type UUIDVector interface {
+	Vector
+	Get(i int) []byte
+}
+
 type intVector struct {
 	vect []int
 	rid  []uint32
@@ -270,4 +275,33 @@ func (v byteSliceVector) Get(i int) []byte {
 
 	return v.data[start:v.offsets[i]]
 
+}
+
+type uuidVector struct {
+	rid  []uint32
+	data []byte
+}
+
+func (v uuidVector) Len() int {
+	return len(v.data) / 16
+}
+
+func (v uuidVector) Rid() []uint32 {
+	return v.rid
+}
+
+func (v uuidVector) Data() []byte {
+	return v.data
+}
+
+func (v uuidVector) Get(i int) []byte {
+	o := i << 4
+	return v.data[o : o+16]
+}
+
+func NewByteSliceVector(rid []uint32, data []byte) UUIDVector {
+	return uuidVector{
+		data: data,
+		rid:  rid,
+	}
 }

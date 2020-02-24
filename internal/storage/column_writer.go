@@ -16,6 +16,8 @@ package storage
 import (
 	"meerkat/internal/buffer"
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
@@ -53,7 +55,6 @@ type BlockIndexWriter interface {
 }
 
 type BlockWriter interface {
-	Flushable
 	WriteBlock(block []byte, baseRid uint32)
 }
 
@@ -101,15 +102,42 @@ type ColumnWriter interface {
 }
 
 func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
-	return nil
+
+	blkIdx := index.NewBlockIndexWriter(bw)
+	blkWriter := NewBlockWriter(bw, blkIdx)
+
+	switch fieldType {
+	case schema.FieldType_INT:
+		src := NewIntColumnSource(buf.(*buffer.IntBuffer), 8*1024, perm)
+		enc := encoding.NewIntPlainEncoder(blkWriter)
+		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, nil, bw)
+
+	case schema.FieldType_STRING:
+		src := NewByteSliceColumnSource(buf.(*buffer.ByteSliceBuffer), 8*1024, perm)
+		enc := encoding.NewByteSlicePlainEncodeer(blkWriter)
+		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, nil, bw)
+
+	case schema.FieldType_UUID:
+		src := NewUUIDColumnSource(buf.(*buffer.UUIDBuffer), 512, perm)
+		enc := encoding.NewByteSlicePlainEncodeer(blkWriter)
+		return NewUUIDColumnWriter(schema.FieldType_UUID, src, enc, nil, blkIdx, nil, bw)
+
+	default:
+		panic("unknown fieldType")
+
+	}
+
 }
 
-func NewTSColumnWriter(buf *buffer.IntBuffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter {
 
-	// TODO: here should be the logic of the column writer factory.
-	//  The factory will build the src using an appropriate page size
-	//  to feed the encoder.
+	// plain 8k pages
+	src := NewTsColumnSource(buf, 8*1024)
+	blkIdx := index.NewBlockIndexWriter(bw)
+	blkWriter := NewBlockWriter(bw, blkIdx)
+	enc := encoding.NewIntPlainEncoder(blkWriter)
+	cw := NewIntColumnWriter(schema.FieldType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
 
-	return nil
+	return cw
 
 }

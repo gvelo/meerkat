@@ -38,7 +38,6 @@ func (e *ByteSliceSnappyEncoder) Flush() {
 }
 
 func (e *ByteSliceSnappyEncoder) FlushBlocks() {
-	e.bw.Flush()
 }
 
 func (e *ByteSliceSnappyEncoder) Type() storage.EncodingType {

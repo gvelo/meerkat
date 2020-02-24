@@ -39,19 +39,21 @@ func NewByteSliceColumnWriter(fieldType schema.FieldType,
 }
 
 type ByteSliceColumnWriter struct {
-	fieldType      schema.FieldType
-	bw             *io.BinaryWriter
-	src            ByteSliceColumSource
-	encoder        ByteSliceEncoder
-	colIndex       ByteSliceIndexWriter
-	blockIndex     BlockIndexWriter
-	validity       ValidityIndexWriter
-	numOfValues    int
-	cardinality    int
-	blockIdxOffset int
-	encOffset      int
-	colIndexOffset int
-	validityOffset int
+	fieldType   schema.FieldType
+	bw          *io.BinaryWriter
+	src         ByteSliceColumSource
+	encoder     ByteSliceEncoder
+	colIndex    ByteSliceIndexWriter
+	blockIndex  BlockIndexWriter
+	validity    ValidityIndexWriter
+	numOfValues int
+	cardinality int
+
+	blkEnd         int
+	blkIdxEnd      int
+	encoderEnd     int
+	colIdxEnd      int
+	validityIdxEnd int
 }
 
 func (w *ByteSliceColumnWriter) Write() {
@@ -76,13 +78,15 @@ func (w *ByteSliceColumnWriter) Write() {
 
 	w.encoder.FlushBlocks()
 
-	w.encoder.Flush()
-
-	w.encOffset = w.bw.Offset()
+	w.blkEnd = w.bw.Offset()
 
 	w.blockIndex.Flush()
 
-	w.blockIdxOffset = w.bw.Offset()
+	w.blkIdxEnd = w.bw.Offset()
+
+	w.encoder.Flush()
+
+	w.encoderEnd = w.bw.Offset()
 
 	// TODO(gvelo) if the column is not indexed estimate
 	// cardinality anyways using datasketches.
@@ -90,7 +94,7 @@ func (w *ByteSliceColumnWriter) Write() {
 
 		w.colIndex.Flush()
 
-		w.colIndexOffset = w.bw.Offset()
+		w.colIdxEnd = w.bw.Offset()
 
 		w.cardinality = w.colIndex.Cardinality()
 
@@ -100,32 +104,140 @@ func (w *ByteSliceColumnWriter) Write() {
 
 		w.validity.Flush()
 
-		w.validityOffset = w.bw.Offset()
+		w.validityIdxEnd = w.bw.Offset()
 
 	}
 
-	w.writeMetadata()
+	w.writeFooter()
 
 }
 
-func (w *ByteSliceColumnWriter) writeMetadata() {
+func (w *ByteSliceColumnWriter) writeFooter() {
 
-	metadata := []int{
-		int(w.fieldType),
-		int(w.encoder.Type()),
-		w.blocksOffset,
-		w.encOffset,
-		w.blockIdxOffset,
-		w.colIndexOffset,
-		w.validityOffset,
-		w.numOfValues,
-		w.cardinality,
+	entry := w.bw.Offset()
+
+	w.bw.WriteUvarint(int(w.fieldType))
+	w.bw.WriteUvarint(int(w.encoder.Type()))
+	w.bw.WriteUvarint(w.blkEnd)
+	w.bw.WriteUvarint(w.blkIdxEnd)
+	w.bw.WriteUvarint(w.encoderEnd)
+	w.bw.WriteUvarint(w.colIdxEnd)
+	w.bw.WriteUvarint(w.validityIdxEnd)
+	w.bw.WriteUvarint(w.numOfValues)
+	w.bw.WriteUvarint(w.cardinality)
+
+	w.bw.WriteFixedInt(entry)
+
+}
+
+func NewUUIDColumnWriter(fieldType schema.FieldType,
+	src UUIDColumSource,
+	encoder ByteSliceEncoder,
+	colIndex ByteSliceIndexWriter,
+	blockIndex BlockIndexWriter,
+	validityIndex ValidityIndexWriter,
+	bw *io.BinaryWriter) *UUIDColumnWriter {
+
+	return &UUIDColumnWriter{
+		fieldType:  fieldType,
+		src:        src,
+		bw:         bw,
+		encoder:    encoder,
+		colIndex:   colIndex,
+		blockIndex: blockIndex,
+		validity:   validityIndex,
 	}
 
-	metadataStart := w.bw.Offset()
+}
 
-	w.bw.WriteUVarIntSlice(metadata)
+type UUIDColumnWriter struct {
+	fieldType   schema.FieldType
+	bw          *io.BinaryWriter
+	src         UUIDColumSource
+	encoder     ByteSliceEncoder
+	colIndex    ByteSliceIndexWriter
+	blockIndex  BlockIndexWriter
+	validity    ValidityIndexWriter
+	numOfValues int
+	cardinality int
 
-	w.bw.WriteFixedInt(metadataStart)
+	blkEnd         int
+	blkIdxEnd      int
+	encoderEnd     int
+	colIdxEnd      int
+	validityIdxEnd int
+}
+
+func (w *UUIDColumnWriter) Write() {
+
+	for w.src.HasNext() {
+
+		vec := w.src.Next()
+
+		w.numOfValues += vec.Len()
+
+		w.encoder.Encode(vec)
+
+		if w.colIndex != nil {
+			w.colIndex.Index(vec)
+		}
+
+		if w.src.HasNulls() {
+			w.validity.Index(vec.Rid())
+		}
+
+	}
+
+	w.encoder.FlushBlocks()
+
+	w.blkEnd = w.bw.Offset()
+
+	w.blockIndex.Flush()
+
+	w.blkIdxEnd = w.bw.Offset()
+
+	w.encoder.Flush()
+
+	w.encoderEnd = w.bw.Offset()
+
+	// TODO(gvelo) if the column is not indexed estimate
+	// cardinality anyways using datasketches.
+	if w.colIndex != nil {
+
+		w.colIndex.Flush()
+
+		w.colIdxEnd = w.bw.Offset()
+
+		w.cardinality = w.colIndex.Cardinality()
+
+	}
+
+	if w.src.HasNulls() {
+
+		w.validity.Flush()
+
+		w.validityIdxEnd = w.bw.Offset()
+
+	}
+
+	w.writeFooter()
+
+}
+
+func (w *UUIDColumnWriter) writeFooter() {
+
+	entry := w.bw.Offset()
+
+	w.bw.WriteUvarint(int(w.fieldType))
+	w.bw.WriteUvarint(int(w.encoder.Type()))
+	w.bw.WriteUvarint(w.blkEnd)
+	w.bw.WriteUvarint(w.blkIdxEnd)
+	w.bw.WriteUvarint(w.encoderEnd)
+	w.bw.WriteUvarint(w.colIdxEnd)
+	w.bw.WriteUvarint(w.validityIdxEnd)
+	w.bw.WriteUvarint(w.numOfValues)
+	w.bw.WriteUvarint(w.cardinality)
+
+	w.bw.WriteFixedInt(entry)
 
 }

@@ -14,7 +14,6 @@
 package storage
 
 import (
-	"errors"
 	"github.com/google/uuid"
 	"meerkat/internal/buffer"
 	"meerkat/internal/storage/io"
@@ -58,58 +57,34 @@ func (sw *SegmentWriter) Write() error {
 
 	defer sw.bw.Close()
 
-	err = sw.writeHeader()
+	sw.writeHeader()
 
-	if err != nil {
-		return err
-	}
+	perm := sw.writeTSColumn()
 
-	perm, err := sw.writeTSColumn()
+	sw.writeColumns(perm)
 
-	if err != nil {
-		return err
-	}
-
-	err = sw.writeColumns(perm)
-
-	if err != nil {
-		return err
-	}
-
-	err = sw.writeMetadata()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	sw.writeFooter()
 
 }
 
-func (sw *SegmentWriter) writeHeader() error {
+func (sw *SegmentWriter) writeHeader() {
 
-	_, err := sw.bw.Write([]byte(MagicNumber))
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	sw.bw.Write([]byte(MagicNumber))
 
 }
 
-func (sw *SegmentWriter) writeTSColumn() ([]int, error) {
+func (sw *SegmentWriter) writeTSColumn() []int {
 
 	c, ok := sw.table.Col(TSColID)
 
 	if !ok {
-		return nil, errors.New("missing TS column")
+		panic("missing TS column")
 	}
 
 	tsColumn, ok := c.(*buffer.IntBuffer)
 
 	if !ok {
-		return nil, errors.New("wrong TS column type")
+		panic("wrong TS column type")
 	}
 
 	perm := sortTSColumn(tsColumn.Values())
@@ -118,21 +93,17 @@ func (sw *SegmentWriter) writeTSColumn() ([]int, error) {
 	sw.fromDate = tsColumn.Values()[0]
 	sw.toDate = tsColumn.Values()[tsColumn.Len()]
 
-	cw := NewTSColumnWriter(tsColumn, perm, sw.bw)
+	cw := NewTSColumnWriter(tsColumn, sw.bw)
 
-	err := cw.Write()
+	cw.Write()
 
-	if err != nil {
-		return nil, err
-	}
+	sw.offsets[TSColID] = sw.bw.Offset()
 
-	sw.offsets[TSColID] = sw.bw.Offset
-
-	return perm, nil
+	return perm
 
 }
 
-func (sw *SegmentWriter) writeColumns(perm []int) error {
+func (sw *SegmentWriter) writeColumns(perm []int) {
 
 	for _, f := range sw.table.Index().Fields {
 
@@ -149,102 +120,46 @@ func (sw *SegmentWriter) writeColumns(perm []int) error {
 
 		w := NewColumWriter(f.FieldType, b, perm, sw.bw)
 
-		err := w.Write()
+		w.Write()
 
-		if err != nil {
-			return err
-		}
-
-		sw.offsets[f.Id] = sw.bw.Offset
+		sw.offsets[f.Id] = sw.bw.Offset()
 
 	}
-
-	return nil
 
 }
 
-func (sw *SegmentWriter) writeMetadata() error {
+func (sw *SegmentWriter) writeFooter() {
 
-	metadataStart := sw.bw.Offset
+	entry := sw.bw.Offset()
 
-	err := sw.bw.WriteByte(byte(SegmentVersion))
+	sw.bw.WriteByte(byte(SegmentVersion))
 
-	if err != nil {
-		return err
-	}
-
-	_, err = sw.bw.Write(sw.id[:])
-
-	if err != nil {
-		return err
-	}
+	sw.bw.Write(sw.id[:])
 
 	// TODO(gvelo) refactor to [16]byte
-	err = sw.bw.WriteString(sw.table.Index().Id)
+	sw.bw.WriteString(sw.table.Index().Id)
 
-	if err != nil {
-		return err
-	}
+	sw.bw.WriteString(sw.table.Index().Name)
 
-	err = sw.bw.WriteString(sw.table.Index().Name)
+	sw.bw.WriteFixedInt(sw.fromDate)
 
-	if err != nil {
-		return err
-	}
+	sw.bw.WriteFixedInt(sw.toDate)
 
-	err = sw.bw.WriteFixedInt(sw.fromDate)
+	sw.bw.WriteUvarint(sw.table.Len())
 
-	if err != nil {
-		return err
-	}
-
-	err = sw.bw.WriteFixedInt(sw.toDate)
-
-	if err != nil {
-		return err
-	}
-
-	err = sw.bw.WriteUvarint(sw.table.Len())
-
-	if err != nil {
-		return err
-	}
-
-	err = sw.bw.WriteFixedInt(len(sw.table.Cols()))
-
-	if err != nil {
-		return err
-	}
+	sw.bw.WriteFixedInt(len(sw.table.Cols()))
 
 	for _, f := range sw.table.Index().Fields {
 
-		err = sw.bw.WriteString(f.Id)
+		sw.bw.WriteString(f.Id)
 
-		if err != nil {
-			return err
-		}
+		sw.bw.WriteString(f.Name)
 
-		err = sw.bw.WriteString(f.Name)
-
-		if err != nil {
-			return err
-		}
-
-		err = sw.bw.WriteUvarint(sw.offsets[f.Id])
-
-		if err != nil {
-			return err
-		}
+		sw.bw.WriteUvarint(sw.offsets[f.Id])
 
 	}
 
-	err = sw.bw.WriteFixedInt(metadataStart)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	sw.bw.WriteFixedInt(entry)
 
 }
 
