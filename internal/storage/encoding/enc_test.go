@@ -11,50 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package encoding
 
 import (
-	"errors"
-	"meerkat/internal/storage/io"
+	"github.com/stretchr/testify/assert"
+	"math/rand"
+	"testing"
 )
 
-var errUnknFileType = errors.New("unknown file type")
+func TestDeltaEnc(t *testing.T) {
 
-type segment struct {
-}
+	s := 1024
 
-func (s *segment) read() error {
+	src := make([]int, s)
+	dst := make([]int, s)
 
-}
+	r := make([]int, s)
 
-func ReadSegment(path string) (Segment, error) {
+	src[0] = 10
 
-	f, err := io.MMap(path)
-
-	if err != nil {
-		return nil, err
+	for i := 1; i < s; i++ {
+		src[i] = src[i-1] + rand.Intn(20)
 	}
 
-	br := f.NewBinaryReader()
+	DeltaEncode(src, dst)
+	DeltaDecode(dst, r)
 
-	br.Entry()
-
-	segmentVersion := br.ReadByte()
-
-	// we only have just one segment version
-
-	switch segmentVersion {
-	case SegmentVersion1:
-		//
-	default:
-		return nil, errors.New("unknown segment version")
-	}
-
-}
-
-type SegmentReader struct {
-}
-
-func (r *SegmentReader) Read() (Segment, error) {
+	assert.Equal(t, src, r, "slice doesn't match")
 
 }

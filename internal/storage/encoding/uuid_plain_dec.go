@@ -11,22 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package encoding
 
-import (
-	"math/rand"
-	"strings"
-)
+type UUIDPlainDecoder struct {
+}
 
-var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
-	"abcdefghijklmnopqrstuvwxyzåäö" +
-	"0123456789")
+func NewUUIDPlainDecoder() *UUIDPlainDecoder {
+	return &UUIDPlainDecoder{}
+}
 
-func RandomString(maxLenght int) string {
-	length := rand.Intn(maxLenght) + 1
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
+func (d *UUIDPlainDecoder) Decode(block []byte, buf []byte) []byte {
+
+	if len(buf) < len(block) {
+		panic("there isn't enough space to decode integer values")
 	}
-	return b.String()
+
+	n := copy(buf, block)
+
+	return buf[:n]
+
 }

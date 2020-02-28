@@ -427,7 +427,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	}
 
 	// Field Count
-	err = bw.WriteVarInt(len(sw.segment.IndexInfo.Fields))
+	err = bw.WriteUvarint(len(sw.segment.IndexInfo.Fields))
 
 	if err != nil {
 		return err

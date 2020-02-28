@@ -11,50 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package encoding
 
 import (
-	"errors"
-	"meerkat/internal/storage/io"
+	"meerkat/internal/storage/vector"
 )
 
-var errUnknFileType = errors.New("unknown file type")
-
-type segment struct {
+type IntPlainEncoder struct {
+	bw BlockWriter
 }
 
-func (s *segment) read() error {
-
-}
-
-func ReadSegment(path string) (Segment, error) {
-
-	f, err := io.MMap(path)
-
-	if err != nil {
-		return nil, err
+func NewIntPlainEncoder(bw BlockWriter) *IntPlainEncoder {
+	return &IntPlainEncoder{
+		bw: bw,
 	}
-
-	br := f.NewBinaryReader()
-
-	br.Entry()
-
-	segmentVersion := br.ReadByte()
-
-	// we only have just one segment version
-
-	switch segmentVersion {
-	case SegmentVersion1:
-		//
-	default:
-		return nil, errors.New("unknown segment version")
-	}
-
 }
 
-type SegmentReader struct {
+func (e *IntPlainEncoder) Flush() {
 }
 
-func (r *SegmentReader) Read() (Segment, error) {
+func (e *IntPlainEncoder) FlushBlocks() {
+}
 
+func (e *IntPlainEncoder) Type() EncodingType {
+	return Plain
+}
+
+func (e *IntPlainEncoder) Encode(vec vector.IntVector) {
+	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
 }

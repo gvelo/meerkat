@@ -43,9 +43,9 @@ func writeLevel0(bw *io.BinaryWriter, offsets [][]int) ([]uint64, error) {
 
 	for i := 0; i < max; i++ {
 		o = append(o, uint64(bw.Offset))
-		bw.WriteVarUint64(uint64(i)) // # columns
+		bw.WriteUVarint64(uint64(i)) // # columns
 		for _, colOffsets := range offsets {
-			bw.WriteVarUint64(uint64(colOffsets[i]))
+			bw.WriteUVarint64(uint64(colOffsets[i]))
 		}
 	}
 	return o, nil
@@ -64,8 +64,8 @@ func processLevel(bw *io.BinaryWriter, offsets []uint64, idxOffsets []uint64, lv
 	for i := 0; i < int(uint64(len(offsets))); i++ {
 		if lvl > 0 {
 			o := bw.Offset
-			bw.WriteVarUint64(offsets[i])
-			bw.WriteVarUint64(idxOffsets[i])
+			bw.WriteUVarint64(offsets[i])
+			bw.WriteUVarint64(idxOffsets[i])
 			if i%ixl == 0 {
 				ns = append(ns, uint64(o))
 			}

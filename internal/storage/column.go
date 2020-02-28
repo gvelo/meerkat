@@ -15,6 +15,8 @@ package storage
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/vector"
 	"time"
 )
 
@@ -31,18 +33,8 @@ type SegmentRegistry interface {
 	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
 }
 
-type Encoding int
-
-const (
-	Plain Encoding = iota
-	Dict
-	DictRleBitPacked
-	DeltaBitPacked
-	Snappy
-)
-
 type Column interface {
-	Encoding() Encoding
+	Encoding() encoding.EncodingType
 	Validity() *roaring.Bitmap
 	HasNulls() bool
 	Stats() *Stats
@@ -52,7 +44,9 @@ type IntColumn interface {
 	Column
 	Dict() IntDict
 	Index() IntIndex
-	Read(pos []uint32) (IntVector, error)
+	// TODO(gvelo): hint the reader about index use.
+	//  ie. avoid index use in low selectivity search.
+	Read(pos []uint32) vector.IntVector
 	Iterator() IntIterator
 }
 
@@ -60,7 +54,7 @@ type FloatColumn interface {
 	Column
 	Dict() FloatDict
 	Index() FloatIndex
-	Read(pos []uint32) (FloatVector, error)
+	Read(pos []uint32) vector.FloatVector
 	Iterator() FloatIterator
 }
 
@@ -68,8 +62,8 @@ type StringColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	ReadDictEnc(pos []uint32) (IntVector, error)
-	Read(pos []uint32) (ByteSliceVector, error)
+	ReadDictEnc(pos []uint32) vector.IntVector
+	Read(pos []uint32) vector.ByteSliceVector
 	DictEncodedIterator() IntIterator
 	Iterator() ByteSliceIterator
 }
@@ -77,14 +71,14 @@ type StringColumn interface {
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
-	Read(pos []uint32) (ByteSliceVector, error)
+	Read(pos []uint32) vector.ByteSliceVector
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []uint32) (IntVector, error)
+	Read(pos []uint32) vector.IntVector
 	Iterator() IntIterator
 }
 
@@ -94,29 +88,29 @@ type Iterator interface {
 
 type IntIterator interface {
 	Iterator
-	Next() (IntVector, error)
+	Next() vector.IntVector
 }
 
 type FloatIterator interface {
 	Iterator
-	Next() (FloatVector, error)
+	Next() vector.FloatVector
 }
 
 type ByteSliceIterator interface {
 	Iterator
-	Next() (ByteSliceVector, error)
+	Next() vector.ByteSliceVector
 }
 
 type IntDict interface {
-	DecodeInt(id int) (int, error)
+	DecodeInt(id int) int
 }
 
 type FloatDict interface {
-	DecodeFloat(id int) (float64, error)
+	DecodeFloat(id int) float64
 }
 
 type ByteSliceDict interface {
-	DecodeByteSlice(i int) ([]byte, error)
+	DecodeByteSlice(i int) []byte
 }
 
 type ByteSliceIndex interface {
@@ -149,33 +143,9 @@ type TimeIndex interface {
 }
 
 type Stats struct {
-	Len         int
-	Size        int
+	Size        int // no compressed
 	Cardinality int
-	Compresed   int
+	Compresed   int // size compressed
 	Max         interface{}
 	Min         interface{}
-}
-
-type Vector interface {
-	Len() int
-	HasNulls() bool
-	Pos() []uint32
-	ValuesAsBytes() []byte
-	PosAsBytes() []byte
-}
-
-type IntVector interface {
-	Vector
-	ValuesAsInt() []int
-}
-
-type FloatVector interface {
-	Vector
-	ValuesAsFloat() []float64
-}
-
-type ByteSliceVector interface {
-	Vector
-	ValuesAsSlide() [][]byte
 }

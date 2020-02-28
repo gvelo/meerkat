@@ -13,48 +13,26 @@
 
 package storage
 
-import (
-	"errors"
-	"meerkat/internal/storage/io"
-)
+import "meerkat/internal/buffer"
 
-var errUnknFileType = errors.New("unknown file type")
-
-type segment struct {
-}
-
-func (s *segment) read() error {
-
-}
-
-func ReadSegment(path string) (Segment, error) {
-
-	f, err := io.MMap(path)
-
-	if err != nil {
-		return nil, err
+func NewSegmentWriterPool(chanSize int, poolSize int) *SegmentWriterPool {
+	return &SegmentWriterPool{
+		poolSize: poolSize,
+		inChan:   make(chan *buffer.Table, chanSize),
+		done:     make(chan struct{}),
 	}
+}
 
-	br := f.NewBinaryReader()
+type SegmentWriterPool struct {
+	poolSize int
+	inChan   chan *buffer.Table
+	done     chan struct{}
+}
 
-	br.Entry()
-
-	segmentVersion := br.ReadByte()
-
-	// we only have just one segment version
-
-	switch segmentVersion {
-	case SegmentVersion1:
-		//
-	default:
-		return nil, errors.New("unknown segment version")
-	}
+func (s *SegmentWriterPool) Start() {
 
 }
 
-type SegmentReader struct {
-}
-
-func (r *SegmentReader) Read() (Segment, error) {
+func (s *SegmentWriterPool) Stop() {
 
 }

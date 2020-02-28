@@ -11,50 +11,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package encoding
 
-import (
-	"errors"
-	"meerkat/internal/storage/io"
-)
+import "meerkat/internal/utils"
 
-var errUnknFileType = errors.New("unknown file type")
-
-type segment struct {
+type IntPlainDecoder struct {
 }
 
-func (s *segment) read() error {
-
+func NewIntPlainDecoder() *IntPlainDecoder {
+	return &IntPlainDecoder{}
 }
 
-func ReadSegment(path string) (Segment, error) {
+func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
 
-	f, err := io.MMap(path)
+	data := utils.B2I(block)
 
-	if err != nil {
-		return nil, err
+	if len(buf) < len(data) {
+		panic("there isn't enough space to decode integer values")
 	}
 
-	br := f.NewBinaryReader()
+	n := copy(buf, data)
 
-	br.Entry()
-
-	segmentVersion := br.ReadByte()
-
-	// we only have just one segment version
-
-	switch segmentVersion {
-	case SegmentVersion1:
-		//
-	default:
-		return nil, errors.New("unknown segment version")
-	}
-
-}
-
-type SegmentReader struct {
-}
-
-func (r *SegmentReader) Read() (Segment, error) {
+	return buf[:n]
 
 }

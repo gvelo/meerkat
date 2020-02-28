@@ -51,8 +51,8 @@ func writeLevel0(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor) ([]*inmem
 	for i := 0; i < len(offsets); i++ {
 		// starting id , idx offset
 		o = append(o, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
-		bw.WriteVarUint64(uint64(offsets[i].StartID))
-		bw.WriteVarUint64(uint64(offsets[i].Offset))
+		bw.WriteUVarint64(uint64(offsets[i].StartID))
+		bw.WriteUVarint64(uint64(offsets[i].Offset))
 	}
 	return o, nil
 }
@@ -71,8 +71,8 @@ func processLevel(bw *io.BinaryWriter, offsets []*inmem.PageDescriptor, lvl int,
 		if i%config.SkipLevelSize == 0 {
 			nl = append(nl, &inmem.PageDescriptor{StartID: offsets[i].StartID, Offset: bw.Offset})
 		}
-		bw.WriteVarUint64(uint64(offsets[i].StartID))
-		bw.WriteVarUint64(uint64(offsets[i].Offset))
+		bw.WriteUVarint64(uint64(offsets[i].StartID))
+		bw.WriteUVarint64(uint64(offsets[i].Offset))
 
 	}
 	return processLevel(bw, nl, lvl+1, ts, offset)

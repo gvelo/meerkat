@@ -1,4 +1,4 @@
-// Copyright 2019 The Meerkat Authors
+// Copyright 2020 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,40 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondsk
+package storage
 
 import (
-	"github.com/RoaringBitmap/roaring"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
-type PostingStore struct {
-	file *io.MMFile
+type blockWriter struct {
+	bw *io.BinaryWriter
+	bi index.BlockIndexWriter
 }
 
-func (ps PostingStore) Read(offset int) (*roaring.Bitmap, error) {
-
-	b := ps.file.NewBinaryReader().SliceFrom(offset)
-
-	//TODO reuse Bitmaps.
-	bitmap := roaring.NewBitmap()
-
-	_, err := bitmap.FromBuffer(b)
-
-	if err != nil {
-		return nil, err
+func NewBlockWriter(bw *io.BinaryWriter, bi index.BlockIndexWriter) *blockWriter {
+	return &blockWriter{
+		bw: bw,
+		bi: bi,
 	}
-
-	return bitmap, nil
-
 }
 
-func (ps *PostingStore) Close() error {
-	return ps.file.UnMap()
-}
-
-func NewPostingStore(file *io.MMFile) *PostingStore {
-	return &PostingStore{
-		file: file,
-	}
+func (w *blockWriter) WriteBlock(block []byte, baseRid uint32) {
+	w.bi.IndexBlock(block, baseRid)
+	w.bw.Write(block)
 }
