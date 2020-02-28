@@ -14,6 +14,7 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/RoaringBitmap/roaring"
 	"time"
 )
@@ -167,11 +168,13 @@ type Vector interface {
 type IntVector interface {
 	Vector
 	ValuesAsInt() []int
+	AppendValue(i int)
 }
 
 type FloatVector interface {
 	Vector
 	ValuesAsFloat() []float64
+	AppendValue(i float64)
 }
 
 type ByteSliceVector interface {
@@ -179,11 +182,35 @@ type ByteSliceVector interface {
 	Data() []byte
 	Offsets() []int
 	Get(i int) []byte
+	AppendValue(i []byte)
+}
+
+func NewIntVector() IntVector {
+	return &intVector{
+		rid:  make([]uint32, 0),
+		vect: make([]int, 0),
+	}
+}
+
+func NewIntVectorFromSlice(values []int) IntVector {
+	rid := make([]int, len(values))
+	for i, _ := range values {
+		rid[i] = i
+	}
+	return &intVector{
+		rid:  make([]uint32, 0),
+		vect: values,
+	}
 }
 
 type intVector struct {
 	vect []int
 	rid  []uint32
+}
+
+func (v intVector) AppendValue(i int) {
+	v.vect = append(v.vect, i)
+	fmt.Printf("2 %p , %v\n ", v, v)
 }
 
 func (v intVector) Len() int {
@@ -203,6 +230,29 @@ type floatVector struct {
 	rid  []uint32
 }
 
+func NewFloatVector() FloatVector {
+	return &floatVector{
+		rid:  make([]uint32, 0),
+		vect: make([]float64, 0),
+	}
+}
+
+func NewFloatVectorFromSlice(values []float64) FloatVector {
+	rid := make([]uint32, len(values))
+	for i, _ := range values {
+		rid[i] = uint32(i)
+	}
+	return &floatVector{
+		rid:  rid,
+		vect: values,
+	}
+}
+
+func (v floatVector) AppendValue(i float64) {
+	v.vect = append(v.vect, i)
+	fmt.Printf("2 %p , %v\n ", v, v)
+}
+
 func (v floatVector) Len() int {
 	return len(v.vect)
 }
@@ -213,6 +263,30 @@ func (v floatVector) Rid() []uint32 {
 
 func (v floatVector) ValuesAsFloat() []float64 {
 	return v.vect
+}
+
+func NewByteSliceVector() ByteSliceVector {
+	return &byteSliceVector{
+		rid:     make([]uint32, 0),
+		data:    make([]byte, 0),
+		offsets: make([]int, 0),
+	}
+}
+
+func NewByteSliceVectorSlice(values [][]byte) ByteSliceVector {
+	rid := make([]uint32, len(values))
+	offsets := make([]int, len(values))
+	data := make([]byte, 0, len(values)*5) // mas o menos el maximo de los strings..
+	for i, _ := range values {
+		rid[i] = uint32(i)
+		data = append(data, values[i]...)
+		offsets[i] = len(data)
+	}
+	return &byteSliceVector{
+		rid:     rid,
+		data:    data,
+		offsets: offsets,
+	}
 }
 
 type byteSliceVector struct {
@@ -235,6 +309,13 @@ func (v byteSliceVector) Data() []byte {
 
 func (v byteSliceVector) Offsets() []int {
 	return v.offsets
+}
+
+func (v byteSliceVector) AppendValue(i []byte) {
+	v.data = append(v.data, i...)
+	v.offsets = append(v.offsets, len(i))
+	fmt.Printf("2 %p , %v\n ", v, v)
+
 }
 
 func (v byteSliceVector) Get(i int) []byte {

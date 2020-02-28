@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"math"
 	"meerkat/internal/storage"
 	"unsafe"
@@ -22,6 +23,10 @@ const (
 	SumSq
 	StdDev
 )
+
+func (d AggType) String() string {
+	return [...]string{"Min", "Max", "Mean", "Count", "Sum", "SumSq", "StdDev"}[d]
+}
 
 // Should we use it??? change for functions.
 type Counter interface {
@@ -164,18 +169,18 @@ func histogram(ts []int) map[int]int {
 	return m
 }
 
-func NewHashAggregateOperator(ctx Context, child MultiVectorOperator, aCols []Aggregation, gByCols []int) MultiVectorOperator {
+func NewHashAggregateOperator(ctx Context, child MultiVectorOperator, aggCols []Aggregation, keyCols []int) MultiVectorOperator {
 	return &HashAggregateOperator{
 		ctx:     ctx,
 		child:   child,
-		aCols:   aCols,
-		keyCols: gByCols,
+		aggCols: aggCols,
+		keyCols: keyCols,
 	}
 }
 
 type Aggregation struct {
 	AggType AggType
-	AgCol   int
+	AggCol  int
 }
 
 // AggregateOperator
@@ -183,17 +188,66 @@ type Aggregation struct {
 type HashAggregateOperator struct {
 	ctx       Context
 	child     MultiVectorOperator
-	aCols     []Aggregation // Aggregation columns
+	aggCols   []Aggregation // Aggregation columns
 	keyCols   []int         // Group by columns
 	resultVec []storage.Vector
+}
+
+func createVector(idx []byte, ctx Context) storage.Vector {
+	c := ctx.Segment().Col(idx)
+	switch c.(type) {
+	case storage.FloatColumn:
+		return storage.NewFloatVector()
+	case storage.IntColumn:
+		return storage.NewIntVector()
+	case storage.StringColumn:
+		return storage.NewByteSliceVector()
+	case storage.TextColumn:
+		return storage.NewByteSliceVector()
+
+	}
+	panic(" No mapping Found.")
 }
 
 func (r *HashAggregateOperator) Init() {
 	r.child.Init()
 	r.resultVec = make([]storage.Vector, 0)
-	// for each key col a create a result
-	for i := 0; i < len(r.keyCols); i++ {
-		// r.resultVec = append(r.resultVec, createVector() )
+	// new index column map
+	nkv := make(map[int][]byte)
+	// old index column map
+	// TODO: tengo que saber cual es la entrada en Vectores, para saber que salen, no estoy seguro que sea lo merjor.
+	// aca lo mejor seria usar la salida del counter.
+	if kv, ok := r.ctx.Get(ColumnIndexKeysKey); ok == true {
+
+		okv := kv.(map[int][]byte)
+
+		// for each key (group by) col we a create a result vector
+		last := 0
+		for i := 0; i < len(r.keyCols); i++ {
+			colId := okv[r.keyCols[i]]
+			r.resultVec = append(r.resultVec, createVector(colId, r.ctx))
+			nkv[i] = okv[r.keyCols[i]]
+			last = i + 1
+		}
+
+		// for each aggregated column we create a result vector
+		for x := 0; x < len(r.aggCols); x++ {
+			colId := okv[r.aggCols[x].AggCol]
+			r.resultVec = append(r.resultVec, createVector(colId, r.ctx))
+
+			resName := make([]byte, 0)
+			resName = append(resName, okv[r.aggCols[x].AggCol]...)
+			resName = append(resName, '_')
+			resName = append(resName, []byte(r.aggCols[x].AggType.String())...)
+
+			nkv[last+x] = resName
+		}
+
+		// Update the key values
+		r.ctx.Value(ColumnIndexKeysKey, nkv)
+
+	} else {
+		panic("Error parsing column keys")
 	}
 
 }
@@ -204,50 +258,101 @@ func (r *HashAggregateOperator) Destroy() {
 
 func (r *HashAggregateOperator) Next() []storage.Vector {
 
-	n := r.child.Next() // Iterate over all vectors...
+	mKey := make(map[string]int)
 
-	if n != nil && len(n) > 0 {
+	// the capacity should be the product of the cardinality of the n keys.
+	result := make([][]interface{}, 0, 100)
 
-		mKey := make(map[string][]Counter)
+	l := len(r.keyCols)
 
+	// Iterate over all vectors...
+	for n := r.child.Next(); n != nil; n = r.child.Next() {
+
+		// iterate over all "rows"
+		// For each item in first column deberia ser 1000? o algo por el estilo.?
 		for i := 0; i < n[0].Len(); i++ {
-			// For each item in first column
-			// TODO(sebad): check if this is ok.
 
 			// create the key
 			k := createKey(n, r.keyCols, i)
 
 			// check the key
 			if _, ok := mKey[string(k)]; ok != true {
-				//new key append counters.
-				c := make([]Counter, 0)
-				for range r.aCols {
+
+				// Create the result array
+				c := make([]interface{}, 0)
+
+				// append the keys
+				for _, it := range r.keyCols {
+					switch col := n[it].(type) {
+					case storage.IntVector:
+						c = append(c, col.ValuesAsInt()[i])
+					case storage.FloatVector:
+						c = append(c, col.ValuesAsFloat()[i])
+					case storage.ByteSliceVector:
+						c = append(c, col.Get(i))
+					}
+				}
+
+				// append the counters.
+				for range r.aggCols {
 					c = append(c, NewCounter())
 				}
-				mKey[string(k)] = c
+
+				// sets the key's position in the resulting slice
+				mKey[string(k)] = len(result)
+				result = append(result, c)
 			}
 
 			// update values.
-			for x, it := range r.aCols {
-				c := mKey[string(k)] // get the counters array
+			// TODO: Usando contadores se repiten por ahora...
+			for x, it := range r.aggCols {
+				idx := mKey[string(k)] // get the result array index
 				// TODO: ver los demas tipos de valores.
-				switch col := n[it.AgCol].(type) {
+				switch col := n[it.AggCol].(type) {
 				case storage.IntVector:
-					c[x].Update(col.ValuesAsInt()[i])
+					result[idx][l+x].(Counter).Update(col.ValuesAsInt()[i])
 				case storage.FloatVector:
-					c[x].Update(int(col.ValuesAsFloat()[i]))
+					result[idx][l+x].(Counter).Update(int(col.ValuesAsFloat()[i]))
 				}
 
 			}
 
 		}
 
-		// habria que ir agrupando los vectores y claves.... [c1][c2][c3]  para despues hacer -> (sum1) (sum3)
-		// o devolverlos a Nodo agrupador.
-		// paralelizar?
-		// Analizar como procesar esto de manera mas simple.
 	}
-	return nil
+	// Sin contadores esto seria mejor....
+	for i := 0; i < len(result); i++ {
+		for j := 0; j < len(result[i]); j++ {
+			fmt.Printf("1 %p , %v\n", r.resultVec[j], r.resultVec[j])
+			switch v := r.resultVec[j].(type) {
+			//Check counters...
+			case storage.IntVector:
+
+				if j >= len(r.keyCols) {
+					v.AppendValue(int(result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType)))
+				} else {
+					v.AppendValue(result[i][j].(int))
+				}
+				fmt.Printf("3 %p , %v\n", v, v)
+			case storage.FloatVector:
+
+				if j >= len(r.keyCols) {
+					v.AppendValue(result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType))
+				} else {
+					v.AppendValue(result[i][j].(float64))
+				}
+				fmt.Printf("3 %p , %v\n ", v, v)
+			case storage.ByteSliceVector:
+				v.AppendValue(result[i][j].([]byte))
+				fmt.Printf("3 %p , %v\n ", v, v)
+			}
+		}
+	}
+
+	return r.resultVec
+	// habria que ir agrupando los vectores y claves.... [c1][c2][c3]  para despues hacer -> (sum1) (sum3)
+	// pasar to do a vectores
+	// Aca deberia devolver los vectores.
 }
 
 func createKey(n []storage.Vector, keyCols []int, index int) []byte {
@@ -268,22 +373,23 @@ func createKey(n []storage.Vector, keyCols []int, index int) []byte {
 	return k
 }
 
-func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aCols []AggType, gByCol int) MultiVectorOperator {
+func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aggCols []Aggregation, keyCols []int) MultiVectorOperator {
 	return &SortedAggregateOperator{
-		ctx:    ctx,
-		child:  child,
-		aCols:  aCols,
-		gByCol: gByCol,
+		ctx:     ctx,
+		child:   child,
+		aggCols: aggCols,
+		keyCols: keyCols,
 	}
 }
 
 // AggregateOperator
 //
 type SortedAggregateOperator struct {
-	ctx    Context
-	child  MultiVectorOperator
-	aCols  []AggType
-	gByCol int
+	ctx       Context
+	child     MultiVectorOperator
+	aggCols   []Aggregation // Aggregation columns
+	keyCols   []int         // Group by columns
+	resultVec []storage.Vector
 }
 
 func (r *SortedAggregateOperator) Init() {
