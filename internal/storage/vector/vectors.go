@@ -60,7 +60,7 @@ func (v intVector) Values() []int {
 }
 
 func (v intVector) Data() []byte {
-	return utils.IntAsByte(v.data)
+	return utils.I2B(v.data)
 }
 
 func NewIntVector(data []int, rid []uint32) IntVector {
@@ -88,7 +88,7 @@ func (v floatVector) Values() []float64 {
 }
 
 func (v floatVector) Data() []byte {
-	return utils.Float64AsByte(v.data)
+	return utils.F2B(v.data)
 }
 
 func NewFloatVector(data []float64, rid []uint32) FloatVector {

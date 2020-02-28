@@ -37,8 +37,8 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, nil, bw)
 
 	case schema.FieldType_STRING:
-		src := NewByteSliceColumnSource(buf.(*buffer.ByteSliceBuffer), 8*1024, perm)
-		enc := encoding.NewByteSlicePlainEncodeer(blkWriter)
+		src := NewByteSliceColumnSource(buf.(*buffer.ByteSliceBuffer), 64*1024, perm)
+		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
 		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, nil, bw)
 
 	case schema.FieldType_UUID:

@@ -78,12 +78,12 @@ func TestSegmentWriter_Write(t *testing.T) {
 
 	table := buffer.NewTable(index)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
 		r := buffer.NewRow(4)
 		r.AddCol("_ts", int(time.Now().UnixNano()))
 		r.AddCol("_id", uuid.New())
 		r.AddCol("intFieldId", rand.Int())
-		r.AddCol("stringFieldId", fmt.Sprintf("row %v", i))
+		r.AddCol("stringFieldId", fmt.Sprintf("row number %v", i))
 		table.AppendRow(r)
 	}
 

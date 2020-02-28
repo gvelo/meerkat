@@ -47,7 +47,7 @@ func (bt *BTrie) newNode() *Node {
 
 func (bt *BTrie) Add(key []byte, rid uint32) {
 
-	str := utils.ByteSlice2String(key)
+	str := utils.B2S(key)
 
 	currentNode := bt.Root
 

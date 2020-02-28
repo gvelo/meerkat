@@ -45,14 +45,24 @@ type SegmentWriter struct {
 	toDate   int
 }
 
-func (sw *SegmentWriter) Write() error {
+func (sw *SegmentWriter) Write() (err error) {
 
-	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			e, ok := r.(error)
+			if ok {
+				err = e
+				return
+			} else {
+				panic(r)
+			}
+		}
+	}()
 
 	sw.bw, err = io.NewBinaryWriter(sw.path)
 
 	if err != nil {
-		return err
+		return
 	}
 
 	defer sw.bw.Close()
@@ -65,8 +75,7 @@ func (sw *SegmentWriter) Write() error {
 
 	sw.writeFooter()
 
-	// TODO unwrap panic
-	return nil
+	return
 
 }
 
@@ -201,4 +210,9 @@ func (t *TSSlice) Less(i, j int) bool {
 func (t *TSSlice) Swap(i, j int) {
 	t.ts[i], t.ts[j] = t.ts[j], t.ts[i]
 	t.perm[i], t.perm[j] = t.perm[j], t.perm[i]
+}
+
+func WriteSegment(path string, id uuid.UUID, table *buffer.Table) error {
+	w := NewSegmentWriter(path, id, table)
+	return w.Write()
 }

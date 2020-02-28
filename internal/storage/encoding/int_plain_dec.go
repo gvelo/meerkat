@@ -24,7 +24,7 @@ func NewIntPlainDecoder() *IntPlainDecoder {
 
 func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
 
-	data := utils.BytesAsInt(block)
+	data := utils.B2I(block)
 
 	if len(buf) < len(data) {
 		panic("there isn't enough space to decode integer values")

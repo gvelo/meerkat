@@ -170,7 +170,7 @@ func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) []uin
 
 func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) {
 
-	ridBytes := utils.UInt32AsByte(rid)
+	ridBytes := utils.U32B(rid)
 
 	w.bw.Write(ridBytes)
 
@@ -180,7 +180,7 @@ func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) {
 		w.bw.Write(padding[:padLen])
 	}
 
-	offsetBytes := utils.IntAsByte(offsets)
+	offsetBytes := utils.I2B(offsets)
 
 	w.bw.Write(offsetBytes)
 
@@ -192,7 +192,7 @@ func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) {
 
 func (w *blockIndexWriter) writeNode(rid []uint32) {
 
-	ridBytes := utils.UInt32AsByte(rid)
+	ridBytes := utils.U32B(rid)
 
 	w.bw.Write(ridBytes)
 

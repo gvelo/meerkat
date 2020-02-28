@@ -33,23 +33,23 @@ func asByteSlice(size int, p unsafe.Pointer) []byte {
 	return res
 }
 
-func IntAsByte(s []int) []byte {
+func I2B(s []int) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
-func UInt64AsByte(s []uint64) []byte {
+func U642B(s []uint64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
-func UInt32AsByte(s []uint32) []byte {
+func U32B(s []uint32) []byte {
 	return asByteSlice(Int32SizeBytes, unsafe.Pointer(&s))
 }
 
-func Float64AsByte(s []float64) []byte {
+func F2B(s []float64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
-func BytesAsInt(b []byte) []int {
+func B2I(b []byte) []int {
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	var res []int
 	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
@@ -59,7 +59,7 @@ func BytesAsInt(b []byte) []int {
 	return res
 }
 
-func BytesAsUInt32(b []byte) []uint32 {
+func B2U32(b []byte) []uint32 {
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	var res []uint32
 	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
@@ -69,6 +69,6 @@ func BytesAsUInt32(b []byte) []uint32 {
 	return res
 }
 
-func ByteSlice2String(bs []byte) string {
+func B2S(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 }

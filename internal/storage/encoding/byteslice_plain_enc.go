@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	maxSlicesPerBlock = 1024 * 2
+	maxSlicesPerBlock = 1024 * 32
 )
 
 type ByteSlicePlainEncoder struct {
