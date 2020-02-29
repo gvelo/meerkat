@@ -103,7 +103,7 @@ type IntIterator interface {
 
 type FloatIterator interface {
 	Iterator
-	Next() (FloatVector, error)
+	Next() (*floatVector, error)
 }
 
 type ByteSliceIterator interface {
@@ -208,20 +208,20 @@ type intVector struct {
 	rid  []uint32
 }
 
-func (v intVector) AppendValue(i int) {
+func (v *intVector) AppendValue(i int) {
 	v.vect = append(v.vect, i)
 	fmt.Printf("2 %p , %v\n ", v, v)
 }
 
-func (v intVector) Len() int {
+func (v *intVector) Len() int {
 	return len(v.vect)
 }
 
-func (v intVector) Rid() []uint32 {
+func (v *intVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v intVector) ValuesAsInt() []int {
+func (v *intVector) ValuesAsInt() []int {
 	return v.vect
 }
 
@@ -230,14 +230,14 @@ type floatVector struct {
 	rid  []uint32
 }
 
-func NewFloatVector() FloatVector {
+func NewFloatVector() *floatVector {
 	return &floatVector{
 		rid:  make([]uint32, 0),
 		vect: make([]float64, 0),
 	}
 }
 
-func NewFloatVectorFromSlice(values []float64) FloatVector {
+func NewFloatVectorFromSlice(values []float64) *floatVector {
 	rid := make([]uint32, len(values))
 	for i, _ := range values {
 		rid[i] = uint32(i)
@@ -248,20 +248,20 @@ func NewFloatVectorFromSlice(values []float64) FloatVector {
 	}
 }
 
-func (v floatVector) AppendValue(i float64) {
+func (v *floatVector) AppendValue(i float64) {
 	v.vect = append(v.vect, i)
 	fmt.Printf("2 %p , %v\n ", v, v)
 }
 
-func (v floatVector) Len() int {
+func (v *floatVector) Len() int {
 	return len(v.vect)
 }
 
-func (v floatVector) Rid() []uint32 {
+func (v *floatVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v floatVector) ValuesAsFloat() []float64 {
+func (v *floatVector) ValuesAsFloat() []float64 {
 	return v.vect
 }
 
@@ -295,23 +295,23 @@ type byteSliceVector struct {
 	offsets []int
 }
 
-func (v byteSliceVector) Len() int {
+func (v *byteSliceVector) Len() int {
 	return len(v.offsets)
 }
 
-func (v byteSliceVector) Rid() []uint32 {
+func (v *byteSliceVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v byteSliceVector) Data() []byte {
+func (v *byteSliceVector) Data() []byte {
 	return v.data
 }
 
-func (v byteSliceVector) Offsets() []int {
+func (v *byteSliceVector) Offsets() []int {
 	return v.offsets
 }
 
-func (v byteSliceVector) AppendValue(i []byte) {
+func (v *byteSliceVector) AppendValue(i []byte) {
 	v.data = append(v.data, i...)
 	v.offsets = append(v.offsets, len(i))
 	fmt.Printf("2 %p , %v\n ", v, v)

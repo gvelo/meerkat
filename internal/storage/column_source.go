@@ -93,7 +93,7 @@ func (cs *intColumnSource) Next() IntVector {
 
 	}
 
-	return intVector{
+	return &intVector{
 		vect: cs.dstBuf[:i],
 		rid:  cs.rid[:i],
 	}
@@ -141,7 +141,7 @@ func (cs *tsColumnSource) Next() IntVector {
 		cs.pos++
 	}
 
-	return intVector{
+	return &intVector{
 		vect: cs.srcBuf[cs.start:cs.end],
 		rid:  cs.rid[0:dstLen],
 	}
@@ -199,7 +199,7 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 	}
 
-	return floatVector{
+	return &floatVector{
 		vect: cs.dstBuf[:i],
 		rid:  cs.rid[:i],
 	}
@@ -286,7 +286,7 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 
 	}
 
-	return byteSliceVector{
+	return &byteSliceVector{
 		rid:     cs.rid,
 		data:    cs.dstBuf[:size],
 		offsets: cs.dstOffsets,
