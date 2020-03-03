@@ -18,14 +18,9 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-var errUnknFileType = errors.New("unknown file type")
-
-type segment struct {
-}
-
-func (s *segment) read() error {
-
-}
+const (
+	SegmentVersion1 = 1
+)
 
 func ReadSegment(path string) (Segment, error) {
 
@@ -37,6 +32,12 @@ func ReadSegment(path string) (Segment, error) {
 
 	br := f.NewBinaryReader()
 
+	header := br.ReadSlice(0, len(MagicNumber))
+
+	if string(header) != MagicNumber {
+		panic("unknown file type")
+	}
+
 	br.Entry()
 
 	segmentVersion := br.ReadByte()
@@ -45,16 +46,30 @@ func ReadSegment(path string) (Segment, error) {
 
 	switch segmentVersion {
 	case SegmentVersion1:
-		//
+		s := NewSegment(f)
+		err := s.read(br.Offset())
+		return s, err
 	default:
 		return nil, errors.New("unknown segment version")
 	}
 
 }
 
-type SegmentReader struct {
+func NewSegment(f *io.MMFile) *segment {
+	return &segment{
+		f: f,
+	}
 }
 
-func (r *SegmentReader) Read() (Segment, error) {
+type segment struct {
+	f *io.MMFile
+	from int
+	to int
+
+}
+
+func (s *segment) read(start int) error {
+
+
 
 }

@@ -152,6 +152,10 @@ func (br *BinaryReader) ReadVarUintSlice() []int {
 
 }
 
+func (br *BinaryReader) ReadSlice(from, to int) []byte {
+	return br.bytes[from:to]
+}
+
 func (br *BinaryReader) Entry() {
 	br.offset = br.size - 8
 	br.offset = br.ReadFixed64()

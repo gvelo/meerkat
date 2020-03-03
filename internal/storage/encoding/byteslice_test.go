@@ -80,6 +80,6 @@ func createRandomSliceVec(size int) vector.ByteSliceVector {
 		rid = append(rid, uint32(i))
 	}
 
-	return vector.NewByteSliceVector(rid, data, offsets)
+	return vector.NewByteSliceVector(data, rid, offsets)
 
 }

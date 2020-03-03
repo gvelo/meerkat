@@ -33,6 +33,16 @@ type SegmentRegistry interface {
 	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
 }
 
+type Col interface {
+	Encoding() encoding.EncodingType
+	Validity() *roaring.Bitmap
+	HasNulls() bool
+	Read(pos []uint32) vector.Vec
+	Idx() interface{}
+	Iterator()
+
+}
+
 type Column interface {
 	Encoding() encoding.EncodingType
 	Validity() *roaring.Bitmap
