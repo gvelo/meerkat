@@ -13,7 +13,9 @@
 
 package index
 
-import "meerkat/internal/storage/vector"
+import (
+	"meerkat/internal/storage/colval"
+)
 
 type IndexWriter interface {
 	Flush()
@@ -22,27 +24,22 @@ type IndexWriter interface {
 
 type IntIndexWriter interface {
 	IndexWriter
-	Index(vector vector.IntVector)
+	Index(v colval.IntColValues)
 }
 
 type UintIndexWriter interface {
 	IndexWriter
-	Index(vector vector.IntVector)
+	Index(v colval.UintColValues)
 }
 
 type FloatIndexWriter interface {
 	IndexWriter
-	Index(vector vector.FloatVector)
+	Index(v colval.FloatColValues)
 }
 
 type ByteSliceIndexWriter interface {
 	IndexWriter
-	Index(vector vector.ByteSliceVector)
-}
-
-type UUIDIndexWriter interface {
-	IndexWriter
-	Index(vector vector.UUIDVector)
+	Index(v colval.ByteSliceColValues)
 }
 
 type BlockIndexWriter interface {

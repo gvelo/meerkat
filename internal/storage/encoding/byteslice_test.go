@@ -15,7 +15,7 @@ package encoding
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/storage/vector"
+	"meerkat/internal/storage/colval"
 	"meerkat/internal/utils"
 	"testing"
 )
@@ -68,7 +68,7 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d ByteSliceDecoder) {
 
 }
 
-func createRandomSliceVec(size int) vector.ByteSliceVector {
+func createRandomSliceVec(size int) colval.ByteSliceColValues {
 
 	var data []byte
 	var offsets []int
@@ -80,6 +80,6 @@ func createRandomSliceVec(size int) vector.ByteSliceVector {
 		rid = append(rid, uint32(i))
 	}
 
-	return vector.NewByteSliceVector(rid, data, offsets)
+	return colval.NewByteSliceColValues(data, rid, offsets)
 
 }

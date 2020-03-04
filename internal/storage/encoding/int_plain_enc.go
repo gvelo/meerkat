@@ -14,7 +14,8 @@
 package encoding
 
 import (
-	"meerkat/internal/storage/vector"
+	"meerkat/internal/storage/colval"
+	"meerkat/internal/utils"
 )
 
 type IntPlainEncoder struct {
@@ -37,6 +38,7 @@ func (e *IntPlainEncoder) Type() EncodingType {
 	return Plain
 }
 
-func (e *IntPlainEncoder) Encode(vec vector.IntVector) {
-	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
+func (e *IntPlainEncoder) Encode(v colval.IntColValues) {
+	b := utils.I2B(v.Values())
+	e.bw.WriteBlock(b, v.Rid()[0])
 }

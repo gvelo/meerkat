@@ -15,8 +15,8 @@ package encoding
 
 import (
 	"encoding/binary"
+	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/io"
-	"meerkat/internal/storage/vector"
 )
 
 const (
@@ -47,20 +47,20 @@ func (e *ByteSlicePlainEncoder) Type() EncodingType {
 	return Plain
 }
 
-func (e *ByteSlicePlainEncoder) Encode(vec vector.ByteSliceVector) {
+func (e *ByteSlicePlainEncoder) Encode(v colval.ByteSliceColValues) {
 
-	size := binary.MaxVarintLen64*(vec.Len()+2) + len(vec.Data())
+	size := binary.MaxVarintLen64*(v.Len()+2) + len(v.Data())
 
 	e.buf.Reset(size)
 
-	DeltaEncode(vec.Offsets(), e.offsetBuf)
+	DeltaEncode(v.Offsets(), e.offsetBuf)
 
 	// left enough room at the beginning of the block to write the
 	// block length encoded as uvarint
-	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
+	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:v.Len()])
 
 	// write the vector data
-	e.buf.WriteBytes(vec.Data())
+	e.buf.WriteBytes(v.Data())
 
 	blockSize := e.buf.Len() - binary.MaxVarintLen64
 
@@ -70,6 +70,6 @@ func (e *ByteSlicePlainEncoder) Encode(vec vector.ByteSliceVector) {
 
 	block := e.buf.Bytes()[offset:]
 
-	e.bw.WriteBlock(block, vec.Rid()[0])
+	e.bw.WriteBlock(block, v.Rid()[0])
 
 }

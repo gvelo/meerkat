@@ -11,30 +11,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encoding
+package colval
 
-import "meerkat/internal/storage/vector"
 
-type UUIDPlainEncoder struct {
-	bw BlockWriter
+{{range .}}
+
+type {{.Name}}ColValues struct {
+	values []{{.Type}}
+	rid  []uint32
 }
 
-func NewUUIDPlainEncoder(bw BlockWriter) *UUIDPlainEncoder {
-	return &UUIDPlainEncoder{
-		bw: bw,
+func (v *{{.Name}}ColValues) Len() int {
+	return len(v.values)
+}
+
+func (v *{{.Name}}ColValues) Rid() []uint32 {
+	return v.rid
+}
+
+func (v *{{.Name}}ColValues) Values() []{{.Type}} {
+	return v.values
+}
+
+func New{{.Name}}ColValues(values []{{.Type}}, rid []uint32) {{.Name}}ColValues {
+	return {{.Name}}ColValues{
+		values: values,
+		rid:  rid,
 	}
 }
 
-func (e *UUIDPlainEncoder) Flush() {
+
+{{ end }}
+
+
+
+
+
+
+{{range .}}
+
+type {{.Name}}ColSource interface {
+	ColSource
+	Next() {{.Name}}ColValues
 }
 
-func (e *UUIDPlainEncoder) FlushBlocks() {
-}
+{{ end }}
 
-func (e *UUIDPlainEncoder) Type() EncodingType {
-	return Plain
-}
 
-func (e *UUIDPlainEncoder) Encode(vec vector.UUIDVector) {
-	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
-}

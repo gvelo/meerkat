@@ -16,7 +16,7 @@ package encoding
 import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
-	"meerkat/internal/storage/vector"
+	"meerkat/internal/storage/colval"
 	"testing"
 )
 
@@ -36,13 +36,13 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d IntDecoder) {
 
 	bw := &blockWriterMock{}
 
-	v := createRandomIntVec(s)
+	v := createRandomIntColVal(s)
 
 	e := f(bw)
 
 	e.Encode(v)
 
-	data := make([]int, len(v.Data())*2)
+	data := make([]int, len(v.Values())*8*2)
 
 	data = d.Decode(bw.block, data)
 
@@ -50,7 +50,7 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d IntDecoder) {
 
 }
 
-func createRandomIntVec(size int) vector.IntVector {
+func createRandomIntColVal(size int) colval.IntColValues {
 
 	var data []int
 	var rid []uint32
@@ -60,6 +60,6 @@ func createRandomIntVec(size int) vector.IntVector {
 		rid = append(rid, uint32(i))
 	}
 
-	return vector.NewIntVector(data, rid)
+	return colval.NewIntColValues(data, rid)
 
 }

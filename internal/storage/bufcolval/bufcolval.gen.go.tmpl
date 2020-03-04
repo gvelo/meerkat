@@ -1,0 +1,130 @@
+// Copyright 2020 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package bufcolval
+
+import (
+	"meerkat/internal/buffer"
+	"meerkat/internal/storage/colval"
+)
+
+
+{{range .}}
+
+type {{.Name}}ColValues struct {
+	values []{{.Type}}
+	rid  []uint32
+}
+
+func (v *{{.Name}}ColValues) Len() int {
+	return len(v.values)
+}
+
+func (v *{{.Name}}ColValues) Rid() []uint32 {
+	return v.rid
+}
+
+func (v *{{.Name}}ColValues) Values() []{{.Type}} {
+	return v.values
+}
+
+func New{{.Name}}ColValues(values []{{.Type}}, rid []uint32) {{.Name}}ColValues {
+	return {{.Name}}ColValues{
+		values: values,
+		rid:  rid,
+	}
+}
+
+
+{{ end }}
+
+
+
+
+
+
+{{range .}}
+
+type {{.Name}}ColSource interface {
+	colval.ColSource
+	Next() {{.Name}}ColValues
+}
+
+
+
+{{ end }}
+
+
+
+{{range .}}
+
+type {{.Name}}BufColSource struct {
+	srcBuf   []{{.Type}}
+	dstBuf   []{{.Type}}
+	nulls    []bool
+	rid      []uint32
+	permMap  []int
+	pos      int
+	hasNulls bool
+}
+
+func (cs *{{.Name}}BufColSource) HasNext() bool {
+	return cs.pos < len(cs.srcBuf)
+}
+
+func (cs *{{.Name}}BufColSource) HasNulls() bool {
+	return cs.hasNulls
+}
+
+
+// The underlying array point to an internal buffer that will be
+// overwritten by a subsequent call to Next().
+func (cs *{{.Name}}BufColSource) Next() colval.{{.Name}}ColValues {
+
+	var i int
+
+	for i = 0; i < len(cs.dstBuf) && cs.pos < len(cs.srcBuf); i++ {
+
+		j := cs.permMap[cs.pos]
+
+		if cs.hasNulls && cs.nulls[j] {
+			i--
+		} else {
+			cs.dstBuf[i] = cs.srcBuf[j]
+			cs.rid[i] = uint32(cs.pos)
+		}
+
+		cs.pos++
+
+	}
+
+	return colval.New{{.Name}}ColValues(cs.dstBuf[:i], cs.rid[:i])
+
+}
+
+func New{{.Name}}BufColSource(buf *buffer.{{.Name}}Buffer, dstSize int, permMap []int) *{{.Name}}BufColSource {
+
+	return &{{.Name}}BufColSource{
+		srcBuf:   buf.Values(),
+		dstBuf:   make([]{{.Type}}, dstSize),
+		nulls:    buf.Nulls(),
+		rid:      make([]uint32, dstSize),
+		permMap:  permMap,
+		hasNulls: buf.Nullable(),
+	}
+
+}
+
+
+
+{{ end }}

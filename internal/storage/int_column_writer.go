@@ -15,13 +15,14 @@ package storage
 
 import (
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
 func NewIntColumnWriter(fieldType schema.FieldType,
-	src IntColumSource,
+	src colval.IntColSource,
 	encoder encoding.IntEncoder,
 	colIndex index.IntIndexWriter,
 	blockIndex index.BlockIndexWriter,
@@ -43,7 +44,7 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 type IntColumnWriter struct {
 	fieldType   schema.FieldType
 	bw          *io.BinaryWriter
-	src         IntColumSource
+	src         colval.IntColSource
 	encoder     encoding.IntEncoder
 	colIndex    index.IntIndexWriter
 	blockIndex  index.BlockIndexWriter
