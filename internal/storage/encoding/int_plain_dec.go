@@ -13,7 +13,9 @@
 
 package encoding
 
-import "meerkat/internal/utils"
+import (
+	"meerkat/internal/util/sliceutil"
+)
 
 type IntPlainDecoder struct {
 }
@@ -24,7 +26,7 @@ func NewIntPlainDecoder() *IntPlainDecoder {
 
 func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
 
-	data := utils.B2I(block)
+	data := sliceutil.B2I(block)
 
 	if len(buf) < len(data) {
 		panic("there isn't enough space to decode integer values")

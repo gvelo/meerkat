@@ -15,7 +15,7 @@ package index
 
 import (
 	"meerkat/internal/storage/io"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/sliceutil"
 )
 
 type blockIndexReader struct {
@@ -84,8 +84,8 @@ func (p *blockIndexReader) readLeaf(pos int) ([]uint32, []int) {
 
 	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
 
-	ridList := utils.B2U32(page[0:ridLeafSize])
-	offsets := utils.B2I(page[ridLeafSize : ridLeafSize+offsetLeafSize])
+	ridList := sliceutil.B2U32(page[0:ridLeafSize])
+	offsets := sliceutil.B2I(page[ridLeafSize : ridLeafSize+offsetLeafSize])
 
 	return ridList, offsets
 
@@ -97,7 +97,7 @@ func (p *blockIndexReader) readNode(level int, pos int) []uint32 {
 
 	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
 
-	ridList := utils.B2U32(page)
+	ridList := sliceutil.B2U32(page)
 
 	return ridList
 

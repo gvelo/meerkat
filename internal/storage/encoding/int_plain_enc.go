@@ -15,7 +15,7 @@ package encoding
 
 import (
 	"meerkat/internal/storage/colval"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/sliceutil"
 )
 
 type IntPlainEncoder struct {
@@ -39,6 +39,6 @@ func (e *IntPlainEncoder) Type() EncodingType {
 }
 
 func (e *IntPlainEncoder) Encode(v colval.IntColValues) {
-	b := utils.I2B(v.Values())
+	b := sliceutil.I2B(v.Values())
 	e.bw.WriteBlock(b, v.Rid()[0])
 }

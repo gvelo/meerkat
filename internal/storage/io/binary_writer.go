@@ -123,11 +123,11 @@ func (bw *BinaryWriter) WriteFixedUint64(x uint64) {
 func (bw *BinaryWriter) WriteBytes(b []byte) {
 
 	bw.WriteUvarint(len(b))
-	bw.Write(b)
+	bw.WriteRaw(b)
 
 }
 
-func (bw *BinaryWriter) Write(b []byte) {
+func (bw *BinaryWriter) WriteRaw(b []byte) {
 
 	n, err := bw.writer.Write(b)
 
@@ -136,6 +136,20 @@ func (bw *BinaryWriter) Write(b []byte) {
 	}
 
 	bw.offset += n
+
+}
+
+func (bw *BinaryWriter) Write(b []byte) (int, error) {
+
+	n, err := bw.writer.Write(b)
+
+	if err != nil {
+		panic(err)
+	}
+
+	bw.offset += n
+
+	return n, nil
 
 }
 

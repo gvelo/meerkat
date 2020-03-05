@@ -15,11 +15,10 @@ package inmem
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
-func NewValidityBitmapIndex(bw *io.BinaryWriter) index.ValidityIndexWriter {
+func NewValidityBitmapIndex(bw *io.BinaryWriter) *ValidityBitmapIndex {
 	return &ValidityBitmapIndex{
 		bitmap: roaring.NewBitmap(),
 		bw:     bw,
@@ -31,25 +30,12 @@ type ValidityBitmapIndex struct {
 	bw     *io.BinaryWriter
 }
 
-func (v *ValidityBitmapIndex) Flush() error {
-
-	start := v.bw.Offset
+func (v *ValidityBitmapIndex) Flush() {
 
 	v.bitmap.RunOptimize()
 
-	_, err := v.bitmap.WriteTo(v.bw)
+	_, _ = v.bitmap.WriteTo(v.bw)
 
-	if err != nil {
-		return err
-	}
-
-	err = v.bw.WriteFixedInt(start)
-
-	if err != nil {
-		return err
-	}
-
-	return err
 }
 
 func (v *ValidityBitmapIndex) Cardinality() int {

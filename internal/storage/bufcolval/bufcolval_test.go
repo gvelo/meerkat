@@ -18,7 +18,7 @@ import (
 	"math/rand"
 	"meerkat/internal/buffer"
 	"meerkat/internal/storage/colval"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/testutil"
 	"testing"
 )
 
@@ -171,7 +171,7 @@ func createByteSliceBuffer(bufSize int, nullable bool) (*buffer.ByteSliceBuffer,
 			nulls++
 			continue
 		}
-		b.AppendSlice([]byte(utils.RandomString(50)))
+		b.AppendSlice([]byte(testutil.RandomString(50)))
 	}
 
 	return b, p, nulls
