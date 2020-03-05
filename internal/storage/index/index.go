@@ -42,6 +42,11 @@ type ByteSliceIndexWriter interface {
 	Index(v colval.ByteSliceColValues)
 }
 
+type BoolIndexWriter interface {
+	IndexWriter
+	Index(v colval.BoolColValues)
+}
+
 type BlockIndexWriter interface {
 	Flush()
 	IndexBlock(block []byte, baseRID uint32)

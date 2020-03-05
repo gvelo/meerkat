@@ -51,9 +51,17 @@ type UintEncoder interface {
 	Encode(v colval.UintColValues)
 }
 
+type UintDecoder interface {
+	Decode(block []byte, buf []uint) []uint
+}
+
 type FloatEncoder interface {
 	Encoder
 	Encode(v colval.FloatColValues)
+}
+
+type FloatDecoder interface {
+	Decode(block []byte, buf []float64) []float64
 }
 
 type ByteSliceEncoder interface {
@@ -63,6 +71,15 @@ type ByteSliceEncoder interface {
 
 type ByteSliceDecoder interface {
 	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
+}
+
+type BoolEncoder interface {
+	Encoder
+	Encode(v colval.BoolColValues)
+}
+
+type BoolDecoder interface {
+	Decode(block []byte, buf []bool) []bool
 }
 
 func DeltaEncode(src []int, dst []int) {

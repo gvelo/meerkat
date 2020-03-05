@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate env GO111MODULE=on go run github.com/benbjohnson/tmpl -data=@column_types.tmpldata column_writer.gen.go.tmpl
+
 package storage
 
 import (

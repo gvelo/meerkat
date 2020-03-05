@@ -1,0 +1,17 @@
+[
+  {
+    "Type": "Int"
+  },
+  {
+    "Type": "Uint"
+  },
+  {
+    "Type": "Float"
+  },
+  {
+    "Type": "Bool"
+  },
+  {
+    "Type": "ByteSlice"
+  }
+]
