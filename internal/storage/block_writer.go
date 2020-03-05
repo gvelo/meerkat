@@ -32,5 +32,5 @@ func NewBlockWriter(bw *io.BinaryWriter, bi index.BlockIndexWriter) *blockWriter
 
 func (w *blockWriter) WriteBlock(block []byte, baseRid uint32) {
 	w.bi.IndexBlock(block, baseRid)
-	w.bw.Write(block)
+	w.bw.WriteRaw(block)
 }

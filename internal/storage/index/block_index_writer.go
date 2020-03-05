@@ -15,7 +15,7 @@ package index
 
 import (
 	"meerkat/internal/storage/io"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/sliceutil"
 )
 
 const (
@@ -170,36 +170,36 @@ func (w *blockIndexWriter) writeLevel(itemsPerNode int, writer nodeWriter) []uin
 
 func (w *blockIndexWriter) writeLeafNode(rid []uint32, offsets []int) {
 
-	ridBytes := utils.U32B(rid)
+	ridBytes := sliceutil.U32B(rid)
 
-	w.bw.Write(ridBytes)
+	w.bw.WriteRaw(ridBytes)
 
 	padLen := ridLeafSize - len(ridBytes)
 
 	if padLen > 0 {
-		w.bw.Write(padding[:padLen])
+		w.bw.WriteRaw(padding[:padLen])
 	}
 
-	offsetBytes := utils.I2B(offsets)
+	offsetBytes := sliceutil.I2B(offsets)
 
-	w.bw.Write(offsetBytes)
+	w.bw.WriteRaw(offsetBytes)
 
 	padLen = pageSize - (ridLeafSize + len(offsetBytes))
 
-	w.bw.Write(padding[:padLen])
+	w.bw.WriteRaw(padding[:padLen])
 
 }
 
 func (w *blockIndexWriter) writeNode(rid []uint32) {
 
-	ridBytes := utils.U32B(rid)
+	ridBytes := sliceutil.U32B(rid)
 
-	w.bw.Write(ridBytes)
+	w.bw.WriteRaw(ridBytes)
 
 	padLen := pageSize - len(ridBytes)
 
 	if padLen > 0 {
-		w.bw.Write(padding[:padLen])
+		w.bw.WriteRaw(padding[:padLen])
 	}
 
 }

@@ -16,7 +16,7 @@ package inmem
 import (
 	"fmt"
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/sliceutil"
 	"strings"
 )
 
@@ -47,7 +47,7 @@ func (bt *BTrie) newNode() *Node {
 
 func (bt *BTrie) Add(key []byte, rid uint32) {
 
-	str := utils.B2S(key)
+	str := sliceutil.B2S(key)
 
 	currentNode := bt.Root
 

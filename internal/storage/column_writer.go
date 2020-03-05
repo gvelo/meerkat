@@ -11,11 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate env GO111MODULE=on go run github.com/benbjohnson/tmpl -data=@column_types.tmpldata column_writer.gen.go.tmpl
+
 package storage
 
 import (
 	"meerkat/internal/buffer"
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/bufcolval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
@@ -32,19 +35,14 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 
 	switch fieldType {
 	case schema.FieldType_INT:
-		src := NewIntColumnSource(buf.(*buffer.IntBuffer), 8*1024, perm)
+		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), 8*1024, perm)
 		enc := encoding.NewIntPlainEncoder(blkWriter)
 		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, nil, bw)
 
 	case schema.FieldType_STRING:
-		src := NewByteSliceColumnSource(buf.(*buffer.ByteSliceBuffer), 64*1024, perm)
+		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), 64*1024, perm)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
 		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, nil, bw)
-
-	case schema.FieldType_UUID:
-		src := NewUUIDColumnSource(buf.(*buffer.UUIDBuffer), 512, perm)
-		enc := encoding.NewUUIDPlainEncoder(blkWriter)
-		return NewUUIDColumnWriter(schema.FieldType_UUID, src, enc, nil, blkIdx, nil, bw)
 
 	default:
 		panic("unknown fieldType")
@@ -56,7 +54,7 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter {
 
 	// plain 8k pages
-	src := NewTsColumnSource(buf, 8*1024)
+	src := bufcolval.NewTsBufColSource(buf, 8*1024)
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
 	enc := encoding.NewIntPlainEncoder(blkWriter)

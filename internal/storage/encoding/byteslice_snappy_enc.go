@@ -16,8 +16,8 @@ package encoding
 import (
 	"encoding/binary"
 	"github.com/golang/snappy"
+	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/io"
-	"meerkat/internal/storage/vector"
 )
 
 type ByteSliceSnappyEncoder struct {
@@ -44,24 +44,24 @@ func (e *ByteSliceSnappyEncoder) Type() EncodingType {
 	return Snappy
 }
 
-func (e *ByteSliceSnappyEncoder) Encode(vec vector.ByteSliceVector) {
+func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 
 	// make sure that the buffer has enough space to accommodate
 	// the offsets slice plus the encoded data. We need to avoid
 	// allocation inside the snappy encoder.
-	size := binary.MaxVarintLen64*(vec.Len()+2) + snappy.MaxEncodedLen(len(vec.Data()))
+	size := binary.MaxVarintLen64*(v.Len()+2) + snappy.MaxEncodedLen(len(v.Data()))
 
 	e.buf.Reset(size)
 
-	DeltaEncode(vec.Offsets(), e.offsetBuf)
+	DeltaEncode(v.Offsets(), e.offsetBuf)
 
 	// left enough room at the beginning of the block to write the
 	// block length encoded as uvarint
-	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:vec.Len()])
+	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:v.Len()])
 
 	// as we have enough room in the dst buffer the encoder will not
 	// allocate a new slice. See MaxEncodedLen(srcLen int) int
-	r := snappy.Encode(e.buf.Free(), vec.Data())
+	r := snappy.Encode(e.buf.Free(), v.Data())
 
 	e.buf.SetLen(e.buf.Len() + len(r))
 
@@ -73,6 +73,6 @@ func (e *ByteSliceSnappyEncoder) Encode(vec vector.ByteSliceVector) {
 
 	block := e.buf.Bytes()[offset:]
 
-	e.bw.WriteBlock(block, vec.Rid()[0])
+	e.bw.WriteBlock(block, v.Rid()[0])
 
 }

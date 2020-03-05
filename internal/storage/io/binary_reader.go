@@ -15,7 +15,7 @@ package io
 
 import (
 	"encoding/binary"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/sliceutil"
 )
 
 type BinaryReader struct {
@@ -134,7 +134,7 @@ func (br *BinaryReader) ReadString() string {
 
 	buf := br.ReadBytes()
 
-	return utils.B2S(buf)
+	return sliceutil.B2S(buf)
 
 }
 

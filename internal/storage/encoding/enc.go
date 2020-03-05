@@ -13,7 +13,9 @@
 
 package encoding
 
-import "meerkat/internal/storage/vector"
+import (
+	"meerkat/internal/storage/colval"
+)
 
 type EncodingType int
 
@@ -37,7 +39,7 @@ type Encoder interface {
 
 type IntEncoder interface {
 	Encoder
-	Encode(vec vector.IntVector)
+	Encode(v colval.IntColValues)
 }
 
 type IntDecoder interface {
@@ -46,30 +48,38 @@ type IntDecoder interface {
 
 type UintEncoder interface {
 	Encoder
-	Encode(vec vector.IntVector)
+	Encode(v colval.UintColValues)
+}
+
+type UintDecoder interface {
+	Decode(block []byte, buf []uint) []uint
 }
 
 type FloatEncoder interface {
 	Encoder
-	Encode(vec vector.FloatVector)
+	Encode(v colval.FloatColValues)
+}
+
+type FloatDecoder interface {
+	Decode(block []byte, buf []float64) []float64
 }
 
 type ByteSliceEncoder interface {
 	Encoder
-	Encode(vec vector.ByteSliceVector)
-}
-
-type UUIDEncoder interface {
-	Encoder
-	Encode(vec vector.UUIDVector)
+	Encode(v colval.ByteSliceColValues)
 }
 
 type ByteSliceDecoder interface {
 	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
 }
 
-type UUIDDecoder interface {
-	Decode(block []byte, data []byte) []byte
+type BoolEncoder interface {
+	Encoder
+	Encode(v colval.BoolColValues)
+}
+
+type BoolDecoder interface {
+	Decode(block []byte, buf []bool) []bool
 }
 
 func DeltaEncode(src []int, dst []int) {

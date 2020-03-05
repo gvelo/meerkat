@@ -15,20 +15,25 @@ package storage
 
 import (
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
-func NewIntColumnWriter(fieldType schema.FieldType,
-	src IntColumSource,
-	encoder encoding.IntEncoder,
-	colIndex index.IntIndexWriter,
+
+{{range .}}
+
+
+func New{{.Type}}ColumnWriter(fieldType schema.FieldType,
+	src colval.{{.Type}}ColSource,
+	encoder encoding.{{.Type}}Encoder,
+	colIndex index.{{.Type}}IndexWriter,
 	blockIndex index.BlockIndexWriter,
 	validityIndex index.ValidityIndexWriter,
-	bw *io.BinaryWriter) *IntColumnWriter {
+	bw *io.BinaryWriter) *{{.Type}}ColumnWriter {
 
-	return &IntColumnWriter{
+	return &{{.Type}}ColumnWriter{
 		fieldType:  fieldType,
 		src:        src,
 		bw:         bw,
@@ -40,12 +45,12 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 
 }
 
-type IntColumnWriter struct {
+type {{.Type}}ColumnWriter struct {
 	fieldType   schema.FieldType
 	bw          *io.BinaryWriter
-	src         IntColumSource
-	encoder     encoding.IntEncoder
-	colIndex    index.IntIndexWriter
+	src         colval.{{.Type}}ColSource
+	encoder     encoding.{{.Type}}Encoder
+	colIndex    index.{{.Type}}IndexWriter
 	blockIndex  index.BlockIndexWriter
 	validity    index.ValidityIndexWriter
 	numOfValues int
@@ -58,22 +63,22 @@ type IntColumnWriter struct {
 	validityIdxEnd int
 }
 
-func (w *IntColumnWriter) Write() {
+func (w *{{.Type}}ColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
-		vec := w.src.Next()
+		values := w.src.Next()
 
-		w.numOfValues += vec.Len()
+		w.numOfValues += values.Len()
 
-		w.encoder.Encode(vec)
+		w.encoder.Encode(values)
 
 		if w.colIndex != nil {
-			w.colIndex.Index(vec)
+			w.colIndex.Index(values)
 		}
 
 		if w.src.HasNulls() {
-			w.validity.Index(vec.Rid())
+			w.validity.Index(values.Rid())
 		}
 
 	}
@@ -82,7 +87,10 @@ func (w *IntColumnWriter) Write() {
 
 	w.blkEnd = w.bw.Offset()
 
-	w.blockIndex.Flush()
+	// some column types like boolean col don't write blocks.
+	if w.blockIndex != nil {
+		w.blockIndex.Flush()
+	}
 
 	w.blkIdxEnd = w.bw.Offset()
 
@@ -114,7 +122,7 @@ func (w *IntColumnWriter) Write() {
 
 }
 
-func (w *IntColumnWriter) writeFooter() {
+func (w *{{.Type}}ColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
@@ -131,3 +139,6 @@ func (w *IntColumnWriter) writeFooter() {
 	w.bw.WriteFixedInt(entry)
 
 }
+
+
+{{ end }}

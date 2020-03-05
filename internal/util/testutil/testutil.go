@@ -11,30 +11,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encoding
+package testutil
 
-import "meerkat/internal/storage/vector"
+import (
+	"math/rand"
+	"strings"
+)
 
-type UUIDPlainEncoder struct {
-	bw BlockWriter
-}
+var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
+	"abcdefghijklmnopqrstuvwxyzåäö" +
+	"0123456789")
 
-func NewUUIDPlainEncoder(bw BlockWriter) *UUIDPlainEncoder {
-	return &UUIDPlainEncoder{
-		bw: bw,
+func RandomString(maxLenght int) string {
+	length := rand.Intn(maxLenght) + 1
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
 	}
-}
-
-func (e *UUIDPlainEncoder) Flush() {
-}
-
-func (e *UUIDPlainEncoder) FlushBlocks() {
-}
-
-func (e *UUIDPlainEncoder) Type() EncodingType {
-	return Plain
-}
-
-func (e *UUIDPlainEncoder) Encode(vec vector.UUIDVector) {
-	e.bw.WriteBlock(vec.Data(), vec.Rid()[0])
+	return b.String()
 }

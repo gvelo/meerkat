@@ -11,23 +11,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package encoding
-
-type UUIDPlainDecoder struct {
-}
-
-func NewUUIDPlainDecoder() *UUIDPlainDecoder {
-	return &UUIDPlainDecoder{}
-}
-
-func (d *UUIDPlainDecoder) Decode(block []byte, buf []byte) []byte {
-
-	if len(buf) < len(block) {
-		panic("there isn't enough space to decode integer values")
-	}
-
-	n := copy(buf, block)
-
-	return buf[:n]
-
-}
+package bitutil

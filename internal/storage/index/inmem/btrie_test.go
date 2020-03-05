@@ -16,7 +16,7 @@ package inmem
 import (
 	"fmt"
 	"math/rand"
-	"meerkat/internal/utils"
+	"meerkat/internal/util/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -165,7 +165,7 @@ func Test_random_test(t *testing.T) {
 
 	for i := 0; i < numOfTokens; i++ {
 
-		t := utils.RandomString(30)
+		t := testutil.RandomString(30)
 
 		if tokenMap[t] {
 			i--

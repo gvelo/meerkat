@@ -44,16 +44,6 @@ func TestSegmentWriter_Write(t *testing.T) {
 				Updated:   time.Time{},
 			},
 			{
-				Id:        "_id",
-				Name:      "_id",
-				Desc:      "",
-				IndexId:   "test-index",
-				FieldType: schema.FieldType_UUID,
-				Nullable:  false,
-				Created:   time.Time{},
-				Updated:   time.Time{},
-			},
-			{
 				Id:        "intFieldId",
 				Name:      "intField",
 				Desc:      "",

@@ -24,7 +24,7 @@ type segment struct {
 }
 
 func (s *segment) read() error {
-
+	return nil
 }
 
 func ReadSegment(path string) (Segment, error) {
@@ -39,16 +39,18 @@ func ReadSegment(path string) (Segment, error) {
 
 	br.Entry()
 
-	segmentVersion := br.ReadByte()
+	//segmentVersion := br.ReadByte()
 
 	// we only have just one segment version
 
-	switch segmentVersion {
-	case SegmentVersion1:
-		//
-	default:
-		return nil, errors.New("unknown segment version")
-	}
+	//switch segmentVersion {
+	//case SegmentVersion1:
+	//	//
+	//default:
+	//	return nil, errors.New("unknown segment version")
+	//}
+	//
+	return nil, nil
 
 }
 
@@ -56,5 +58,5 @@ type SegmentReader struct {
 }
 
 func (r *SegmentReader) Read() (Segment, error) {
-
+	return nil, nil
 }

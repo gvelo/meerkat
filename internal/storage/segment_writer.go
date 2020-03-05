@@ -81,7 +81,7 @@ func (sw *SegmentWriter) Write() (err error) {
 
 func (sw *SegmentWriter) writeHeader() {
 
-	sw.bw.Write([]byte(MagicNumber))
+	sw.bw.WriteRaw([]byte(MagicNumber))
 
 }
 
@@ -146,7 +146,7 @@ func (sw *SegmentWriter) writeFooter() {
 
 	sw.bw.WriteByte(byte(SegmentVersion))
 
-	sw.bw.Write(sw.id[:])
+	sw.bw.WriteRaw(sw.id[:])
 
 	// TODO(gvelo) refactor to [16]byte
 	sw.bw.WriteString(sw.table.Index().Id)

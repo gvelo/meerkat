@@ -11,13 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package bufcolval
 
 import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"meerkat/internal/buffer"
-	"meerkat/internal/utils"
+	"meerkat/internal/storage/colval"
+	"meerkat/internal/util/testutil"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ func TestNullableIntColumnSource(t *testing.T) {
 
 	b, p, numOfNulls := createIntBuffer(bufSize, true)
 
-	src := NewIntColumnSource(b, pageSize, p)
+	src := NewIntBufColSource(b, pageSize, p)
 
 	testIntColumnSource(t, src, b, bufSize, pageSize, numOfNulls, p)
 
@@ -41,7 +42,7 @@ func TestIntColumnSource(t *testing.T) {
 
 	b, p, numOfNulls := createIntBuffer(bufSize, false)
 
-	src := NewIntColumnSource(b, pageSize, p)
+	src := NewIntBufColSource(b, pageSize, p)
 
 	testIntColumnSource(t, src, b, bufSize, pageSize, numOfNulls, p)
 
@@ -54,7 +55,7 @@ func TestTsColumnSource(t *testing.T) {
 
 	b, p, numOfNulls := createIntBuffer(bufSize, false)
 
-	src := NewTsColumnSource(b, pageSize)
+	src := NewTsBufColSource(b, pageSize)
 
 	testIntColumnSource(t, src, b, bufSize, pageSize, numOfNulls, p)
 
@@ -67,7 +68,7 @@ func TestByteColumnSource(t *testing.T) {
 
 	b, p, _ := createByteSliceBuffer(bufSize, false)
 
-	src := NewByteSliceColumnSource(b, pageSize, p)
+	src := NewByteSliceBufColSource(b, pageSize, p)
 
 	testByteSliceColumnSource(t, src, b, p)
 
@@ -80,14 +81,14 @@ func TestNullableByteColumnSource(t *testing.T) {
 
 	b, p, _ := createByteSliceBuffer(bufSize, true)
 
-	src := NewByteSliceColumnSource(b, pageSize, p)
+	src := NewByteSliceBufColSource(b, pageSize, p)
 
 	testByteSliceColumnSource(t, src, b, p)
 
 }
 
 func testIntColumnSource(t *testing.T,
-	src IntColumSource,
+	src colval.IntColSource,
 	b *buffer.IntBuffer,
 	bufSize int,
 	pageSize int,
@@ -121,7 +122,7 @@ func testIntColumnSource(t *testing.T,
 }
 
 func testByteSliceColumnSource(t *testing.T,
-	src ByteSliceColumSource,
+	src colval.ByteSliceColSource,
 	b *buffer.ByteSliceBuffer,
 	p []int) {
 
@@ -170,7 +171,7 @@ func createByteSliceBuffer(bufSize int, nullable bool) (*buffer.ByteSliceBuffer,
 			nulls++
 			continue
 		}
-		b.AppendSlice([]byte(utils.RandomString(50)))
+		b.AppendSlice([]byte(testutil.RandomString(50)))
 	}
 
 	return b, p, nulls

@@ -14,8 +14,6 @@
 package buffer
 
 import (
-	"bytes"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -75,7 +73,7 @@ func TestIntBuffer_AddBuffer(t *testing.T) {
 	assert.Equal(dstBuff.Len(), 200, "wrong len return value")
 	assert.Equal(len(dstBuff.nulls), 200, "wrong nulls len return value")
 	for _, value := range dstBuff.Nulls() {
-		assert.True(value, "wrong null value")
+		assert.False(value, "wrong null value")
 	}
 
 }
@@ -160,29 +158,5 @@ func TestSliceBuffer_AppendSliceBuffer(t *testing.T) {
 	})
 
 	assert.Equal(sbr, bufr, "wrong slice value")
-
-}
-
-func TestUUIDBuffer_Append(t *testing.T) {
-
-	assert := assert.New(t)
-
-	buf := NewUUIDBuffer(false, 0)
-
-	uid := make([]uuid.UUID, 256)
-
-	for i := 0; i < len(uid); i++ {
-		uid[i] = uuid.New()
-		buf.Append(uid[i])
-	}
-
-	assert.Equal(256, buf.Len())
-
-	buf.Each(func(i int, actual uuid.UUID) bool {
-		expected := uid[i]
-		r := bytes.Equal(expected[:], actual[:])
-		assert.True(r, "buffers are not equals")
-		return true
-	})
 
 }
