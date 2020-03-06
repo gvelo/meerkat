@@ -28,11 +28,11 @@ func (e *RawEncoder) Encode(values interface{}) []byte {
 	case []byte:
 		r = values.([]byte)
 	case []int:
-		r = UnsafeCastIntsToBytes(values.([]int))
+		r = UnsafeCastIntSliceToByteSlice(values.([]int))
 	case []float64:
-		r = UnsafeCastFloatsToBytes(values.([]float64))
+		r = UnsafeCastFloatSliceToByteSlice(values.([]float64))
 	case []string:
-		r = CastStringToBytes(values.([]string))
+		r = CastStringSliceToByteSlice(values.([]string))
 	}
 	if e.next != nil {
 		return e.next.Encode(r)

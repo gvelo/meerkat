@@ -376,7 +376,7 @@ func (r *BufferOperator) Init() {
 		r.vKeys[i] = c.(ColumnOperator).GetName()
 		c.Init()
 	}
-	r.ctx.Value(ColumnIndexKeysKey, r.vKeys)
+	r.ctx.Value(ColumnIndexToColumnName, r.vKeys)
 }
 
 func (r *BufferOperator) Destroy() {
@@ -420,11 +420,11 @@ func (r *MaterializeOperator) Destroy() {
 func (r *MaterializeOperator) Next() []storage.Vector {
 	n := r.child.Next()
 	var keys [][]byte
-	v, ok := r.ctx.Get(ColumnIndexKeysKey)
+	v, ok := r.ctx.Get(ColumnIndexToColumnName)
 	if ok {
 		keys = v.([][]byte)
 	} else {
-		panic("No ColumnIndexKeysKey")
+		panic("No ColumnIndexToColumnName")
 	}
 
 	// Aca tengo los valores de los objetos... que son null o no segun el vector lo tengo que validar

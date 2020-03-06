@@ -103,7 +103,7 @@ type IntIterator interface {
 
 type FloatIterator interface {
 	Iterator
-	Next() (*floatVector, error)
+	Next() (FloatVector, error)
 }
 
 type ByteSliceIterator interface {
@@ -187,8 +187,8 @@ type ByteSliceVector interface {
 
 func NewIntVector() IntVector {
 	return &intVector{
-		rid:  make([]uint32, 0),
-		vect: make([]int, 0),
+		rid: make([]uint32, 0),
+		vec: make([]int, 0),
 	}
 }
 
@@ -197,72 +197,71 @@ func NewIntVectorFromSlice(values []int) IntVector {
 	for i, _ := range values {
 		rid[i] = i
 	}
-	return &intVector{
-		rid:  make([]uint32, 0),
-		vect: values,
+	return intVector{
+		rid: make([]uint32, 0),
+		vec: values,
 	}
 }
 
 type intVector struct {
-	vect []int
-	rid  []uint32
+	vec []int
+	rid []uint32
 }
 
-func (v *intVector) AppendValue(i int) {
-	v.vect = append(v.vect, i)
+func (v intVector) AppendValue(i int) {
+	v.vec = append(v.vec, i)
 	fmt.Printf("2 %p , %v\n ", v, v)
 }
 
-func (v *intVector) Len() int {
-	return len(v.vect)
+func (v intVector) Len() int {
+	return len(v.vec)
 }
 
-func (v *intVector) Rid() []uint32 {
+func (v intVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *intVector) ValuesAsInt() []int {
-	return v.vect
+func (v intVector) ValuesAsInt() []int {
+	return v.vec
 }
 
 type floatVector struct {
-	vect []float64
-	rid  []uint32
+	vec []float64
+	rid []uint32
 }
 
-func NewFloatVector() *floatVector {
-	return &floatVector{
-		rid:  make([]uint32, 0),
-		vect: make([]float64, 0),
+func NewFloatVector() FloatVector {
+	return floatVector{
+		rid: make([]uint32, 0),
+		vec: make([]float64, 0),
 	}
 }
 
-func NewFloatVectorFromSlice(values []float64) *floatVector {
+func NewFloatVectorFromSlice(values []float64) FloatVector {
 	rid := make([]uint32, len(values))
 	for i, _ := range values {
 		rid[i] = uint32(i)
 	}
-	return &floatVector{
-		rid:  rid,
-		vect: values,
+	return floatVector{
+		rid: rid,
+		vec: values,
 	}
 }
 
-func (v *floatVector) AppendValue(i float64) {
-	v.vect = append(v.vect, i)
-	fmt.Printf("2 %p , %v\n ", v, v)
+func (v floatVector) AppendValue(i float64) {
+	v.vec = append(v.vec, i)
 }
 
-func (v *floatVector) Len() int {
-	return len(v.vect)
+func (v floatVector) Len() int {
+	return len(v.vec)
 }
 
-func (v *floatVector) Rid() []uint32 {
+func (v floatVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *floatVector) ValuesAsFloat() []float64 {
-	return v.vect
+func (v floatVector) ValuesAsFloat() []float64 {
+	return v.vec
 }
 
 func NewByteSliceVector() ByteSliceVector {
@@ -282,7 +281,7 @@ func NewByteSliceVectorSlice(values [][]byte) ByteSliceVector {
 		data = append(data, values[i]...)
 		offsets[i] = len(data)
 	}
-	return &byteSliceVector{
+	return byteSliceVector{
 		rid:     rid,
 		data:    data,
 		offsets: offsets,
@@ -295,23 +294,23 @@ type byteSliceVector struct {
 	offsets []int
 }
 
-func (v *byteSliceVector) Len() int {
+func (v byteSliceVector) Len() int {
 	return len(v.offsets)
 }
 
-func (v *byteSliceVector) Rid() []uint32 {
+func (v byteSliceVector) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *byteSliceVector) Data() []byte {
+func (v byteSliceVector) Data() []byte {
 	return v.data
 }
 
-func (v *byteSliceVector) Offsets() []int {
+func (v byteSliceVector) Offsets() []int {
 	return v.offsets
 }
 
-func (v *byteSliceVector) AppendValue(i []byte) {
+func (v byteSliceVector) AppendValue(i []byte) {
 	v.data = append(v.data, i...)
 	v.offsets = append(v.offsets, len(i))
 	fmt.Printf("2 %p , %v\n ", v, v)

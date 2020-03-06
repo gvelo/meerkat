@@ -29,7 +29,7 @@ func TestQuery1(t *testing.T) {
 	var s storage.Segment
 
 	ctx := NewContext(s)
-	ctx.Value(ColumnIndexKeysKey, []string{"F", "C1", "C2", "C3"})
+	ctx.Value(ColumnIndexToColumnName, []string{"F", "C1", "C2", "C3"})
 
 	op1 := NewIndexScanOperator(ctx, lt, 1, "ts") // ts > 1
 	op2 := NewIndexScanOperator(ctx, gt, 2, "ts") // ts < 2
@@ -72,7 +72,7 @@ func TestQuery2(t *testing.T) {
 	var s storage.Segment
 
 	ctx := NewContext(s)
-	ctx.Value(ColumnIndexKeysKey, []string{"_ts"})
+	ctx.Value(ColumnIndexToColumnName, []string{"_ts"})
 
 	op1 := NewIndexScanOperator(ctx, lt, 1, "_ts") // _ts > 1
 	op2 := NewIndexScanOperator(ctx, gt, 2, "_ts") // _ts < 2

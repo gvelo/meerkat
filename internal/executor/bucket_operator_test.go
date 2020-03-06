@@ -169,14 +169,3 @@ func TestIntBucketList(t *testing.T) {
 		a.Equal(r[i], e[i], "Error %d, is not equal than %d ", r[i], e[i])
 	}
 }
-
-//TODO: BenchmarkBucket
-/*
-func BenchmarkBucket(b *testing.B) {
-	list := setUpIntBucketN(b.N)
-	op := NewBucketOperator(list, 5)
-
-	b.ResetTimer()
-	for r := op.Next(); r != nil; r = op.Next() {
-	}
-} */

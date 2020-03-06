@@ -28,11 +28,11 @@ func (e *RawDecoder) Decoder(values []byte, t interface{}) interface{} {
 	case []byte:
 		r = values
 	case []int:
-		r = UnsafeCastBytesToInts(values)
+		r = UnsafeCastByteSliceToIntSlice(values)
 	case []float64:
-		r = UnsafeCastBytesToFloats(values)
+		r = UnsafeCastByteSliceToFloatSlice(values)
 	case []string:
-		r = CastBytesToString(values)
+		r = CastByteSliceToStringSlice(values)
 	}
 	if e.next != nil {
 		return e.next.Decode(r)

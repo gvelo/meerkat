@@ -18,7 +18,7 @@ import (
 )
 
 // save a slice that maps the vector index to column ids in segment.
-const ColumnIndexKeysKey = "COLUMN_INDEX_KEYS_KEY"
+const ColumnIndexToColumnName = "COLUMN_INDEX_TO_COLUMN_NAME"
 
 type Context interface {
 	Value(key string, value interface{})

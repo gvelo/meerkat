@@ -31,8 +31,8 @@ func TestUnsafeCastBytesToInt64(t *testing.T) {
 	before := make([]int, 1000)
 	copy(before, list)
 
-	byteList := UnsafeCastIntsToBytes(list)
-	res := UnsafeCastBytesToInts(byteList)
+	byteList := UnsafeCastIntSliceToByteSlice(list)
+	res := UnsafeCastByteSliceToIntSlice(byteList)
 
 	assert.Equal(before, res)
 
@@ -51,8 +51,8 @@ func TestUnsafeCastBytesToFloat(t *testing.T) {
 	before := make([]float64, 1000)
 	copy(before, list)
 
-	byteList := UnsafeCastFloatsToBytes(list)
-	res := UnsafeCastBytesToFloats(byteList)
+	byteList := UnsafeCastFloatSliceToByteSlice(list)
+	res := UnsafeCastByteSliceToFloatSlice(byteList)
 
 	assert.Equal(before, res)
 
