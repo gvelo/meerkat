@@ -13,6 +13,50 @@
 
 package storage
 
-import "errors"
+import (
+	"errors"
+	"meerkat/internal/storage/io"
+)
 
 var errUnknFileType = errors.New("unknown file type")
+
+type segment struct {
+}
+
+func (s *segment) read() error {
+	return nil
+}
+
+func ReadSegment(path string) (Segment, error) {
+
+	f, err := io.MMap(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	br := f.NewBinaryReader()
+
+	br.Entry()
+
+	//segmentVersion := br.ReadByte()
+
+	// we only have just one segment version
+
+	//switch segmentVersion {
+	//case SegmentVersion1:
+	//	//
+	//default:
+	//	return nil, errors.New("unknown segment version")
+	//}
+	//
+	return nil, nil
+
+}
+
+type SegmentReader struct {
+}
+
+func (r *SegmentReader) Read() (Segment, error) {
+	return nil, nil
+}

@@ -87,7 +87,7 @@ func processSkip(bw *io.BinaryWriter, keys []float64, offsets []uint64, lvl int,
 	for i := 0; i < int(uint64(len(offsets))); i++ {
 		o := bw.Offset
 		bw.WriteFixedUint64(math.Float64bits(keys[i]))
-		bw.WriteVarUint64(offsets[i])
+		bw.WriteUVarint64(offsets[i])
 		if i%config.SkipLevelSize == 0 {
 			nk = append(nk, keys[i])
 			nl = append(nl, uint64(o))

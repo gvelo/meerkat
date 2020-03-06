@@ -218,7 +218,7 @@ func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (p
 			page.Total = config.PageSize
 
 			bw.WritePageHeader(page)
-			bw.Write(r.([]byte))
+			bw.WriteRaw(r.([]byte))
 
 			pd = append(pd, &inmem.PageDescriptor{StartID: i - config.PageSize, Offset: bw.Offset})
 
@@ -237,7 +237,7 @@ func writePages(f string, col inmem.Column, sl *inmem.SkipList, slice slicer) (p
 		page.PayloadSize = len(r.([]byte))
 
 		bw.WritePageHeader(page)
-		bw.Write(r.([]byte))
+		bw.WriteRaw(r.([]byte))
 
 		pd = append(pd, &inmem.PageDescriptor{StartID: page.StartID, Offset: bw.Offset})
 	}
@@ -427,7 +427,7 @@ func (sw *SegmentWriter) writeSegmentInfo() error {
 	}
 
 	// Field Count
-	err = bw.WriteVarInt(len(sw.segment.IndexInfo.Fields))
+	err = bw.WriteUvarint(len(sw.segment.IndexInfo.Fields))
 
 	if err != nil {
 		return err

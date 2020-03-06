@@ -1,0 +1,26 @@
+[
+  {
+    "Name": "Int",
+    "Type": "int",
+    "Null": 0,
+    "Size": 8
+  },
+  {
+    "Name": "Uint",
+    "Type": "uint",
+    "Null": 0,
+    "Size": 8
+  },
+  {
+    "Name": "Float",
+    "Type": "float64",
+    "Null": 0,
+    "Size": 8
+  },
+  {
+    "Name": "Bool",
+    "Type": "bool",
+    "Null": "false",
+    "Size": 1
+  }
+]

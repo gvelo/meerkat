@@ -1,8 +1,11 @@
 module meerkat
 
+go 1.14
+
 require (
 	github.com/RoaringBitmap/roaring v0.4.17
 	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
+	github.com/benbjohnson/tmpl v1.0.0 // indirect
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
@@ -10,6 +13,7 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2
+	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
 	github.com/gopherjs/gopherjs v0.0.0-20190309154008-847fc94819f9 // indirect
 	github.com/hashicorp/serf v0.8.3

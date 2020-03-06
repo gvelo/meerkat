@@ -1,0 +1,110 @@
+// Copyright 2020 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package buffer
+
+
+{{range .}}
+
+
+// {{.Name}}
+
+
+
+type {{.Name}}Buffer struct {
+    buf      []{{.Type}}
+	nulls    []bool
+	nullable bool
+}
+
+func New{{.Name}}Buffer(nullable bool, capacity int) *{{.Name}}Buffer {
+
+	b := &{{.Name}}Buffer{
+		buf:      make([]{{.Type}}, 0, capacity),
+		nullable: nullable,
+	}
+
+	if nullable {
+		b.nulls = make([]bool, 0, capacity)
+	}
+
+	return b
+
+}
+
+func (b *{{.Name}}Buffer) Len() int {
+	return len(b.buf)
+}
+
+func (b *{{.Name}}Buffer) Size() int {
+	// TODO(gvelo) add null space.
+	return len(b.buf) * {{.Size}}
+}
+
+func (b *{{.Name}}Buffer) Nulls() []bool {
+	return b.nulls
+}
+
+func (b *{{.Name}}Buffer) AppendNull() {
+
+	if !b.nullable {
+		panic("not nullable")
+	}
+
+	b.nulls = append(b.nulls, true)
+	b.buf = append(b.buf, {{.Null}})
+
+}
+
+func (b *{{.Name}}Buffer) Nullable() bool {
+	return b.nullable
+}
+
+func (b *{{.Name}}Buffer) Values() []{{.Type}} {
+	return b.buf
+}
+
+func (b *{{.Name}}Buffer) Append{{.Name}}(v {{.Type}}) {
+
+	b.buf = append(b.buf, v)
+
+	if b.nullable {
+		b.nulls = append(b.nulls, false)
+	}
+
+}
+
+func (b *{{.Name}}Buffer) Append(v interface{}) {
+	b.Append{{.Name}}(v.({{.Type}}))
+}
+
+func (b *{{.Name}}Buffer) Append{{.Name}}Buffer(s *{{.Name}}Buffer) {
+
+	if b.nullable != s.nullable {
+		panic("schema mutation on ingestion not supported yet")
+	}
+
+	b.buf = append(b.buf, s.buf...)
+
+	if b.nullable {
+		b.nulls = append(b.nulls, s.nulls...)
+	}
+
+}
+
+func (b *{{.Name}}Buffer) AppendBuffer(buf interface{}) {
+	b.Append{{.Name}}Buffer(buf.(*{{.Name}}Buffer))
+}
+
+
+{{ end }}

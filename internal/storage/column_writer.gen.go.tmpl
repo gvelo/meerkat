@@ -1,0 +1,144 @@
+// Copyright 2020 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package storage
+
+import (
+	"meerkat/internal/schema"
+	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/index"
+	"meerkat/internal/storage/io"
+)
+
+
+{{range .}}
+
+
+func New{{.Type}}ColumnWriter(fieldType schema.FieldType,
+	src colval.{{.Type}}ColSource,
+	encoder encoding.{{.Type}}Encoder,
+	colIndex index.{{.Type}}IndexWriter,
+	blockIndex index.BlockIndexWriter,
+	validityIndex index.ValidityIndexWriter,
+	bw *io.BinaryWriter) *{{.Type}}ColumnWriter {
+
+	return &{{.Type}}ColumnWriter{
+		fieldType:  fieldType,
+		src:        src,
+		bw:         bw,
+		encoder:    encoder,
+		colIndex:   colIndex,
+		blockIndex: blockIndex,
+		validity:   validityIndex,
+	}
+
+}
+
+type {{.Type}}ColumnWriter struct {
+	fieldType   schema.FieldType
+	bw          *io.BinaryWriter
+	src         colval.{{.Type}}ColSource
+	encoder     encoding.{{.Type}}Encoder
+	colIndex    index.{{.Type}}IndexWriter
+	blockIndex  index.BlockIndexWriter
+	validity    index.ValidityIndexWriter
+	numOfValues int
+	cardinality int
+
+	blkEnd         int
+	blkIdxEnd      int
+	encoderEnd     int
+	colIdxEnd      int
+	validityIdxEnd int
+}
+
+func (w *{{.Type}}ColumnWriter) Write() {
+
+	for w.src.HasNext() {
+
+		values := w.src.Next()
+
+		w.numOfValues += values.Len()
+
+		w.encoder.Encode(values)
+
+		if w.colIndex != nil {
+			w.colIndex.Index(values)
+		}
+
+		if w.src.HasNulls() {
+			w.validity.Index(values.Rid())
+		}
+
+	}
+
+	w.encoder.FlushBlocks()
+
+	w.blkEnd = w.bw.Offset()
+
+	// some column types like boolean col don't write blocks.
+	if w.blockIndex != nil {
+		w.blockIndex.Flush()
+	}
+
+	w.blkIdxEnd = w.bw.Offset()
+
+	w.encoder.Flush()
+
+	w.encoderEnd = w.bw.Offset()
+
+	// TODO(gvelo) if the column is not indexed estimate
+	// cardinality anyways using datasketches.
+	if w.colIndex != nil {
+
+		w.colIndex.Flush()
+
+		w.colIdxEnd = w.bw.Offset()
+
+		w.cardinality = w.colIndex.Cardinality()
+
+	}
+
+	if w.src.HasNulls() {
+
+		w.validity.Flush()
+
+		w.validityIdxEnd = w.bw.Offset()
+
+	}
+
+	w.writeFooter()
+
+}
+
+func (w *{{.Type}}ColumnWriter) writeFooter() {
+
+	entry := w.bw.Offset()
+
+	w.bw.WriteUvarint(int(w.fieldType))
+	w.bw.WriteUvarint(int(w.encoder.Type()))
+	w.bw.WriteUvarint(w.blkEnd)
+	w.bw.WriteUvarint(w.blkIdxEnd)
+	w.bw.WriteUvarint(w.encoderEnd)
+	w.bw.WriteUvarint(w.colIdxEnd)
+	w.bw.WriteUvarint(w.validityIdxEnd)
+	w.bw.WriteUvarint(w.numOfValues)
+	w.bw.WriteUvarint(w.cardinality)
+
+	w.bw.WriteFixedInt(entry)
+
+}
+
+
+{{ end }}

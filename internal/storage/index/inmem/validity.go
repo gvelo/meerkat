@@ -1,4 +1,4 @@
-// Copyright 2019 The Meerkat Authors
+// Copyright 2020 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,40 +11,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ondsk
+package inmem
 
 import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage/io"
 )
 
-type PostingStore struct {
-	file *io.MMFile
-}
-
-func (ps PostingStore) Read(offset int) (*roaring.Bitmap, error) {
-
-	b := ps.file.NewBinaryReader().SliceFrom(offset)
-
-	//TODO reuse Bitmaps.
-	bitmap := roaring.NewBitmap()
-
-	_, err := bitmap.FromBuffer(b)
-
-	if err != nil {
-		return nil, err
+func NewValidityBitmapIndex(bw *io.BinaryWriter) *ValidityBitmapIndex {
+	return &ValidityBitmapIndex{
+		bitmap: roaring.NewBitmap(),
+		bw:     bw,
 	}
+}
 
-	return bitmap, nil
+type ValidityBitmapIndex struct {
+	bitmap *roaring.Bitmap
+	bw     *io.BinaryWriter
+}
+
+func (v *ValidityBitmapIndex) Flush() {
+
+	v.bitmap.RunOptimize()
+
+	_, _ = v.bitmap.WriteTo(v.bw)
 
 }
 
-func (ps *PostingStore) Close() error {
-	return ps.file.UnMap()
+func (v *ValidityBitmapIndex) Cardinality() int {
+	return int(v.bitmap.GetCardinality())
 }
 
-func NewPostingStore(file *io.MMFile) *PostingStore {
-	return &PostingStore{
-		file: file,
-	}
+func (v *ValidityBitmapIndex) Index(rid []uint32) {
+	v.bitmap.AddMany(rid)
 }
