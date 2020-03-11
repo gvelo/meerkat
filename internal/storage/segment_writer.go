@@ -82,6 +82,7 @@ func (sw *SegmentWriter) Write() (err error) {
 func (sw *SegmentWriter) writeHeader() {
 
 	sw.bw.WriteRaw([]byte(MagicNumber))
+	sw.bw.WriteByte(byte(SegmentVersion))
 
 }
 
@@ -144,8 +145,6 @@ func (sw *SegmentWriter) writeFooter() {
 
 	entry := sw.bw.Offset()
 
-	sw.bw.WriteByte(byte(SegmentVersion))
-
 	sw.bw.WriteRaw(sw.id[:])
 
 	// TODO(gvelo) refactor to [16]byte
@@ -159,13 +158,15 @@ func (sw *SegmentWriter) writeFooter() {
 
 	sw.bw.WriteUvarint(sw.table.Len())
 
-	sw.bw.WriteFixedInt(len(sw.table.Cols()))
+	sw.bw.WriteUvarint(len(sw.table.Cols()))
 
 	for _, f := range sw.table.Index().Fields {
 
 		sw.bw.WriteString(f.Id)
 
 		sw.bw.WriteString(f.Name)
+
+		sw.bw.WriteByte(byte(f.FieldType))
 
 		sw.bw.WriteUvarint(sw.offsets[f.Id])
 

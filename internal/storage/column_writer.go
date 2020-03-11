@@ -24,6 +24,12 @@ import (
 	"meerkat/internal/storage/io"
 )
 
+const (
+	blockLen     = 1024 * 8  // numeric block length
+	txtBlockSize = 1024 * 64 // txt block size in bytes
+	vectorLen    = 1024 * 64 // the numeric vector len ( move to executor pakage ? )
+)
+
 type ColumnWriter interface {
 	Write()
 }
@@ -35,12 +41,15 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 
 	switch fieldType {
 	case schema.FieldType_INT:
-		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), 8*1024, perm)
+		// TODO(gvelo): for plain encoded scalars blockindex is not necessary.
+		//              offset can be computed using the RID plus the
+		//              column's value width.
+		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
 		enc := encoding.NewIntPlainEncoder(blkWriter)
 		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, nil, bw)
 
 	case schema.FieldType_STRING:
-		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), 64*1024, perm)
+		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
 		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, nil, bw)
 
@@ -54,7 +63,7 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter {
 
 	// plain 8k pages
-	src := bufcolval.NewTsBufColSource(buf, 8*1024)
+	src := bufcolval.NewTsBufColSource(buf, blockLen)
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
 	enc := encoding.NewIntPlainEncoder(blkWriter)

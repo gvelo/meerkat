@@ -22,11 +22,11 @@ import (
 
 type Segment interface {
 	IndexName() string
-	IndexID() []byte
+	IndexID() string
 	From() time.Time
 	To() time.Time
 	Rows() int
-	Col(id []byte) Column
+	Col(id string) Column
 }
 
 type SegmentRegistry interface {
@@ -42,43 +42,53 @@ type Column interface {
 
 type IntColumn interface {
 	Column
-	Dict() IntDict
 	Index() IntIndex
+	Reader() IntColumnReader
+	Iterator() IntIterator
+}
+
+type IntColumnReader interface {
 	// TODO(gvelo): hint the reader about index use.
 	//  ie. avoid index use in low selectivity search.
 	Read(pos []uint32) vector.IntVector
-	Iterator() IntIterator
 }
 
 type FloatColumn interface {
 	Column
-	Dict() FloatDict
 	Index() FloatIndex
 	Read(pos []uint32) vector.FloatVector
 	Iterator() FloatIterator
+}
+
+type FloatColumnReader interface {
+	Read(pos []uint32) vector.FloatVector
 }
 
 type StringColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	ReadDictEnc(pos []uint32) vector.IntVector
-	Read(pos []uint32) vector.ByteSliceVector
-	DictEncodedIterator() IntIterator
+	DictEncReader() IntColumnReader
+	Reader() ByteSliceReader
 	Iterator() ByteSliceIterator
+	DictEncIterator() IntIterator
+}
+
+type ByteSliceReader interface {
+	Read(pos []uint32) vector.FloatVector
 }
 
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
-	Read(pos []uint32) vector.ByteSliceVector
+	Reader() ByteSliceReader
 	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Read(pos []uint32) vector.IntVector
+	Reader() IntColumnReader
 	Iterator() IntIterator
 }
 

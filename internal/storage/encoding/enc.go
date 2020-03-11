@@ -33,6 +33,9 @@ type BlockWriter interface {
 
 type Encoder interface {
 	Flush()
+	// TODO(gvelo) remove FlushBlocks, the encode api
+	//  is block oriented and do not buffer blocks.
+	//  roaringbitmap ?????
 	FlushBlocks()
 	Type() EncodingType
 }
@@ -100,4 +103,20 @@ func DeltaDecode(src []int, dst []int) {
 		dst[i] = dst[i-1] + src[i]
 	}
 
+}
+
+func GetIntDecoder(d EncodingType, b []byte, start int, end int, blockLen int) (IntDecoder, BlockReader) {
+
+	var dec IntDecoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewIntPlainDecoder()
+		br = NewScalarPlainBlockReader(start, end, b, blockLen)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
 }

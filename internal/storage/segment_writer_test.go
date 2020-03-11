@@ -53,16 +53,16 @@ func TestSegmentWriter_Write(t *testing.T) {
 				Created:   time.Time{},
 				Updated:   time.Time{},
 			},
-			{
-				Id:        "stringFieldId",
-				Name:      "stringField",
-				Desc:      "",
-				IndexId:   "test-index",
-				FieldType: schema.FieldType_STRING,
-				Nullable:  false,
-				Created:   time.Time{},
-				Updated:   time.Time{},
-			},
+			//{
+			//	Id:        "stringFieldId",
+			//	Name:      "stringField",
+			//	Desc:      "",
+			//	IndexId:   "test-index",
+			//	FieldType: schema.FieldType_STRING,
+			//	Nullable:  false,
+			//	Created:   time.Time{},
+			//	Updated:   time.Time{},
+			//},
 		},
 	}
 
@@ -73,16 +73,24 @@ func TestSegmentWriter_Write(t *testing.T) {
 		r.AddCol("_ts", int(time.Now().UnixNano()))
 		r.AddCol("_id", uuid.New())
 		r.AddCol("intFieldId", rand.Int())
-		r.AddCol("stringFieldId", fmt.Sprintf("row number %v", i))
+		///r.AddCol("stringFieldId", fmt.Sprintf("row number %v", i))
 		table.AppendRow(r)
 	}
 
-	sw := NewSegmentWriter("/tmp/segment", uuid.New(), table)
+	path := "/tmp/segment"
+
+	sid := uuid.New()
+
+	fmt.Println(sid)
+
+	sw := NewSegmentWriter("/tmp/segment", sid, table)
 
 	err := sw.Write()
 
 	if err != nil {
 		t.Error(err)
 	}
+
+	_, err = ReadSegment(path)
 
 }

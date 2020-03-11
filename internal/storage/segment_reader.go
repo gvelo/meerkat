@@ -15,19 +15,17 @@ package storage
 
 import (
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
+	"meerkat/internal/schema"
 	"meerkat/internal/storage/io"
 )
 
-var errUnknFileType = errors.New("unknown file type")
+const (
+	SegmentVersion1 = 1
+)
 
-type segment struct {
-}
-
-func (s *segment) read() error {
-	return nil
-}
-
-func ReadSegment(path string) (Segment, error) {
+func ReadSegment(path string) (*segment, error) {
 
 	f, err := io.MMap(path)
 
@@ -37,26 +35,142 @@ func ReadSegment(path string) (Segment, error) {
 
 	br := f.NewBinaryReader()
 
-	br.Entry()
+	header := br.ReadSlice(0, len(MagicNumber))
 
-	//segmentVersion := br.ReadByte()
+	if string(header) != MagicNumber {
+		panic("unknown file type")
+	}
+
+	segmentVersion := br.ReadByte()
 
 	// we only have just one segment version
 
-	//switch segmentVersion {
-	//case SegmentVersion1:
-	//	//
-	//default:
-	//	return nil, errors.New("unknown segment version")
-	//}
-	//
-	return nil, nil
+	switch segmentVersion {
+	case SegmentVersion1:
+		s := NewSegment(f)
+		err := s.read()
+		return s, err
+	default:
+		return nil, errors.New("unknown segment version")
+	}
 
 }
 
-type SegmentReader struct {
+func NewSegment(f *io.MMFile) *segment {
+	return &segment{
+		f:       f,
+		columns: make(map[string]interface{}),
+	}
 }
 
-func (r *SegmentReader) Read() (Segment, error) {
-	return nil, nil
+type segment struct {
+	f         *io.MMFile
+	id        uuid.UUID
+	from      int
+	to        int
+	numOfRows int
+	start     int
+	tableId   string
+	tableName string
+	numOfCol  int
+	//columns   map[string]Column
+	columns map[string]interface{}
+}
+
+type colData struct {
+	colType     schema.FieldType
+	id          string
+	name        string
+	offsetStart int
+	offsetEnd   int
+}
+
+// start = entry
+func (s *segment) read() error {
+
+	// magicNumber + version
+	s.start = len(MagicNumber) + 1
+
+	br := s.f.NewBinaryReader()
+
+	br.Entry()
+
+	br.ReadRaw(s.id[:])
+
+	s.tableId = br.ReadString()
+
+	s.tableName = br.ReadString()
+
+	s.from = br.ReadFixed64()
+
+	s.to = br.ReadFixed64()
+
+	s.numOfRows = br.ReadUVarint()
+
+	s.numOfCol = br.ReadUVarint()
+
+	cd := make([]colData, s.numOfCol)
+
+	fmt.Println("numofcol", s.numOfCol, s.numOfRows)
+
+	for i := 0; i < s.numOfCol; i++ {
+		c := colData{}
+		c.id = br.ReadString()
+		c.name = br.ReadString()
+		c.colType = schema.FieldType(br.ReadByte())
+		c.offsetEnd = br.ReadUVarint()
+		if i == 0 {
+			c.offsetStart = s.start
+		} else {
+			c.offsetStart = cd[i-1].offsetEnd
+		}
+		cd[i] = c
+	}
+
+	s.readColumns(cd)
+
+	// TODO(gvelo) recover from panic and return the err.
+
+	return nil
+
+}
+
+func (s *segment) readColumns(cd []colData) {
+
+	for _, cData := range cd {
+
+		//var colStart, colEnd int
+
+		//if i == 0 {
+		//	colStart = s.start
+		//} else {
+		//	colStart = colEnd
+		//}
+
+		fmt.Println("cdata ", cData.offsetStart, cData.offsetEnd)
+
+		//colEnd = cData.offsetEnd
+
+		fmt.Println("================", cData.offsetStart, cData.offsetEnd, cData.colType, cData.id)
+
+		//var col Column
+		var col interface{}
+
+		switch cData.colType {
+		case schema.FieldType_TIMESTAMP:
+			col = NewIntColumn(s.f.Bytes, cData.offsetStart, cData.offsetEnd)
+		case schema.FieldType_INT:
+			col = NewIntColumn(s.f.Bytes, cData.offsetStart, cData.offsetEnd)
+		case schema.FieldType_UINT:
+		case schema.FieldType_FLOAT:
+		case schema.FieldType_STRING:
+		case schema.FieldType_TEXT:
+		default:
+			panic("unknown column type")
+		}
+
+		s.columns[cData.id] = col
+
+	}
+
 }

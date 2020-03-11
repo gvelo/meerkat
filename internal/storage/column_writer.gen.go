@@ -91,10 +91,12 @@ func (w *IntColumnWriter) Write() {
 
 	// some column types like boolean col don't write blocks.
 	if w.blockIndex != nil {
-		w.blockIndex.Flush()
-	}
 
-	w.blkIdxEnd = w.bw.Offset()
+		w.blockIndex.Flush()
+
+		w.blkIdxEnd = w.bw.Offset()
+
+	}
 
 	w.encoder.Flush()
 
@@ -128,7 +130,6 @@ func (w *IntColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
-	w.bw.WriteUvarint(int(w.fieldType))
 	w.bw.WriteUvarint(int(w.encoder.Type()))
 	w.bw.WriteUvarint(w.blkEnd)
 	w.bw.WriteUvarint(w.blkIdxEnd)
@@ -206,10 +207,12 @@ func (w *UintColumnWriter) Write() {
 
 	// some column types like boolean col don't write blocks.
 	if w.blockIndex != nil {
-		w.blockIndex.Flush()
-	}
 
-	w.blkIdxEnd = w.bw.Offset()
+		w.blockIndex.Flush()
+
+		w.blkIdxEnd = w.bw.Offset()
+
+	}
 
 	w.encoder.Flush()
 
@@ -243,7 +246,6 @@ func (w *UintColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
-	w.bw.WriteUvarint(int(w.fieldType))
 	w.bw.WriteUvarint(int(w.encoder.Type()))
 	w.bw.WriteUvarint(w.blkEnd)
 	w.bw.WriteUvarint(w.blkIdxEnd)
@@ -321,10 +323,12 @@ func (w *FloatColumnWriter) Write() {
 
 	// some column types like boolean col don't write blocks.
 	if w.blockIndex != nil {
-		w.blockIndex.Flush()
-	}
 
-	w.blkIdxEnd = w.bw.Offset()
+		w.blockIndex.Flush()
+
+		w.blkIdxEnd = w.bw.Offset()
+
+	}
 
 	w.encoder.Flush()
 
@@ -358,7 +362,6 @@ func (w *FloatColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
-	w.bw.WriteUvarint(int(w.fieldType))
 	w.bw.WriteUvarint(int(w.encoder.Type()))
 	w.bw.WriteUvarint(w.blkEnd)
 	w.bw.WriteUvarint(w.blkIdxEnd)
@@ -436,10 +439,12 @@ func (w *BoolColumnWriter) Write() {
 
 	// some column types like boolean col don't write blocks.
 	if w.blockIndex != nil {
-		w.blockIndex.Flush()
-	}
 
-	w.blkIdxEnd = w.bw.Offset()
+		w.blockIndex.Flush()
+
+		w.blkIdxEnd = w.bw.Offset()
+
+	}
 
 	w.encoder.Flush()
 
@@ -473,7 +478,6 @@ func (w *BoolColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
-	w.bw.WriteUvarint(int(w.fieldType))
 	w.bw.WriteUvarint(int(w.encoder.Type()))
 	w.bw.WriteUvarint(w.blkEnd)
 	w.bw.WriteUvarint(w.blkIdxEnd)
@@ -551,10 +555,12 @@ func (w *ByteSliceColumnWriter) Write() {
 
 	// some column types like boolean col don't write blocks.
 	if w.blockIndex != nil {
-		w.blockIndex.Flush()
-	}
 
-	w.blkIdxEnd = w.bw.Offset()
+		w.blockIndex.Flush()
+
+		w.blkIdxEnd = w.bw.Offset()
+
+	}
 
 	w.encoder.Flush()
 
@@ -588,7 +594,6 @@ func (w *ByteSliceColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
-	w.bw.WriteUvarint(int(w.fieldType))
 	w.bw.WriteUvarint(int(w.encoder.Type()))
 	w.bw.WriteUvarint(w.blkEnd)
 	w.bw.WriteUvarint(w.blkIdxEnd)
