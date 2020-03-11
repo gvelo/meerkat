@@ -13,7 +13,9 @@
 
 package executor
 
-import "meerkat/internal/storage"
+import (
+	"meerkat/internal/storage/vector"
+)
 
 func NewSortOperator(child MultiVectorOperator, colIds []int) *SortOperator {
 	return &SortOperator{child: child, colIds: colIds}
@@ -32,7 +34,7 @@ func (r *SortOperator) Destroy() {
 
 }
 
-func (r *SortOperator) Next() []storage.Vector {
+func (r *SortOperator) Next() []vector.Vector {
 
 	return nil
 }

@@ -4,6 +4,8 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage"
+	encoding2 "meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/vector"
 	"testing"
 	"time"
 )
@@ -11,8 +13,8 @@ import (
 // FAKES
 
 type fakeMultiVectorOperator struct {
-	vect []storage.Vector
-	idx  int
+	vec []vector.Vector
+	idx int
 }
 
 func (f *fakeMultiVectorOperator) Init() {
@@ -23,12 +25,12 @@ func (f *fakeMultiVectorOperator) Destroy() {
 	// nothing to do
 }
 
-func (f *fakeMultiVectorOperator) Next() []storage.Vector {
+func (f *fakeMultiVectorOperator) Next() []vector.Vector {
 	if f.idx == 1 {
 		return nil
 	}
 	f.idx++
-	return f.vect
+	return f.vec
 }
 
 type fakeSegment struct {
@@ -62,19 +64,15 @@ func (f *fakeSegment) Col(id []byte) storage.Column {
 type fakeFloatColumn struct {
 }
 
-func (f *fakeFloatColumn) Encoding() storage.Encoding {
+func (f *fakeFloatColumn) Encoding() encoding2.EncodingType {
 	panic("implement me")
 }
 
-func (f fakeFloatColumn) Validity() *roaring.Bitmap {
+func (f *fakeFloatColumn) Validity() *roaring.Bitmap {
 	panic("implement me")
 }
 
 func (f *fakeFloatColumn) HasNulls() bool {
-	panic("implement me")
-}
-
-func (f *fakeFloatColumn) Read(pos []uint32) (storage.Vector, error) {
 	panic("implement me")
 }
 
@@ -90,14 +88,18 @@ func (f *fakeFloatColumn) Index() storage.FloatIndex {
 	panic("implement me")
 }
 
-func (f fakeFloatColumn) Iterator() storage.FloatIterator {
+func (f *fakeFloatColumn) Read(pos []uint32) vector.FloatVector {
+	panic("implement me")
+}
+
+func (f *fakeFloatColumn) Iterator() storage.FloatIterator {
 	panic("implement me")
 }
 
 type fakeIntColumn struct {
 }
 
-func (f *fakeIntColumn) Encoding() storage.Encoding {
+func (f *fakeIntColumn) Encoding() encoding2.EncodingType {
 	panic("implement me")
 }
 
@@ -106,10 +108,6 @@ func (f *fakeIntColumn) Validity() *roaring.Bitmap {
 }
 
 func (f *fakeIntColumn) HasNulls() bool {
-	panic("implement me")
-}
-
-func (f *fakeIntColumn) Read(pos []uint32) (storage.Vector, error) {
 	panic("implement me")
 }
 
@@ -125,6 +123,10 @@ func (f *fakeIntColumn) Index() storage.IntIndex {
 	panic("implement me")
 }
 
+func (f *fakeIntColumn) Read(pos []uint32) vector.IntVector {
+	panic("implement me")
+}
+
 func (f *fakeIntColumn) Iterator() storage.IntIterator {
 	panic("implement me")
 }
@@ -132,7 +134,7 @@ func (f *fakeIntColumn) Iterator() storage.IntIterator {
 type fakeStringColumn struct {
 }
 
-func (f *fakeStringColumn) Encoding() storage.Encoding {
+func (f *fakeStringColumn) Encoding() encoding2.EncodingType {
 	panic("implement me")
 }
 
@@ -141,10 +143,6 @@ func (f *fakeStringColumn) Validity() *roaring.Bitmap {
 }
 
 func (f *fakeStringColumn) HasNulls() bool {
-	panic("implement me")
-}
-
-func (f *fakeStringColumn) Read(pos []uint32) (storage.Vector, error) {
 	panic("implement me")
 }
 
@@ -160,7 +158,11 @@ func (f *fakeStringColumn) Index() storage.ByteSliceIndex {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) ReadDictEnc(pos []uint32) (storage.IntVector, error) {
+func (f *fakeStringColumn) ReadDictEnc(pos []uint32) vector.IntVector {
+	panic("implement me")
+}
+
+func (f *fakeStringColumn) Read(pos []uint32) vector.ByteSliceVector {
 	panic("implement me")
 }
 
@@ -177,12 +179,15 @@ func TestHAggScenario1(t *testing.T) {
 	a := assert.New(t)
 
 	// Set up child
-	vec := make([]storage.Vector, 0)
-	vec = append(vec, storage.NewFloatVectorFromSlice([]float64{1.2, 1.2, 1.4, 1.5, 1.6}))
-	vec = append(vec, storage.NewIntVectorFromSlice([]int{2, 2, 4, 5, 6}))
-	vec = append(vec, storage.NewByteSliceVectorSlice([][]byte{[]byte("123"), []byte("123"), []byte("123"), []byte("123"), []byte("123")}))
+	vec := make([]vector.Vector, 0)
+	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	vec = append(vec, &v)
+	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	vec = append(vec, &v1)
+	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []uint64{}, []int{3, 6, 9, 12, 15})
+	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
-		vect: vec,
+		vec: vec,
 	}
 
 	// Set up segment
@@ -224,9 +229,9 @@ func TestHAggScenario1(t *testing.T) {
 
 	a.NotNil(r, "This should not be nil")
 
-	a.Equal("123", string(r[0].(storage.ByteSliceVector).Get(0)))
-	a.Equal(6.9, r[1].(storage.FloatVector).ValuesAsFloat()[0])
-	a.Equal(1.6, r[2].(storage.FloatVector).ValuesAsFloat()[0])
+	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
+	a.Equal(6.9, r[1].(*vector.FloatVector).Values()[0])
+	a.Equal(1.6, r[2].(*vector.FloatVector).Values()[0])
 
 }
 
@@ -235,12 +240,15 @@ func TestHAggScenario2(t *testing.T) {
 	a := assert.New(t)
 
 	// Set up child
-	vec := make([]storage.Vector, 0)
-	vec = append(vec, storage.NewFloatVectorFromSlice([]float64{1.2, 1.2, 1.4, 1.5, 1.6}))
-	vec = append(vec, storage.NewIntVectorFromSlice([]int{2, 2, 4, 5, 6}))
-	vec = append(vec, storage.NewByteSliceVectorSlice([][]byte{[]byte("1"), []byte("123"), []byte("123"), []byte("123"), []byte("123")}))
+	vec := make([]vector.Vector, 0)
+	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	vec = append(vec, &v)
+	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	vec = append(vec, &v1)
+	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{2, 5, 8, 11, 14})
+	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
-		vect: vec,
+		vec: vec,
 	}
 
 	// Set up segment
@@ -281,13 +289,13 @@ func TestHAggScenario2(t *testing.T) {
 
 	a.NotNil(r, "This should not be nil")
 
-	a.Equal("1", string(r[0].(storage.ByteSliceVector).Get(0)))
-	a.InDelta(1.2, r[1].(storage.FloatVector).ValuesAsFloat()[0], 0.01)
-	a.InDelta(1.2, r[2].(storage.FloatVector).ValuesAsFloat()[0], 0.01)
+	a.Equal("1", string(r[0].(*vector.ByteSliceVector).Get(0)))
+	a.InDelta(1.2, r[1].(*vector.FloatVector).Values()[0], 0.01)
+	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.01)
 
-	a.Equal("123", string(r[0].(storage.ByteSliceVector).Get(1)))
-	a.InDelta(5.7, r[1].(storage.FloatVector).ValuesAsFloat()[1], 0.01)
-	a.InDelta(1.6, r[2].(storage.FloatVector).ValuesAsFloat()[1], 0.01)
+	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(1)))
+	a.InDelta(5.7, r[1].(*vector.FloatVector).Values()[1], 0.01)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[1], 0.01)
 
 }
 

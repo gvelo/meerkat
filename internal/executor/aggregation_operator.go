@@ -1,7 +1,8 @@
 package executor
 
 import (
-	"meerkat/internal/storage"
+	"bytes"
+	"meerkat/internal/storage/vector"
 	"unsafe"
 )
 
@@ -35,7 +36,7 @@ func (r *HashAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *HashAggregateOperator) Next() []storage.Vector {
+func (r *HashAggregateOperator) Next() []vector.Vector {
 
 	mKey := make(map[string]int)
 
@@ -48,8 +49,9 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 	// Iterate over all vectors...
 	for ; n != nil; n = r.child.Next() {
 
+		l1 := n[0].Len()
 		// iterate over all "rows"
-		for i := 0; i < n[0].Len(); i++ {
+		for i := 0; i < l1; i++ {
 
 			// create the key
 			k := createKey(n, r.keyCols, i)
@@ -71,11 +73,11 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 
 				// aca tenemos que separar los operadores.
 				switch col := n[it.AggCol].(type) {
-				case storage.IntVector:
-					counter.Update(float64(col.ValuesAsInt()[i]))
-				case storage.FloatVector:
-					counter.Update(col.ValuesAsFloat()[i])
-				case storage.ByteSliceVector:
+				case *vector.IntVector:
+					counter.Update(float64(col.Values()[i]))
+				case *vector.FloatVector:
+					counter.Update(col.Values()[i])
+				case *vector.ByteSliceVector:
 					counter.Update(1)
 				}
 
@@ -95,9 +97,9 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 		}
 	}
 
-	for i := 0; i < len(result); i++ {
-		for j := 0; j < len(result[i]); j++ {
-			// sacar este if de mierda
+	for i := 0; i < len(result); i++ { // rows
+		for j := 0; j < len(result[i]); j++ { // columns
+			// sacar este if de mierda con 2 vectores.
 			if j < len(r.keyCols) {
 				switch res[j].(type) {
 				case []int:
@@ -120,32 +122,40 @@ func (r *HashAggregateOperator) Next() []storage.Vector {
 		}
 	}
 
-	resVec := make([]storage.Vector, 0)
+	resVec := make([]vector.Vector, 0)
 	for _, it := range res {
 		switch it.(type) {
 		case []int:
-			resVec = append(resVec, storage.NewIntVectorFromSlice(it.([]int)))
+			v := vector.NewIntVector(it.([]int), []uint64{})
+			resVec = append(resVec, &v)
 		case []float64:
-			resVec = append(resVec, storage.NewFloatVectorFromSlice(it.([]float64)))
+			v := vector.NewFloatVector(it.([]float64), []uint64{})
+			resVec = append(resVec, &v)
 		case [][]byte:
-			resVec = append(resVec, storage.NewByteSliceVectorSlice(it.([][]byte)))
+			s := it.([][]byte)
+			offsets := make([]int, len(s))
+			for i, it := range s {
+				offsets[i] = len(it)
+			}
+			v := vector.NewByteSliceVector(bytes.Join(s, nil), []uint64{}, offsets)
+			resVec = append(resVec, &v)
 		}
 	}
 
 	return resVec
 }
 
-func createKey(n []storage.Vector, keyCols []int, index int) []byte {
+func createKey(n []vector.Vector, keyCols []int, index int) []byte {
 	k := make([]byte, 0)
 	for _, it := range keyCols {
 		switch t := n[it].(type) {
-		case storage.ByteSliceVector:
+		case *vector.ByteSliceVector:
 			k = append(k, t.Get(index)...)
-		case storage.IntVector:
-			b := (*[8]byte)(unsafe.Pointer(&t.ValuesAsInt()[index]))[:]
+		case *vector.IntVector:
+			b := (*[8]byte)(unsafe.Pointer(&t.Values()[index]))[:]
 			k = append(k, b...)
-		case storage.FloatVector:
-			b := (*[8]byte)(unsafe.Pointer(&t.ValuesAsFloat()[index]))[:]
+		case *vector.FloatVector:
+			b := (*[8]byte)(unsafe.Pointer(&t.Values()[index]))[:]
 			k = append(k, b...)
 		}
 	}
@@ -154,7 +164,6 @@ func createKey(n []storage.Vector, keyCols []int, index int) []byte {
 }
 
 // SortedAggregateOperator
-
 func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aggCols []Aggregation, keyCols []int) MultiVectorOperator {
 	return &SortedAggregateOperator{
 		ctx:     ctx,
@@ -165,13 +174,12 @@ func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aggCols 
 }
 
 // AggregateOperator
-//
 type SortedAggregateOperator struct {
 	ctx       Context
 	child     MultiVectorOperator
 	aggCols   []Aggregation // Aggregation columns
 	keyCols   []int         // Group by columns
-	resultVec []storage.Vector
+	resultVec []vector.Vector
 }
 
 func (r *SortedAggregateOperator) Init() {
@@ -185,7 +193,7 @@ func (r *SortedAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *SortedAggregateOperator) Next() []storage.Vector {
+func (r *SortedAggregateOperator) Next() []vector.Vector {
 
 	result := make([][]interface{}, 0)
 
@@ -197,7 +205,7 @@ func (r *SortedAggregateOperator) Next() []storage.Vector {
 	for ; n != nil; n = r.child.Next() {
 
 		// iterate over all "rows"
-		for i := 0; i < n[0].Len(); i++ {
+		for i := 0; i < n[0].(vector.Vector).Len(); i++ {
 
 			// create the key
 			k := createKey(n, r.keyCols, i)
@@ -215,11 +223,11 @@ func (r *SortedAggregateOperator) Next() []storage.Vector {
 					counter := result[len(result)-1][l+x].(Counter)
 
 					switch col := n[it.AggCol].(type) {
-					case storage.IntVector:
-						counter.Update(float64(col.ValuesAsInt()[i]))
-					case storage.FloatVector:
-						counter.Update(col.ValuesAsFloat()[i])
-					case storage.ByteSliceVector:
+					case *vector.IntVector:
+						counter.Update(float64(col.Values()[i]))
+					case *vector.FloatVector:
+						counter.Update(col.Values()[i])
+					case *vector.ByteSliceVector:
 						counter.Update(1)
 					}
 
@@ -270,15 +278,18 @@ func (r *SortedAggregateOperator) Next() []storage.Vector {
 		}
 	}
 
-	resVec := make([]storage.Vector, 0)
+	resVec := make([]vector.Vector, 0)
 	for _, it := range res {
 		switch it.(type) {
 		case []int:
-			resVec = append(resVec, storage.NewIntVectorFromSlice(it.([]int)))
+			v := vector.NewIntVector(it.([]int), []uint64{})
+			resVec = append(resVec, &v)
 		case []float64:
-			resVec = append(resVec, storage.NewFloatVectorFromSlice(it.([]float64)))
+			v := vector.NewFloatVector(it.([]float64), []uint64{})
+			resVec = append(resVec, &v)
 		case [][]byte:
-			resVec = append(resVec, storage.NewByteSliceVectorSlice(it.([][]byte)))
+			v := vector.NewByteSliceVector(it.([]byte), []uint64{}, []int{})
+			resVec = append(resVec, &v)
 		}
 	}
 

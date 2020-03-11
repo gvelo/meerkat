@@ -143,7 +143,7 @@ type BoolColSource interface {
 type IntBufColSource struct {
 	srcBuf   []int
 	dstBuf   []int
-	nulls    []bool
+	nulls    []uint64
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -168,7 +168,8 @@ func (cs *IntBufColSource) Next() colval.IntColValues {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		// TODO:fix
+		if cs.hasNulls && false {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -199,7 +200,7 @@ func NewIntBufColSource(buf *buffer.IntBuffer, dstSize int, permMap []int) *IntB
 type UintBufColSource struct {
 	srcBuf   []uint
 	dstBuf   []uint
-	nulls    []bool
+	nulls    []uint64
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -224,7 +225,8 @@ func (cs *UintBufColSource) Next() colval.UintColValues {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		//TODO: fix
+		if cs.HasNulls() && false {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -255,7 +257,7 @@ func NewUintBufColSource(buf *buffer.UintBuffer, dstSize int, permMap []int) *Ui
 type FloatBufColSource struct {
 	srcBuf   []float64
 	dstBuf   []float64
-	nulls    []bool
+	nulls    []uint64
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -280,7 +282,8 @@ func (cs *FloatBufColSource) Next() colval.FloatColValues {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		//TODO: fix
+		if cs.HasNulls() && false {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -311,7 +314,7 @@ func NewFloatBufColSource(buf *buffer.FloatBuffer, dstSize int, permMap []int) *
 type BoolBufColSource struct {
 	srcBuf   []bool
 	dstBuf   []bool
-	nulls    []bool
+	nulls    []uint64
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -336,7 +339,8 @@ func (cs *BoolBufColSource) Next() colval.BoolColValues {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		//TODO: fix
+		if cs.HasNulls() && false {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]

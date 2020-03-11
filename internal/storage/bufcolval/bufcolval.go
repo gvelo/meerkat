@@ -40,7 +40,7 @@ type ByteSliceBufColSource struct {
 	maxSize    int
 	dstBuf     []byte
 	dstOffsets []int
-	nulls      []bool
+	nulls      []uint64
 	rid        []uint32
 	permMap    []int
 	hasNulls   bool
@@ -66,7 +66,8 @@ func (cs *ByteSliceBufColSource) Next() colval.ByteSliceColValues {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		//TODO: fix
+		if cs.HasNulls() && false {
 			continue
 		}
 

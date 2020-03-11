@@ -15,6 +15,7 @@ package storage
 
 import (
 	"meerkat/internal/buffer"
+	"meerkat/internal/storage/vector"
 )
 
 type ColumnSource interface {
@@ -24,28 +25,28 @@ type ColumnSource interface {
 
 type IntColumSource interface {
 	ColumnSource
-	Next() IntVector
+	Next() vector.IntVector
 }
 
 type UintColumSource interface {
 	ColumnSource
-	Next() IntVector
+	Next() vector.IntVector
 }
 
 type FloatColumSource interface {
 	ColumnSource
-	Next() FloatVector
+	Next() vector.FloatVector
 }
 
 type ByteSliceColumSource interface {
 	ColumnSource
-	Next() ByteSliceVector
+	Next() vector.ByteSliceVector
 }
 
 func NewIntColumnSource(buf *buffer.IntBuffer, dstSize int, permMap []int) IntColumSource {
 
 	return &intColumnSource{
-		srcBuf:   buf.Int(),
+		srcBuf:   buf.Values(),
 		dstBuf:   make([]int, dstSize),
 		nulls:    buf.Nulls(),
 		rid:      make([]uint32, dstSize),
@@ -58,7 +59,7 @@ func NewIntColumnSource(buf *buffer.IntBuffer, dstSize int, permMap []int) IntCo
 type intColumnSource struct {
 	srcBuf   []int
 	dstBuf   []int
-	nulls    []bool
+	nulls    []uint64
 	rid      []uint32
 	permMap  []int
 	hasNulls bool
@@ -74,7 +75,7 @@ func (cs *intColumnSource) HasNulls() bool {
 }
 
 // vect valid until next call
-func (cs *intColumnSource) Next() IntVector {
+func (cs *intColumnSource) Next() vector.IntVector {
 
 	var i int
 
@@ -82,7 +83,8 @@ func (cs *intColumnSource) Next() IntVector {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		// TODO:(sebad) sacar cuando este implementado.
+		if cs.HasNulls() {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -93,10 +95,7 @@ func (cs *intColumnSource) Next() IntVector {
 
 	}
 
-	return intVector{
-		vec: cs.dstBuf[:i],
-		rid: cs.rid[:i],
-	}
+	return vector.NewIntVector(cs.dstBuf[:i], []uint64{})
 
 }
 
@@ -125,7 +124,7 @@ func (cs *tsColumnSource) HasNulls() bool {
 	return false
 }
 
-func (cs *tsColumnSource) Next() IntVector {
+func (cs *tsColumnSource) Next() vector.IntVector {
 
 	cs.start = cs.end
 	cs.end = cs.start + cs.dstSize
@@ -141,14 +140,10 @@ func (cs *tsColumnSource) Next() IntVector {
 		cs.pos++
 	}
 
-	return intVector{
-		vec: cs.srcBuf[cs.start:cs.end],
-		rid: cs.rid[0:dstLen],
-	}
-
+	return vector.NewIntVector(cs.srcBuf[cs.start:cs.end], []uint64{})
 }
 
-func NewFloatColumnSource(buf *buffer.Float64Buffer, dstSize int, permMap []int) FloatColumSource {
+func NewFloatColumnSource(buf *buffer.FloatBuffer, dstSize int, permMap []int) FloatColumSource {
 
 	return &floatColumnSource{
 		srcBuf:   buf.Values(),
@@ -164,9 +159,9 @@ func NewFloatColumnSource(buf *buffer.Float64Buffer, dstSize int, permMap []int)
 type floatColumnSource struct {
 	srcBuf   []float64
 	dstBuf   []float64
-	nulls    []bool
-	rid      []uint32
+	nulls    []uint64
 	permMap  []int
+	rid      []uint32
 	hasNulls bool
 	pos      int
 }
@@ -180,7 +175,7 @@ func (cs *floatColumnSource) HasNulls() bool {
 }
 
 // vect valid until next call
-func (cs *floatColumnSource) Next() FloatVector {
+func (cs *floatColumnSource) Next() vector.FloatVector {
 
 	var i int
 
@@ -188,7 +183,8 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		// TODO:(sebad) sacar cuando este implementado.
+		if cs.HasNulls() {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -199,10 +195,7 @@ func (cs *floatColumnSource) Next() FloatVector {
 
 	}
 
-	return floatVector{
-		vec: cs.dstBuf[:i],
-		rid: cs.rid[:i],
-	}
+	return vector.NewFloatVector(cs.dstBuf[:i], []uint64{})
 
 }
 
@@ -225,7 +218,7 @@ type byteSliceColumnSource struct {
 	maxSize    int
 	dstBuf     []byte
 	dstOffsets []int
-	nulls      []bool
+	nulls      []uint64
 	rid        []uint32
 	permMap    []int
 	hasNulls   bool
@@ -240,7 +233,7 @@ func (cs *byteSliceColumnSource) HasNulls() bool {
 	return cs.bs.Nullable()
 }
 
-func (cs *byteSliceColumnSource) Next() ByteSliceVector {
+func (cs *byteSliceColumnSource) Next() vector.ByteSliceVector {
 
 	cs.dstOffsets = cs.dstOffsets[0:0]
 	cs.rid = cs.rid[0:0]
@@ -251,7 +244,8 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 
 		j := cs.permMap[cs.pos]
 
-		if cs.hasNulls && cs.nulls[j] {
+		// TODO:(sebad) sacar cuando este implementado.
+		if cs.HasNulls() {
 			continue
 		}
 
@@ -286,10 +280,6 @@ func (cs *byteSliceColumnSource) Next() ByteSliceVector {
 
 	}
 
-	return byteSliceVector{
-		rid:     cs.rid,
-		data:    cs.dstBuf[:size],
-		offsets: cs.dstOffsets,
-	}
+	return vector.NewByteSliceVector(cs.dstBuf[:size], nil, cs.dstOffsets)
 
 }

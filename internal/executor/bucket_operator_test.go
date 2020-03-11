@@ -15,7 +15,7 @@ package executor
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"testing"
 	"time"
 )
@@ -91,7 +91,7 @@ func TestTimeBucketInSecs(t *testing.T) {
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(storage.IntVector).ValuesAsInt()
+		k := r.(*vector.IntVector).Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}
@@ -120,7 +120,7 @@ func TestTimeBucketInHour(t *testing.T) {
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(storage.IntVector).ValuesAsInt()
+		k := r.(*vector.IntVector).Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}
@@ -143,7 +143,7 @@ func TestIntBucket(t *testing.T) {
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(storage.IntVector).ValuesAsInt()
+		k := r.(*vector.IntVector).Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}

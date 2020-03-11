@@ -49,6 +49,7 @@ func NewIntVector(data []int, nulls []uint64) IntVector {
 	return IntVector{
 		data:  data,
 		nulls: nulls,
+		l:     len(data),
 	}
 }
 
@@ -82,6 +83,7 @@ func NewUintVector(data []uint, nulls []uint64) UintVector {
 	return UintVector{
 		data:  data,
 		nulls: nulls,
+		l:     len(data),
 	}
 }
 
@@ -115,6 +117,7 @@ func NewFloatVector(data []float64, nulls []uint64) FloatVector {
 	return FloatVector{
 		data:  data,
 		nulls: nulls,
+		l:     len(data),
 	}
 }
 
@@ -148,5 +151,6 @@ func NewBoolVector(data []bool, nulls []uint64) BoolVector {
 	return BoolVector{
 		data:  data,
 		nulls: nulls,
+		l:     len(data),
 	}
 }

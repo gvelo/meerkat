@@ -33,9 +33,7 @@ require (
 	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.3.2
 	google.golang.org/grpc v1.22.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
-
-go 1.13

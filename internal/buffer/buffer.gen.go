@@ -23,7 +23,7 @@ package buffer
 
 type IntBuffer struct {
 	buf      []int
-	nulls    []bool
+	nulls    []uint64
 	nullable bool
 }
 
@@ -35,7 +35,7 @@ func NewIntBuffer(nullable bool, capacity int) *IntBuffer {
 	}
 
 	if nullable {
-		b.nulls = make([]bool, 0, capacity)
+		b.nulls = make([]uint64, 0, capacity)
 	}
 
 	return b
@@ -51,7 +51,7 @@ func (b *IntBuffer) Size() int {
 	return len(b.buf) * 8
 }
 
-func (b *IntBuffer) Nulls() []bool {
+func (b *IntBuffer) Nulls() []uint64 {
 	return b.nulls
 }
 
@@ -61,7 +61,7 @@ func (b *IntBuffer) AppendNull() {
 		panic("not nullable")
 	}
 
-	b.nulls = append(b.nulls, true)
+	b.nulls = append(b.nulls, 0)
 	b.buf = append(b.buf, 0)
 
 }
@@ -79,7 +79,7 @@ func (b *IntBuffer) AppendInt(v int) {
 	b.buf = append(b.buf, v)
 
 	if b.nullable {
-		b.nulls = append(b.nulls, false)
+		b.nulls = append(b.nulls, 0)
 	}
 
 }
@@ -110,7 +110,7 @@ func (b *IntBuffer) AppendBuffer(buf interface{}) {
 
 type UintBuffer struct {
 	buf      []uint
-	nulls    []bool
+	nulls    []uint64
 	nullable bool
 }
 
@@ -122,7 +122,7 @@ func NewUintBuffer(nullable bool, capacity int) *UintBuffer {
 	}
 
 	if nullable {
-		b.nulls = make([]bool, 0, capacity)
+		b.nulls = make([]uint64, 0, capacity)
 	}
 
 	return b
@@ -138,7 +138,7 @@ func (b *UintBuffer) Size() int {
 	return len(b.buf) * 8
 }
 
-func (b *UintBuffer) Nulls() []bool {
+func (b *UintBuffer) Nulls() []uint64 {
 	return b.nulls
 }
 
@@ -148,7 +148,7 @@ func (b *UintBuffer) AppendNull() {
 		panic("not nullable")
 	}
 
-	b.nulls = append(b.nulls, true)
+	b.nulls = append(b.nulls, 0)
 	b.buf = append(b.buf, 0)
 
 }
@@ -166,7 +166,7 @@ func (b *UintBuffer) AppendUint(v uint) {
 	b.buf = append(b.buf, v)
 
 	if b.nullable {
-		b.nulls = append(b.nulls, false)
+		b.nulls = append(b.nulls, 0)
 	}
 
 }
@@ -197,7 +197,7 @@ func (b *UintBuffer) AppendBuffer(buf interface{}) {
 
 type FloatBuffer struct {
 	buf      []float64
-	nulls    []bool
+	nulls    []uint64
 	nullable bool
 }
 
@@ -209,7 +209,7 @@ func NewFloatBuffer(nullable bool, capacity int) *FloatBuffer {
 	}
 
 	if nullable {
-		b.nulls = make([]bool, 0, capacity)
+		b.nulls = make([]uint64, 0, capacity)
 	}
 
 	return b
@@ -225,7 +225,7 @@ func (b *FloatBuffer) Size() int {
 	return len(b.buf) * 8
 }
 
-func (b *FloatBuffer) Nulls() []bool {
+func (b *FloatBuffer) Nulls() []uint64 {
 	return b.nulls
 }
 
@@ -234,8 +234,8 @@ func (b *FloatBuffer) AppendNull() {
 	if !b.nullable {
 		panic("not nullable")
 	}
-
-	b.nulls = append(b.nulls, true)
+	// TODO: fix
+	b.nulls = append(b.nulls, 0)
 	b.buf = append(b.buf, 0)
 
 }
@@ -253,7 +253,8 @@ func (b *FloatBuffer) AppendFloat(v float64) {
 	b.buf = append(b.buf, v)
 
 	if b.nullable {
-		b.nulls = append(b.nulls, false)
+		//TODO: fix
+		b.nulls = append(b.nulls, 0)
 	}
 
 }
@@ -284,7 +285,7 @@ func (b *FloatBuffer) AppendBuffer(buf interface{}) {
 
 type BoolBuffer struct {
 	buf      []bool
-	nulls    []bool
+	nulls    []uint64
 	nullable bool
 }
 
@@ -296,7 +297,7 @@ func NewBoolBuffer(nullable bool, capacity int) *BoolBuffer {
 	}
 
 	if nullable {
-		b.nulls = make([]bool, 0, capacity)
+		b.nulls = make([]uint64, 0, capacity)
 	}
 
 	return b
@@ -312,7 +313,7 @@ func (b *BoolBuffer) Size() int {
 	return len(b.buf) * 1
 }
 
-func (b *BoolBuffer) Nulls() []bool {
+func (b *BoolBuffer) Nulls() []uint64 {
 	return b.nulls
 }
 
@@ -322,7 +323,7 @@ func (b *BoolBuffer) AppendNull() {
 		panic("not nullable")
 	}
 
-	b.nulls = append(b.nulls, true)
+	b.nulls = append(b.nulls, 0)
 	b.buf = append(b.buf, false)
 
 }
@@ -340,7 +341,7 @@ func (b *BoolBuffer) AppendBool(v bool) {
 	b.buf = append(b.buf, v)
 
 	if b.nullable {
-		b.nulls = append(b.nulls, false)
+		b.nulls = append(b.nulls, 0)
 	}
 
 }

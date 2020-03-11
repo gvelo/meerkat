@@ -16,6 +16,7 @@ package executor
 import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 )
 
 // BinaryOperation represents an operation between two expressions
@@ -80,7 +81,7 @@ type VectorOperator interface {
 	// if there is no more data to process.
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
-	Next() storage.Vector
+	Next() vector.Vector
 }
 
 // MultiVectorOperator is an Operator that produces a Vector array as output
@@ -91,7 +92,7 @@ type MultiVectorOperator interface {
 	// if there is no more data to process.
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
-	Next() []storage.Vector
+	Next() []vector.Vector
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
@@ -240,7 +241,7 @@ func NewColumnScanOperator(p []int, c storage.Column) MultiVectorOperator {
 //
 type ColumnScanOperator struct {
 	ctx Context
-	c   interface{}
+	c   storage.Column
 }
 
 func (op *ColumnScanOperator) Init() {
@@ -249,7 +250,7 @@ func (op *ColumnScanOperator) Init() {
 func (op *ColumnScanOperator) Destroy() {
 }
 
-func (op *ColumnScanOperator) Next() []storage.Vector {
+func (op *ColumnScanOperator) Next() []vector.Vector {
 
 	//TODO: What do we return in this case?
 	return nil
@@ -300,13 +301,13 @@ func (op *LimitOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *LimitOperator) Next() []storage.Vector {
+func (op *LimitOperator) Next() []vector.Vector {
 	n := op.child.Next()
 
 	return n
 }
 
-func NewReaderOperator(ctx Context, child BitmapOperator, colName string) *ReaderOperator {
+func NewReaderOperator(ctx Context, child BitmapOperator, colName string) VectorOperator {
 	return &ReaderOperator{
 		ctx:     ctx,
 		child:   child,
@@ -338,7 +339,7 @@ func (r *ReaderOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *ReaderOperator) Next() storage.Vector {
+func (r *ReaderOperator) Next() vector.Vector {
 
 	if r.it == nil {
 		return nil
@@ -348,14 +349,14 @@ func (r *ReaderOperator) Next() storage.Vector {
 	s := r.it.NextMany(buff)
 	if s != 0 {
 		c := r.ctx.Segment().Col([]byte(r.colName))
-		v, _ := c.Read(buff) // Check error?
-		return v
+		v := c.(storage.IntColumn).Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
+		return &v
 	} else {
 		return nil
 	}
 }
 
-func NewBufferOperator(ctx Context, children []VectorOperator) *BufferOperator {
+func NewBufferOperator(ctx Context, children []VectorOperator) MultiVectorOperator {
 	return &BufferOperator{
 		ctx:      ctx,
 		children: children,
@@ -385,8 +386,8 @@ func (r *BufferOperator) Destroy() {
 	}
 }
 
-func (r *BufferOperator) Next() []storage.Vector {
-	op := make([]storage.Vector, 0, len(r.children))
+func (r *BufferOperator) Next() []vector.Vector {
+	op := make([]vector.Vector, 0, len(r.children))
 	for i, c := range r.children {
 		// Paralelize
 		op[i] = c.Next()
@@ -396,8 +397,8 @@ func (r *BufferOperator) Next() []storage.Vector {
 }
 
 // Decodifica el diccionario y lo manda....
-func NewMaterialize(ctx Context, child MultiVectorOperator) *MaterializeOperator {
-	return &MaterializeOperator{
+func NewMaterialize(ctx Context, child MultiVectorOperator) MaterializeOperator {
+	return MaterializeOperator{
 		ctx:   ctx,
 		child: child,
 	}
@@ -417,7 +418,7 @@ func (r *MaterializeOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *MaterializeOperator) Next() []storage.Vector {
+func (r *MaterializeOperator) Next() []vector.Vector {
 	n := r.child.Next()
 	var keys [][]byte
 	v, ok := r.ctx.Get(ColumnIndexToColumnName)
@@ -429,15 +430,15 @@ func (r *MaterializeOperator) Next() []storage.Vector {
 
 	// Aca tengo los valores de los objetos... que son null o no segun el vector lo tengo que validar
 	if n != nil {
-		res := make([]storage.Vector, 0, len(n))
+		res := make([]vector.Vector, 0, len(n))
 		for i, _ := range n {
 
 			switch vec := n[i].(type) {
 
-			case storage.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
-			case storage.FloatVector:
+			case *vector.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
+			case *vector.FloatVector:
 				res[i] = vec
-			case storage.IntVector:
+			case *vector.IntVector:
 				fName := keys[i]
 				col := r.ctx.Segment().Col(fName)
 				_, ok := col.(storage.StringColumn) // c

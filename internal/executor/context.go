@@ -24,6 +24,7 @@ type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
 	Segment() storage.Segment
+	BatchLen() int
 }
 
 type ctx struct {
@@ -46,4 +47,8 @@ func (c ctx) Get(key string) (interface{}, bool) {
 
 func (c ctx) Segment() storage.Segment {
 	return c.segment
+}
+
+func (c ctx) BatchLen() int {
+	return 1000
 }

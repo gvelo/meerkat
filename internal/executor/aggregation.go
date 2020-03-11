@@ -3,6 +3,7 @@ package executor
 import (
 	"math"
 	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"strings"
 )
 
@@ -160,18 +161,18 @@ func createSlice(idx []byte, ctx Context) interface{} {
 	panic(" No mapping Found.")
 }
 
-func createResultVector(n []storage.Vector, keyCols []int, aggCols []Aggregation, i int) []interface{} {
+func createResultVector(n []vector.Vector, keyCols []int, aggCols []Aggregation, i int) []interface{} {
 	// Create the result array
 	c := make([]interface{}, 0)
 
 	// append the keys
 	for _, it := range keyCols {
 		switch col := n[it].(type) {
-		case storage.IntVector:
-			c = append(c, col.ValuesAsInt()[i])
-		case storage.FloatVector:
-			c = append(c, col.ValuesAsFloat()[i])
-		case storage.ByteSliceVector:
+		case *vector.IntVector:
+			c = append(c, col.Values()[i])
+		case *vector.FloatVector:
+			c = append(c, col.Values()[i])
+		case *vector.ByteSliceVector:
 			c = append(c, col.Get(i))
 		}
 	}

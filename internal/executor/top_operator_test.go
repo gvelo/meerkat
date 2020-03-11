@@ -15,7 +15,7 @@ package executor
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"testing"
 )
 
@@ -38,7 +38,7 @@ func (op *TestOperator) Init() {
 	op.i = 0
 }
 
-func (op *TestOperator) Next() storage.Vector {
+func (op *TestOperator) Next() vector.Vector {
 	if op.i < len(op.val) {
 		// sc := storage.NewIntVector(op.val[op.i])
 		op.i++
@@ -87,8 +87,8 @@ func TestTopDesc(t *testing.T) {
 	op := NewTopOperator(list, 5, false)
 
 	r := op.Next()
-	k := r[0].(storage.IntVector).ValuesAsInt()
-	v := r[1].(storage.IntVector).ValuesAsInt()
+	k := r[0].(*vector.IntVector).Values()
+	v := r[1].(*vector.IntVector).Values()
 
 	a.Len(k, 5, "length is wrong ")
 	a.Len(v, 5, "length is wrong ")
@@ -107,8 +107,8 @@ func TestTopAsc(t *testing.T) {
 	op := NewTopOperator(list, 5, true)
 
 	r := op.Next()
-	k := r[0].(storage.IntVector).ValuesAsInt()
-	v := r[1].(storage.IntVector).ValuesAsInt()
+	k := r[0].(*vector.IntVector).Values()
+	v := r[1].(*vector.IntVector).Values()
 
 	a.Len(k, 5, "length is wrong ")
 	a.Len(v, 5, "length is wrong ")

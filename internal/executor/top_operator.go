@@ -15,7 +15,7 @@ package executor
 
 import (
 	"github.com/psilva261/timsort"
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 )
 
 // TopOperator operator takes a list of keys
@@ -60,13 +60,13 @@ func (op *TopOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *TopOperator) Next() []storage.Vector {
+func (op *TopOperator) Next() []vector.Vector {
 
 	m := make(map[int]int, op.n)
 
 	for vec := op.child.Next(); vec != nil; vec = op.child.Next() {
 
-		keys := vec.(storage.IntVector).ValuesAsInt()
+		keys := vec.(*vector.IntVector).Values()
 
 		for i := 0; i < len(keys); i++ {
 			m[keys[i]]++

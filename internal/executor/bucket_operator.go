@@ -14,7 +14,7 @@
 package executor
 
 import (
-	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"time"
 )
 
@@ -93,12 +93,12 @@ func (op *BucketOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *BucketOperator) Next() storage.Vector {
+func (op *BucketOperator) Next() vector.Vector {
 
 	vec := op.child.Next()
 	if vec != nil {
 
-		ts := vec.(storage.IntVector).ValuesAsInt()
+		ts := vec.(*vector.IntVector).Values()
 
 		if len(ts) == 0 {
 			return nil
