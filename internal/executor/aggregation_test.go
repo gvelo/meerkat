@@ -245,7 +245,7 @@ func TestHAggScenario2(t *testing.T) {
 	vec = append(vec, &v)
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
 	vec = append(vec, &v1)
-	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{2, 5, 8, 11, 14})
+	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13})
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,

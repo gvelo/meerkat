@@ -2,8 +2,9 @@ package executor
 
 import (
 	"bytes"
+	"encoding/binary"
+	"fmt"
 	"meerkat/internal/storage/vector"
-	"unsafe"
 )
 
 // HashAggregateOperator
@@ -70,7 +71,6 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 			for x, it := range r.aggCols {
 
 				counter := result[mKey[string(k)]][l+x].(Counter)
-
 				// aca tenemos que separar los operadores.
 				switch col := n[it.AggCol].(type) {
 				case *vector.IntVector:
@@ -134,8 +134,10 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 		case [][]byte:
 			s := it.([][]byte)
 			offsets := make([]int, len(s))
+			sum := 0
 			for i, it := range s {
-				offsets[i] = len(it)
+				sum = sum + len(it)
+				offsets[i] = sum
 			}
 			v := vector.NewByteSliceVector(bytes.Join(s, nil), []uint64{}, offsets)
 			resVec = append(resVec, &v)
@@ -146,21 +148,21 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 }
 
 func createKey(n []vector.Vector, keyCols []int, index int) []byte {
-	k := make([]byte, 0)
+	buf := new(bytes.Buffer)
+	var err error
 	for _, it := range keyCols {
 		switch t := n[it].(type) {
 		case *vector.ByteSliceVector:
-			k = append(k, t.Get(index)...)
+			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
 		case *vector.IntVector:
-			b := (*[8]byte)(unsafe.Pointer(&t.Values()[index]))[:]
-			k = append(k, b...)
 		case *vector.FloatVector:
-			b := (*[8]byte)(unsafe.Pointer(&t.Values()[index]))[:]
-			k = append(k, b...)
+			err = binary.Write(buf, binary.LittleEndian, &t.Values()[index])
+		}
+		if err != nil {
+			panic(fmt.Sprint("binary.Write failed:", err))
 		}
 	}
-
-	return k
+	return buf.Bytes()
 }
 
 // SortedAggregateOperator
