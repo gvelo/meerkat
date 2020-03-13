@@ -170,6 +170,7 @@ func (i *IntNullColumnIterator) HasNext() bool {
 type intColumn struct {
 	b              []byte
 	valid          *roaring.Bitmap
+	blkIdx         index.BlockIndexReader
 	encoding       encoding.EncodingType
 	colBounds      io.Bounds
 	blkBounds      io.Bounds
@@ -282,6 +283,8 @@ func (cr *intColumn) read() {
 		}
 	}
 
+	cr.blkIdx = index.NewBlockIndexReader(cr.b, cr.blkIdxBounds)
+
 }
 
 func (cr *intColumn) Iterator() IntIterator {
@@ -313,32 +316,96 @@ func (cr *intColumn) Iterator() IntIterator {
 
 }
 
+func (cr *intColumn) Reader() IntColumnReader {
+
+	dec, blockReader := encoding.GetIntDecoder(
+		cr.encoding,
+		cr.b,
+		cr.blkBounds,
+		cr.blockLen,
+	)
+
+	if cr.valid != nil {
+		panic("not implemented yet")
+	}
+
+	return NewIntColumnReader(blockReader,
+		cr.blkIdx,
+		dec,
+		cr.vectorPool,
+		cr.numOfRows,
+		cr.blockLen,
+	)
+}
+
 type intColumnReader struct {
-	idx    index.BlockIndexReader
-	br     encoding.BlockReader
-	dec    encoding.IntDecoder
-	pool   vector.Pool
-	colLen int
+	idx     index.BlockIndexReader
+	br      encoding.BlockReader
+	dec     encoding.IntDecoder
+	pool    vector.Pool
+	colLen  int
+	buf     []int
+	bufLen  int
+	baseRID uint32
+	nextRid uint32 // next block RID
+}
+
+func NewIntColumnReader(br encoding.BlockReader,
+	idx index.BlockIndexReader,
+	dec encoding.IntDecoder,
+	pool vector.Pool,
+	colLen int,
+	blockLen int,
+) IntColumnReader {
+
+	return &intColumnReader{
+		br:     br,
+		idx:    idx,
+		dec:    dec,
+		pool:   pool,
+		colLen: colLen,
+		buf:    make([]int, blockLen),
+	}
 }
 
 func (r *intColumnReader) Read(rids []uint32) vector.IntVector {
 
 	v := r.pool.GetIntVector()
-	buf := v.Buf()
+	vBuf := v.Buf()
 
 	for i, rid := range rids {
 
-		b, baseRid := r.ReadBlock(rid)
+		if r.bufLen == 0 || rid >= r.nextRid {
+			r.ReadBlock(rid)
+		}
 
-		ridIdx := rid + ba
+		j := rid - r.baseRID
+
+		vBuf[i] = r.buf[j]
 
 	}
 
+	v.SetLen(len(rids))
+
+	return v
+
 }
 
-func (r *intColumnReader) ReadBlock(rid uint32) (encoding.Block, uint32) {
+func (r *intColumnReader) ReadBlock(rid uint32) {
+	var b encoding.Block
+	b, r.baseRID, r.nextRid = r.FindBlock(rid)
+	r.dec.Decode(b.Bytes(), r.buf)
+	r.bufLen = b.Len()
+}
+
+// TODO(gvelo) move to blockreader ???
+// Note: this is only valid for non null columns. For nulls columns we need
+// to determine the next RID using the validity bitmap.
+func (r *intColumnReader) FindBlock(rid uint32) (encoding.Block, uint32, uint32) {
 
 	blockRid, offset := r.idx.Lookup(rid)
+
+	fmt.Println("find block", offset)
 
 	var nextRid uint32
 
@@ -346,8 +413,9 @@ func (r *intColumnReader) ReadBlock(rid uint32) (encoding.Block, uint32) {
 		b := r.br.ReadBlock(offset)
 		nextRid = blockRid + uint32(b.Len())
 		if nextRid > rid {
-			return b, blockRid
+			return b, blockRid, nextRid
 		}
+		fmt.Println("skip")
 		blockRid = nextRid
 	}
 

@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"meerkat/internal/buffer"
 	"meerkat/internal/schema"
+	"meerkat/internal/storage/vector"
 	"os"
 	"path"
 	"testing"
@@ -27,143 +28,9 @@ import (
 )
 
 const (
-	testLen = 126433
+	// 16k vector x 3 plus random
+	testLen = 1024*8*2*3 + 432
 )
-
-func TestSegmentWriter_Write(t *testing.T) {
-
-	index := schema.IndexInfo{
-		Id:             "test-index",
-		Name:           "test-index",
-		Desc:           "test-index",
-		Created:        time.Time{},
-		Updated:        time.Time{},
-		PartitionAlloc: schema.PartitionAlloc{},
-		Fields: []schema.Field{
-			{
-				Id:        "_ts",
-				Name:      "_ts",
-				Desc:      "",
-				IndexId:   "test-index",
-				FieldType: schema.FieldType_TIMESTAMP,
-				Nullable:  false,
-				Created:   time.Time{},
-				Updated:   time.Time{},
-			},
-			{
-				Id:        "intFieldId",
-				Name:      "intField",
-				Desc:      "",
-				IndexId:   "test-index",
-				FieldType: schema.FieldType_INT,
-				Nullable:  false,
-				Created:   time.Time{},
-				Updated:   time.Time{},
-			},
-			{
-				Id:        "intNullable",
-				Name:      "intNullable",
-				Desc:      "intNullable",
-				IndexId:   "test-index",
-				FieldType: schema.FieldType_INT,
-				Nullable:  true,
-				Created:   time.Time{},
-				Updated:   time.Time{},
-			},
-			//{
-			//	Id:        "stringFieldId",
-			//	Name:      "stringField",
-			//	Desc:      "",
-			//	IndexId:   "test-index",
-			//	FieldType: schema.FieldType_STRING,
-			//	Nullable:  false,
-			//	Created:   time.Time{},
-			//	Updated:   time.Time{},
-			//},
-		},
-	}
-
-	table := buffer.NewTable(index)
-
-	for i := 0; i < testLen; i++ {
-		r := buffer.NewRow(4)
-		r.AddCol("_ts", int(time.Now().UnixNano()))
-		//r.AddCol("_id", uuid.New())
-		r.AddCol("intFieldId", rand.Int())
-		if rand.Intn(3) == 2 {
-			r.AddCol("intNullable", i)
-		}
-		///r.AddCol("stringFieldId", fmt.Sprintf("row number %v", i))
-		table.AppendRow(r)
-	}
-
-	path := "/tmp/segment"
-
-	sid := uuid.New()
-
-	fmt.Println(sid)
-
-	sw := NewSegmentWriter("/tmp/segment", sid, table)
-
-	err := sw.Write()
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	seg, err := ReadSegment(path)
-
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	col := seg.columns["_ts"].(*intColumn)
-
-	var buf []int
-
-	iter := col.Iterator()
-
-	for iter.HasNext() {
-		v := iter.Next()
-		buf = append(buf, v.Values()...)
-	}
-
-	assert.Len(t, buf, testLen, "wrong column len")
-
-	colbuf, _ := table.Col("_ts")
-
-	intbuf := colbuf.(*buffer.IntBuffer)
-
-	assert.Equal(t, intbuf.Values(), buf, "values doesnt match")
-
-	nulCol, _ := table.Col("intNullable")
-
-	nulintcol := nulCol.(*buffer.IntBuffer)
-
-	col = seg.columns["intNullable"].(*intColumn)
-	iter = col.Iterator()
-	buf = make([]int, 0)
-	var nulls []bool
-
-	for iter.HasNext() {
-		fmt.Println("parace que hay next")
-		v := iter.Next()
-		buf = append(buf, v.Values()...)
-		for n := 0; n < v.Len(); n++ {
-			if v.IsValid(n) {
-				nulls = append(nulls, false)
-			} else {
-				nulls = append(nulls, true)
-			}
-		}
-	}
-
-	fmt.Println(buf[:200])
-	fmt.Println(nulintcol.Values()[:200])
-
-}
 
 func TestSegmentWriter(t *testing.T) {
 
@@ -218,6 +85,7 @@ func TestSegmentWriter(t *testing.T) {
 
 func createBuffers(indexInfo schema.IndexInfo) *buffer.Table {
 
+	now := int(time.Now().UnixNano())
 	table := buffer.NewTable(indexInfo)
 
 	for i := 0; i < testLen; i++ {
@@ -225,7 +93,8 @@ func createBuffers(indexInfo schema.IndexInfo) *buffer.Table {
 		for _, f := range indexInfo.Fields {
 			switch f.FieldType {
 			case schema.FieldType_TIMESTAMP:
-				r.AddCol(f.Id, int(time.Now().UnixNano()))
+				now += rand.Intn(2000)
+				r.AddCol(f.Id, now)
 			case schema.FieldType_INT:
 				if f.Nullable {
 					if rand.Intn(3) == 2 {
@@ -305,9 +174,10 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 	fmt.Println("===========================")
 	switch field.FieldType {
 	case schema.FieldType_TIMESTAMP:
-		testINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		//testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 	case schema.FieldType_INT:
-		testINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		//testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 	default:
 		t.Fatal("unknown column type")
 	}
@@ -319,7 +189,7 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 
 }
 
-func testINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntBuffer) {
+func testIterINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntBuffer) {
 
 	var values []int
 	var nulls []bool
@@ -349,5 +219,38 @@ func testINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntB
 	if f.Nullable {
 		assert.Equal(t, buf.Nulls(), nulls)
 	}
+
+}
+
+func testReadINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntBuffer) {
+
+	v := vector.DefaultVectorPool().GetIntVector()
+	l := v.Cap()
+
+	var rids []uint32
+
+	for i := 0; i < testLen && len(rids) < l; i++ {
+
+		if rand.Intn(20) == 0 {
+			rids = append(rids, uint32(i))
+		}
+
+	}
+
+	//fmt.Println(rids)
+	fmt.Println(len(rids))
+	fmt.Println(v.Cap())
+
+	r := col.Reader()
+
+	vec := r.Read(rids)
+
+	var val []int
+
+	for _, rid := range rids {
+		val = append(val, buf.Values()[rid])
+	}
+
+	assert.Equal(t, val, vec.Values())
 
 }

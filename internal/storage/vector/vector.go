@@ -95,8 +95,8 @@ type defaultPool struct {
 
 func (*defaultPool) GetIntVector() IntVector {
 	return IntVector{
-		valid: make([]uint64, 8192*5),
-		buf:   make([]int, 8192*5),
+		valid: make([]uint64, 8192*2),
+		buf:   make([]int, 8192*2),
 	}
 }
 
