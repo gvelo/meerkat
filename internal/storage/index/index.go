@@ -56,3 +56,7 @@ type ValidityIndexWriter interface {
 	IndexWriter
 	Index(rid []uint32)
 }
+
+type BlockIndexReader interface {
+	Lookup(rid uint32) (uint32, int)
+}

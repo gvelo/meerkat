@@ -15,6 +15,7 @@ package encoding
 
 import (
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/io"
 )
 
 type EncodingType int
@@ -43,6 +44,11 @@ type Encoder interface {
 type IntEncoder interface {
 	Encoder
 	Encode(v colval.IntColValues)
+}
+
+type IntDecoderReader interface {
+	Decoder() IntDecoder
+	BlockReader() BlockReader
 }
 
 type IntDecoder interface {
@@ -105,7 +111,7 @@ func DeltaDecode(src []int, dst []int) {
 
 }
 
-func GetIntDecoder(d EncodingType, b []byte, start int, end int, blockLen int) (IntDecoder, BlockReader) {
+func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (IntDecoder, BlockReader) {
 
 	var dec IntDecoder
 	var br BlockReader
@@ -113,7 +119,7 @@ func GetIntDecoder(d EncodingType, b []byte, start int, end int, blockLen int) (
 	switch d {
 	case Plain:
 		dec = NewIntPlainDecoder()
-		br = NewScalarPlainBlockReader(start, end, b, blockLen)
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
 	default:
 		panic("unknown encoding type")
 	}

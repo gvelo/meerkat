@@ -17,52 +17,51 @@ import (
 	"fmt"
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/storage/vector"
 )
-
-type colBound struct {
-	start int
-	end   int
-}
 
 type IntColumnIterator struct {
 	dec      encoding.IntDecoder
 	br       encoding.BlockReader
 	pool     vector.Pool
 	blockLen int
+	colLen   int
+	rid      int
 }
 
 func NewIntColumnIterator(
 	dec encoding.IntDecoder,
 	br encoding.BlockReader,
 	pool vector.Pool,
-	blockLen int,
+	colLen int,
 ) *IntColumnIterator {
 
 	return &IntColumnIterator{
-		dec:      dec,
-		br:       br,
-		pool:     pool,
-		blockLen: blockLen,
+		dec:    dec,
+		br:     br,
+		pool:   pool,
+		colLen: colLen,
 	}
 
 }
 
 func (i *IntColumnIterator) Next() vector.IntVector {
 
+	if i.rid >= i.colLen {
+		panic("column EOF")
+	}
+
 	v := i.pool.GetIntVector()
+	l := 0
 
-	for l := 0; i.br.HasNext() && v.RemainingLen() > 0; l++ {
-
+	for i.rid < i.colLen && v.RemainingLen() > 0 {
 		b := i.br.Next()
-
 		i.dec.Decode(b.Bytes(), v.Remaining())
-
-		l += i.blockLen
-
+		i.rid += b.Len()
+		l += b.Len()
 		v.SetLen(l)
-
 	}
 
 	return v
@@ -70,63 +69,71 @@ func (i *IntColumnIterator) Next() vector.IntVector {
 }
 
 func (i *IntColumnIterator) HasNext() bool {
-	return i.br.HasNext()
+	return i.rid < i.colLen
 }
 
 type IntNullColumnIterator struct {
-	decoder   encoding.IntDecoder
-	br        encoding.BlockReader
-	validity  *roaring.Bitmap
-	pool      vector.Pool
-	blockSize int
-	buf       []int
-	valid     []uint32
-	valIter   roaring.ManyIntIterable
-	pos       int
-	rid       uint32
+	decoder  encoding.IntDecoder
+	br       encoding.BlockReader
+	validity *roaring.Bitmap
+	pool     vector.Pool
+	buf      []int
+	bufLen   int
+	valid    []uint32
+	valIter  roaring.ManyIntIterable
+	pos      int
+	rid      uint32
+	colLen   int
+	eof      bool
 }
 
 func NewIntNullColumnIterator(
 	decoder encoding.IntDecoder,
 	br encoding.BlockReader,
 	validity *roaring.Bitmap,
+	colLen int,
 	pool vector.Pool,
-	blockLen int,
 ) *IntNullColumnIterator {
 
 	return &IntNullColumnIterator{
-		decoder:   decoder,
-		br:        br,
-		validity:  validity,
-		pool:      pool,
-		blockSize: blockLen,
+		decoder:  decoder,
+		br:       br,
+		validity: validity,
+		pool:     pool,
+		buf:      make([]int, blockLen),
+		valid:    make([]uint32, blockLen),
+		valIter:  validity.ManyIterator(),
+		colLen:   colLen,
 	}
 
 }
 
 func (i *IntNullColumnIterator) Next() vector.IntVector {
 
-	v := i.pool.GetIntVector()
-	i.readBlock()
+	if int(i.rid) >= i.colLen {
+		panic("column EOF")
+	}
 
+	v := i.pool.GetIntVector()
 	vbuf := v.Buf()
 
 	r := 0
 
-	for r < v.Cap() {
+	for r < v.Cap() && int(i.rid) < i.colLen {
 
-		if i.pos == i.blockSize {
+		if (i.pos == i.bufLen || i.bufLen == 0) && !i.eof {
 
-			if !i.br.HasNext() {
-				break
-			}
-
-			i.readBlock()
 			i.pos = 0
+
+			if i.br.HasNext() {
+				i.readBlock()
+			} else {
+				i.eof = true
+			}
 
 		}
 
-		if i.rid == i.valid[i.pos] {
+		if !i.eof && (i.rid == i.valid[i.pos]) {
 			vbuf[r] = i.buf[i.pos]
 			v.SetValid(r)
 			i.pos++
@@ -146,101 +153,108 @@ func (i *IntNullColumnIterator) Next() vector.IntVector {
 
 func (i *IntNullColumnIterator) readBlock() {
 	b := i.br.Next()
+	i.bufLen = b.Len()
 	i.decoder.Decode(b.Bytes(), i.buf)
-	i.valIter.NextMany(i.valid)
+	vn := i.valIter.NextMany(i.valid)
+
+	if vn != i.bufLen {
+		panic("validity block length doesn't match value block length")
+	}
+
 }
 
 func (i *IntNullColumnIterator) HasNext() bool {
-
-	return i.br.HasNext() || i.pos != 0
+	return int(i.rid) < i.colLen
 }
 
 type intColumn struct {
-	start            int
-	end              int
-	b                []byte
-	valid            *roaring.Bitmap
-	encoding         encoding.EncodingType
-	blkStart         int
-	blkEnd           int
-	blkIdxStart      int
-	blkIdxEnd        int
-	encoderStart     int
-	encoderEnd       int
-	colIdxStart      int
-	colIdxEnd        int
-	validityIdxStart int
-	validityIdxEnd   int
-	numOfValues      int
-	cardinality      int
-	blockLen         int
-	vectorPool       vector.Pool
+	b              []byte
+	valid          *roaring.Bitmap
+	encoding       encoding.EncodingType
+	colBounds      io.Bounds
+	blkBounds      io.Bounds
+	blkIdxBounds   io.Bounds
+	encBounds      io.Bounds
+	colIdxBounds   io.Bounds
+	validityBounds io.Bounds
+	numOfValues    int
+	numOfRows      int
+	cardinality    int
+	blockLen       int
+	vectorPool     vector.Pool
 }
 
-func (cr *intColumn) debug() {
-
-	fmt.Println("start ", cr.start)
-	fmt.Println("end ", cr.end)
-	fmt.Println("encoding ", cr.encoding)
-	fmt.Println("blkStart ", cr.blkStart)
-	fmt.Println("blkEnd ", cr.blkEnd)
-	fmt.Println("blkIdxStart ", cr.blkIdxStart)
-	fmt.Println("blkIdxEnd ", cr.blkIdxEnd)
-	fmt.Println("encoderStart ", cr.encoderStart)
-	fmt.Println("encoderEnd ", cr.encoderEnd)
-	fmt.Println("colIdxStart ", cr.colIdxStart)
-	fmt.Println("colIdxEnd ", cr.colIdxEnd)
-	fmt.Println("validityIdxStart ", cr.validityIdxStart)
-	fmt.Println("validityIdxEnd ", cr.validityIdxEnd)
-	fmt.Println("numOfValues ", cr.numOfValues)
-	fmt.Println("cardinality ", cr.cardinality)
-	fmt.Println("blockLen ", cr.blockLen)
+func (cr *intColumn) String() string {
+	return fmt.Sprintf(`
+	encoding       %v
+	colBounds      %v
+	blkBounds      %v
+	blkIdxBounds   %v
+	encBounds      %v
+	colIdxBounds   %v
+	validityBounds %v
+	numOfValues    %v
+    numOfRows      %v
+	cardinality    %v
+	blockLen       %v
+`, cr.encoding,
+		cr.colBounds,
+		cr.blkBounds,
+		cr.blkIdxBounds,
+		cr.encBounds,
+		cr.colIdxBounds,
+		cr.validityBounds,
+		cr.numOfValues,
+		cr.numOfRows,
+		cr.cardinality,
+		cr.blockLen)
 
 }
 
-func NewIntColumn(b []byte, start int, end int) *intColumn {
+func NewIntColumn(b []byte, bounds io.Bounds, numOfRows int) *intColumn {
 
 	cr := &intColumn{
-		start: start,
-		end:   end,
-		b:     b,
+		colBounds: bounds,
+		b:         b,
+		numOfRows: numOfRows,
 	}
 
 	br := io.NewBinaryReader(b)
 
-	br.SetOffset(cr.end - 8)
+	br.SetOffset(cr.colBounds.End - 8)
 	br.SetOffset(br.ReadFixed64())
 
 	e := 0
 
 	cr.encoding = encoding.EncodingType(br.ReadUVarint())
-	cr.blkStart = start
-	cr.blkEnd = br.ReadUVarint()
-	e = cr.blkEnd
+	cr.blkBounds.Start = cr.colBounds.Start
+	cr.blkBounds.End = br.ReadUVarint()
 
-	cr.blkIdxEnd = br.ReadUVarint()
+	e = cr.blkBounds.End
 
-	if cr.blkIdxEnd != 0 {
-		cr.blkIdxStart = e
-		e = cr.blkIdxEnd
+	cr.blkIdxBounds.End = br.ReadUVarint()
+
+	if cr.blkIdxBounds.End != 0 {
+		cr.blkIdxBounds.Start = e
+		e = cr.blkIdxBounds.End
 	}
 
-	cr.encoderStart = e
-	cr.encoderEnd = br.ReadUVarint()
-	e = cr.encoderEnd
+	cr.encBounds.Start = e
+	cr.encBounds.End = br.ReadUVarint()
+	e = cr.encBounds.End
 
-	cr.colIdxEnd = br.ReadUVarint()
+	cr.colIdxBounds.End = br.ReadUVarint()
 
-	if cr.colIdxEnd != 0 {
-		cr.colIdxStart = e
-		e = cr.colIdxEnd
+	if cr.colIdxBounds.End != 0 {
+		cr.colIdxBounds.Start = e
+		e = cr.colIdxBounds.End
 	}
 
-	cr.validityIdxEnd = br.ReadUVarint()
+	cr.validityBounds.End = br.ReadUVarint()
 
-	if cr.validityIdxEnd != 0 {
-		cr.validityIdxStart = e
-		e = cr.validityIdxEnd
+	if cr.validityBounds.End != 0 {
+		cr.validityBounds.Start = e
+		e = cr.validityBounds.End
 	}
 
 	cr.numOfValues = br.ReadUVarint()
@@ -250,17 +264,19 @@ func NewIntColumn(b []byte, start int, end int) *intColumn {
 	cr.blockLen = blockLen
 	cr.read()
 
+	cr.vectorPool = vector.DefaultVectorPool()
+
 	return cr
 
 }
 
 func (cr *intColumn) read() {
 
-	cr.debug()
+	fmt.Println(cr)
 
-	if cr.validityIdxEnd != 0 {
+	if cr.validityBounds.End != 0 {
 		cr.valid = roaring.NewBitmap()
-		_, err := cr.valid.FromBuffer(cr.b[cr.validityIdxStart:cr.validityIdxEnd])
+		_, err := cr.valid.FromBuffer(cr.b[cr.validityBounds.Start:cr.validityBounds.End])
 		if err != nil {
 			panic(err)
 		}
@@ -273,18 +289,18 @@ func (cr *intColumn) Iterator() IntIterator {
 	dec, blockReader := encoding.GetIntDecoder(
 		cr.encoding,
 		cr.b,
-		cr.encoderStart,
-		cr.encoderEnd,
+		cr.blkBounds,
 		cr.blockLen,
 	)
 
 	if cr.valid != nil {
+
 		return NewIntNullColumnIterator(
 			dec,
 			blockReader,
 			cr.valid,
+			cr.numOfRows,
 			cr.vectorPool,
-			cr.blockLen,
 		)
 	}
 
@@ -292,7 +308,47 @@ func (cr *intColumn) Iterator() IntIterator {
 		dec,
 		blockReader,
 		cr.vectorPool,
-		cr.blockLen,
+		cr.numOfRows,
 	)
+
+}
+
+type intColumnReader struct {
+	idx    index.BlockIndexReader
+	br     encoding.BlockReader
+	dec    encoding.IntDecoder
+	pool   vector.Pool
+	colLen int
+}
+
+func (r *intColumnReader) Read(rids []uint32) vector.IntVector {
+
+	v := r.pool.GetIntVector()
+	buf := v.Buf()
+
+	for i, rid := range rids {
+
+		b, baseRid := r.ReadBlock(rid)
+
+		ridIdx := rid + ba
+
+	}
+
+}
+
+func (r *intColumnReader) ReadBlock(rid uint32) (encoding.Block, uint32) {
+
+	blockRid, offset := r.idx.Lookup(rid)
+
+	var nextRid uint32
+
+	for {
+		b := r.br.ReadBlock(offset)
+		nextRid = blockRid + uint32(b.Len())
+		if nextRid > rid {
+			return b, blockRid
+		}
+		blockRid = nextRid
+	}
 
 }

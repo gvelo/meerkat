@@ -33,6 +33,8 @@ func ReadSegment(path string) (*segment, error) {
 		return nil, err
 	}
 
+	fmt.Println("file len", len(f.Bytes))
+
 	br := f.NewBinaryReader()
 
 	header := br.ReadSlice(0, len(MagicNumber))
@@ -78,11 +80,10 @@ type segment struct {
 }
 
 type colData struct {
-	colType     schema.FieldType
-	id          string
-	name        string
-	offsetStart int
-	offsetEnd   int
+	colType schema.FieldType
+	id      string
+	name    string
+	bounds  io.Bounds
 }
 
 // start = entry
@@ -118,11 +119,11 @@ func (s *segment) read() error {
 		c.id = br.ReadString()
 		c.name = br.ReadString()
 		c.colType = schema.FieldType(br.ReadByte())
-		c.offsetEnd = br.ReadUVarint()
+		c.bounds.End = br.ReadUVarint()
 		if i == 0 {
-			c.offsetStart = s.start
+			c.bounds.Start = s.start
 		} else {
-			c.offsetStart = cd[i-1].offsetEnd
+			c.bounds.Start = cd[i-1].bounds.End
 		}
 		cd[i] = c
 	}
@@ -139,28 +140,16 @@ func (s *segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
-		//var colStart, colEnd int
-
-		//if i == 0 {
-		//	colStart = s.start
-		//} else {
-		//	colStart = colEnd
-		//}
-
-		fmt.Println("cdata ", cData.offsetStart, cData.offsetEnd)
-
-		//colEnd = cData.offsetEnd
-
-		fmt.Println("================", cData.offsetStart, cData.offsetEnd, cData.colType, cData.id)
+		fmt.Printf("================ cdata %v \n", cData)
 
 		//var col Column
 		var col interface{}
 
 		switch cData.colType {
 		case schema.FieldType_TIMESTAMP:
-			col = NewIntColumn(s.f.Bytes, cData.offsetStart, cData.offsetEnd)
+			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		case schema.FieldType_INT:
-			col = NewIntColumn(s.f.Bytes, cData.offsetStart, cData.offsetEnd)
+			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		case schema.FieldType_UINT:
 		case schema.FieldType_FLOAT:
 		case schema.FieldType_STRING:

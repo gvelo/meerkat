@@ -85,3 +85,21 @@ func NewByteSliceVector(data []byte, nulls []uint64, offsets []int) ByteSliceVec
 		nulls:   nulls,
 	}
 }
+
+func DefaultVectorPool() Pool {
+	return &defaultPool{}
+}
+
+type defaultPool struct {
+}
+
+func (*defaultPool) GetIntVector() IntVector {
+	return IntVector{
+		valid: make([]uint64, 8192*5),
+		buf:   make([]int, 8192*5),
+	}
+}
+
+func (*defaultPool) PutIntVector(vector IntVector) {
+	panic("implement me")
+}

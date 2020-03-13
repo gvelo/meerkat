@@ -38,6 +38,7 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
+	var validity index.ValidityIndexWriter
 
 	switch fieldType {
 	case schema.FieldType_INT:
@@ -46,7 +47,10 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 		//              column's value width.
 		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
 		enc := encoding.NewIntPlainEncoder(blkWriter)
-		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, nil, bw)
+		if src.HasNulls() {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, validity, bw)
 
 	case schema.FieldType_STRING:
 		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)

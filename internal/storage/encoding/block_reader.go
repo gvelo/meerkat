@@ -13,7 +13,10 @@
 
 package encoding
 
-import "meerkat/internal/storage/io"
+import (
+	"fmt"
+	"meerkat/internal/storage/io"
+)
 
 type Block struct {
 	// the block bytes
@@ -23,7 +26,7 @@ type Block struct {
 }
 
 func (b *Block) Bytes() []byte {
-	return b.Bytes()
+	return b.bytes
 }
 
 func (b *Block) Len() int {
@@ -37,8 +40,8 @@ type BlockReader interface {
 }
 
 type ByteSliceBlockReader struct {
-	br  *io.BinaryReader
-	end int
+	br     *io.BinaryReader
+	bounds io.Bounds
 }
 
 func (r *ByteSliceBlockReader) ReadBlock(offset int) Block {
@@ -47,7 +50,7 @@ func (r *ByteSliceBlockReader) ReadBlock(offset int) Block {
 }
 
 func (r *ByteSliceBlockReader) HasNext() bool {
-	return r.br.Offset() < r.end
+	return r.br.Offset() < r.bounds.End
 }
 
 func (r *ByteSliceBlockReader) Next() Block {
@@ -59,20 +62,20 @@ func (r *ByteSliceBlockReader) readBlock() Block {
 	s := r.br.ReadUVarint()
 	b.l = r.br.ReadUVarint()
 	b.bytes = r.br.ReadSlice(r.br.Offset(), r.br.Offset()+s)
-	if r.br.Offset() > r.end {
+	if r.br.Offset() > r.bounds.End {
 		panic("read out of column bounds")
 	}
 	return b
 }
 
-func NewByteSliceBlockReader(start int, end int, bytes []byte) *ByteSliceBlockReader {
+func NewByteSliceBlockReader(bytes []byte, bounds io.Bounds) *ByteSliceBlockReader {
 
 	br := io.NewBinaryReader(bytes)
-	br.SetOffset(start)
+	br.SetOffset(bounds.Start)
 
 	b := &ByteSliceBlockReader{
-		end: end,
-		br:  br,
+		bounds: bounds,
+		br:     br,
 	}
 
 	return b
@@ -80,22 +83,22 @@ func NewByteSliceBlockReader(start int, end int, bytes []byte) *ByteSliceBlockRe
 
 type ScalarPlainBlockReader struct {
 	br        *io.BinaryReader
-	end       int
+	bounds    io.Bounds
 	blockSize int
 	blockLen  int
 }
 
-func NewScalarPlainBlockReader(start int,
-	end int,
+func NewScalarPlainBlockReader(
 	bytes []byte,
+	bounds io.Bounds,
 	blockLen int) *ScalarPlainBlockReader {
 
 	br := io.NewBinaryReader(bytes)
-	br.SetOffset(start)
+	br.SetOffset(bounds.Start)
 
 	b := &ScalarPlainBlockReader{
 		br:        br,
-		end:       end,
+		bounds:    bounds,
 		blockSize: blockLen * 8,
 		blockLen:  blockLen,
 	}
@@ -114,12 +117,13 @@ func (r *ScalarPlainBlockReader) Next() Block {
 }
 
 func (r *ScalarPlainBlockReader) HasNext() bool {
-	return r.br.Offset() < r.end
+	fmt.Println("has next ", r.br.Offset(), r.bounds.End, r.br.Offset() < r.bounds.End)
+	return r.br.Offset() < r.bounds.End
 }
 
 func (r *ScalarPlainBlockReader) readBlock() Block {
 
-	if r.br.Offset() == r.end {
+	if r.br.Offset() >= r.bounds.End {
 		panic("read out of column bounds")
 	}
 
@@ -128,15 +132,21 @@ func (r *ScalarPlainBlockReader) readBlock() Block {
 	}
 
 	blockEnd := r.br.Offset() + r.blockSize
+	fmt.Println("r.blockSize ", r.blockSize)
+	if blockEnd > r.bounds.End {
 
-	if blockEnd > r.end {
-		blockEnd = r.end
-		b.l = (blockEnd - r.br.Offset())
-		if (b.l % 8) != 0 {
+		blockEnd = r.bounds.End
+
+		fmt.Println("********************  ", r.br.Offset(), blockEnd)
+		size := blockEnd - r.br.Offset()
+		if (size % 8) != 0 {
 			panic("error reading block")
 		}
-	}
+		b.l = size / 8
+		fmt.Println("b.l", b.l)
 
+	}
+	fmt.Println(" =================== read block offsets ", r.br.Offset(), blockEnd, b.l)
 	b.bytes = r.br.ReadSlice(r.br.Offset(), blockEnd)
 
 	return b

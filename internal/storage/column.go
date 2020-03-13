@@ -50,7 +50,7 @@ type IntColumn interface {
 type IntColumnReader interface {
 	// TODO(gvelo): hint the reader about index use.
 	//  ie. avoid index use in low selectivity search.
-	Read(pos []uint32) vector.IntVector
+	Read(rid []uint32) vector.IntVector
 }
 
 type FloatColumn interface {

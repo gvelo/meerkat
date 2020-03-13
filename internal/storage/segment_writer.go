@@ -49,13 +49,14 @@ func (sw *SegmentWriter) Write() (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			e, ok := r.(error)
-			if ok {
-				err = e
-				return
-			} else {
-				panic(r)
-			}
+			panic(r)
+			//e, ok := r.(error)
+			//if ok {
+			//	err = e
+			//	return
+			//} else {
+			//	panic(r)
+			//}
 		}
 	}()
 

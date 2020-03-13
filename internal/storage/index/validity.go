@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package inmem
+package index
 
 import (
 	"github.com/RoaringBitmap/roaring"
@@ -31,11 +31,11 @@ type ValidityBitmapIndex struct {
 }
 
 func (v *ValidityBitmapIndex) Flush() {
-
 	v.bitmap.RunOptimize()
-
-	_, _ = v.bitmap.WriteTo(v.bw)
-
+	_, err := v.bitmap.WriteTo(v.bw)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (v *ValidityBitmapIndex) Cardinality() int {
