@@ -37,13 +37,13 @@ func (r *HashAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
+//TODO(sebad): We need to spill out to disk we we do not have memory
 func (r *HashAggregateOperator) Next() []vector.Vector {
 
 	mKey := make(map[string]int)
 
-	result := make([][]interface{}, 0)
-
-	l := len(r.keyCols)
+	rKey := make([][]interface{}, 0)
+	rAgg := make([][]interface{}, 0)
 
 	n := r.child.Next()
 
@@ -60,17 +60,18 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 			// check the key
 			if _, ok := mKey[string(k)]; ok != true {
 
-				c := createResultVector(n, r.keyCols, r.aggCols, i)
+				key, agg := createResultVector(n, r.keyCols, r.aggCols, i)
 				// sets the key's position in the resulting slice
-				mKey[string(k)] = len(result)
-				result = append(result, c)
+				mKey[string(k)] = len(rKey)
+				rKey = append(rKey, key)
+				rAgg = append(rAgg, agg)
 			}
 
 			// update values.
 			// TODO: Usando contadores se repiten por ahora...
 			for x, it := range r.aggCols {
 
-				counter := result[mKey[string(k)]][l+x].(Counter)
+				counter := rAgg[mKey[string(k)]][x].(Counter)
 				// aca tenemos que separar los operadores.
 				switch col := n[it.AggCol].(type) {
 				case *vector.IntVector:
@@ -82,47 +83,56 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 				}
 
 			}
-
 		}
 
 	}
 
 	// Create columns
-	res := make([]interface{}, 0)
+	resKey := make([]interface{}, 0)
+	resAgg := make([]interface{}, 0)
 
 	if kv, ok := r.ctx.Get(ColumnIndexToColumnName); ok == true {
 		okv := kv.(map[int][]byte)
-		for i, _ := range result[0] {
-			res = append(res, createSlice(okv[i], r.ctx))
+		// create key slices
+		for i, _ := range rKey[0] {
+			resKey = append(resKey, createSlice(okv[i], r.ctx))
+		}
+		// create aggregation slices
+		for i, _ := range rAgg[0] {
+			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], r.ctx))
 		}
 	}
 
-	for i := 0; i < len(result); i++ { // rows
-		for j := 0; j < len(result[i]); j++ { // columns
-			// sacar este if de mierda con 2 vectores.
-			if j < len(r.keyCols) {
-				switch res[j].(type) {
-				case []int:
-					res[j] = append(res[j].([]int), result[i][j].(int))
-				case []float64:
-					res[j] = append(res[j].([]float64), result[i][j].(float64))
-				case [][]byte:
-					res[j] = append(res[j].([][]byte), result[i][j].([]byte))
-				}
-			} else {
-				switch res[j].(type) {
-				case []int:
-					res[j] = append(res[j].([]int), int(result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType)))
-				case []float64:
-					res[j] = append(res[j].([]float64), result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType))
-				case [][]byte:
-					panic("Va a pasar... y fix")
-				}
+	for i := 0; i < len(rKey); i++ { // rows
+		for j := 0; j < len(rKey[i]); j++ { // columns
+			// Podemos evitar este switch ?
+			switch resKey[j].(type) {
+			case []int:
+				resKey[j] = append(resKey[j].([]int), rKey[i][j].(int))
+			case []float64:
+				resKey[j] = append(resKey[j].([]float64), rKey[i][j].(float64))
+			case [][]byte:
+				resKey[j] = append(resKey[j].([][]byte), rKey[i][j].([]byte))
+			}
+
+		}
+	}
+
+	for i := 0; i < len(rAgg); i++ { // rows
+		for j := 0; j < len(rAgg[i]); j++ { // columns
+			switch resAgg[j].(type) {
+			case []int:
+				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType)))
+			case []float64:
+				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
+			case [][]byte:
+				panic("Va a pasar... y fix")
 			}
 		}
 	}
 
 	resVec := make([]vector.Vector, 0)
+	res := append(resKey, resAgg...)
 	for _, it := range res {
 		switch it.(type) {
 		case []int:
@@ -196,104 +206,5 @@ func (r *SortedAggregateOperator) Destroy() {
 }
 
 func (r *SortedAggregateOperator) Next() []vector.Vector {
-
-	result := make([][]interface{}, 0)
-
-	l := len(r.keyCols)
-
-	n := r.child.Next()
-
-	// Iterate over all vectors...
-	for ; n != nil; n = r.child.Next() {
-
-		// iterate over all "rows"
-		for i := 0; i < n[0].(vector.Vector).Len(); i++ {
-
-			// create the key
-			k := createKey(n, r.keyCols, i)
-			ant := k
-
-			c := createResultVector(n, r.keyCols, r.aggCols, i)
-			result = append(result, c)
-
-			for string(ant) == string(k) {
-
-				// update values.
-				// TODO: Usando contadores se repiten por ahora...
-				for x, it := range r.aggCols {
-
-					counter := result[len(result)-1][l+x].(Counter)
-
-					switch col := n[it.AggCol].(type) {
-					case *vector.IntVector:
-						counter.Update(float64(col.Values()[i]))
-					case *vector.FloatVector:
-						counter.Update(col.Values()[i])
-					case *vector.ByteSliceVector:
-						counter.Update(1)
-					}
-
-				}
-
-				ant = k
-				// create the key
-				k = createKey(n, r.keyCols, i)
-
-			}
-
-		}
-
-	}
-
-	// Create columns
-	res := make([]interface{}, 0)
-
-	if kv, ok := r.ctx.Get(ColumnIndexToColumnName); ok == true {
-		okv := kv.(map[int][]byte)
-		for i, _ := range result[0] {
-			res = append(res, createSlice(okv[i], r.ctx))
-		}
-	}
-
-	for i := 0; i < len(result); i++ {
-		for j := 0; j < len(result[i]); j++ {
-
-			if j < len(r.keyCols) {
-				switch res[j].(type) {
-				case []int:
-					res[j] = append(res[j].([]int), result[i][j].(int))
-				case []float64:
-					res[j] = append(res[j].([]float64), result[i][j].(float64))
-				case [][]byte:
-					res[j] = append(res[j].([][]byte), result[i][j].([]byte))
-				}
-			} else {
-				switch res[j].(type) {
-				case []int:
-					res[j] = append(res[j].([]int), int(result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType)))
-				case []float64:
-					res[j] = append(res[j].([]float64), result[i][j].(Counter).ValueOf(r.aggCols[j-len(r.keyCols)].AggType))
-				case [][]byte:
-					panic("Va a pasar... y fix")
-				}
-			}
-		}
-	}
-
-	resVec := make([]vector.Vector, 0)
-	for _, it := range res {
-		switch it.(type) {
-		case []int:
-			v := vector.NewIntVector(it.([]int), []uint64{})
-			resVec = append(resVec, &v)
-		case []float64:
-			v := vector.NewFloatVector(it.([]float64), []uint64{})
-			resVec = append(resVec, &v)
-		case [][]byte:
-			v := vector.NewByteSliceVector(it.([]byte), []uint64{}, []int{})
-			resVec = append(resVec, &v)
-		}
-	}
-
-	return resVec
+	return nil
 }

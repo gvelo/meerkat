@@ -161,28 +161,29 @@ func createSlice(idx []byte, ctx Context) interface{} {
 	panic(" No mapping Found.")
 }
 
-func createResultVector(n []vector.Vector, keyCols []int, aggCols []Aggregation, i int) []interface{} {
+func createResultVector(n []vector.Vector, keyCols []int, aggCols []Aggregation, i int) (rKey []interface{}, rAgg []interface{}) {
 	// Create the result array
-	c := make([]interface{}, 0)
+	rKey = make([]interface{}, 0)
 
 	// append the keys
 	for _, it := range keyCols {
 		switch col := n[it].(type) {
 		case *vector.IntVector:
-			c = append(c, col.Values()[i])
+			rKey = append(rKey, col.Values()[i])
 		case *vector.FloatVector:
-			c = append(c, col.Values()[i])
+			rKey = append(rKey, col.Values()[i])
 		case *vector.ByteSliceVector:
-			c = append(c, col.Get(i))
+			rKey = append(rKey, col.Get(i))
 		}
 	}
 
+	rAgg = make([]interface{}, 0)
 	// append the counters.
 	for range aggCols {
-		c = append(c, NewCounter())
+		rAgg = append(rAgg, NewCounter())
 	}
 
-	return c
+	return
 }
 
 type Aggregation struct {
