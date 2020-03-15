@@ -37,7 +37,11 @@ func (r *HashAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
-//TODO(sebad): We need to spill out to disk we we do not have memory
+/*
+  This method iterates over the children Vectors and
+
+  TODO(sebad): We need to spill out to disk we we do not have memory
+*/
 func (r *HashAggregateOperator) Next() []vector.Vector {
 
 	mKey := make(map[string]int)
@@ -97,37 +101,45 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 		for i, _ := range rKey[0] {
 			resKey = append(resKey, createSlice(okv[i], r.ctx))
 		}
+
 		// create aggregation slices
 		for i, _ := range rAgg[0] {
 			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], r.ctx))
+
 		}
+	} else {
+		panic("Error")
 	}
 
-	for i := 0; i < len(rKey); i++ { // rows
-		for j := 0; j < len(rKey[i]); j++ { // columns
-			// Podemos evitar este switch ?
-			switch resKey[j].(type) {
-			case []int:
+	for j := 0; j < len(resKey); j++ { // columns
+		switch resKey[j].(type) {
+		case []int:
+			for i := 0; i < len(rKey); i++ { // rows
 				resKey[j] = append(resKey[j].([]int), rKey[i][j].(int))
-			case []float64:
+			}
+		case []float64:
+			for i := 0; i < len(rKey); i++ { // rows
 				resKey[j] = append(resKey[j].([]float64), rKey[i][j].(float64))
-			case [][]byte:
+			}
+		case [][]byte:
+			for i := 0; i < len(rKey); i++ { // rows
 				resKey[j] = append(resKey[j].([][]byte), rKey[i][j].([]byte))
 			}
-
 		}
 	}
 
-	for i := 0; i < len(rAgg); i++ { // rows
-		for j := 0; j < len(rAgg[i]); j++ { // columns
-			switch resAgg[j].(type) {
-			case []int:
+	for j := 0; j < len(resAgg); j++ { // columns
+		switch resAgg[j].(type) {
+		case []int:
+			for i := 0; i < len(rAgg); i++ { // rows
 				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType)))
-			case []float64:
-				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
-			case [][]byte:
-				panic("Va a pasar... y fix")
 			}
+		case []float64:
+			for i := 0; i < len(rAgg); i++ { // rows
+				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
+			}
+		case [][]byte:
+			panic("?????")
 		}
 	}
 

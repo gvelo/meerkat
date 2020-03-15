@@ -235,17 +235,79 @@ func TestHAggScenario1(t *testing.T) {
 
 }
 
+func multiplyIntVector(v []int, n []uint64, times int) (rv []int, rn []uint64) {
+	rv = make([]int, 0)
+
+	for i := 0; i < times; i++ {
+		rv = append(rv, v...)
+	}
+
+	if len(rn) > 0 {
+		rn = make([]uint64, len(n)*times)
+
+		for i := 0; i <= times; i++ {
+			rn = append(rn, n...)
+		}
+	}
+	return
+}
+
+func multiplyFloatVector(v []float64, n []uint64, times int) (rv []float64, rn []uint64) {
+	rv = make([]float64, 0)
+
+	for i := 0; i < times; i++ {
+		rv = append(rv, v...)
+	}
+
+	if len(rn) > 0 {
+		rn = make([]uint64, len(n)*times)
+
+		for i := 0; i < times; i++ {
+			rn = append(rn, n...)
+		}
+	}
+	return
+}
+
+func multiplyBsVector(v []byte, n []uint64, o []int, times int) (rv []byte, rn []uint64, ro []int) {
+	rv = make([]byte, 0)
+	for i := 0; i < times; i++ {
+		rv = append(rv, v...)
+	}
+	ro = make([]int, 0)
+	ant := 0
+
+	for i := 0; i < times; i++ {
+		for _, it := range o {
+			ro = append(ro, ant+it)
+		}
+		ant = ro[len(ro)-1]
+	}
+
+	if len(rn) > 0 {
+		rn = make([]uint64, len(n)*times)
+
+		for i := 0; i < times; i++ {
+			rn = append(rn, n...)
+		}
+	}
+	return
+}
+
 func TestHAggScenario2(t *testing.T) {
 
 	a := assert.New(t)
-
+	times := 10000
 	// Set up child
 	vec := make([]vector.Vector, 0)
-	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
+	v := vector.NewFloatVector(rv, rn)
 	vec = append(vec, &v)
-	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	rv1, rn1 := multiplyIntVector([]int{2, 2, 4, 5, 6}, []uint64{}, times)
+	v1 := vector.NewIntVector(rv1, rn1)
 	vec = append(vec, &v1)
-	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13})
+	rv2, rn2, ro2 := multiplyBsVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13}, times)
+	v2 := vector.NewByteSliceVector(rv2, rn2, ro2)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -290,12 +352,12 @@ func TestHAggScenario2(t *testing.T) {
 	a.NotNil(r, "This should not be nil")
 
 	a.Equal("1", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.InDelta(1.2, r[1].(*vector.FloatVector).Values()[0], 0.01)
-	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.01)
+	a.InDelta(12000, r[1].(*vector.FloatVector).Values()[0], 0.1)
+	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.1)
 
 	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(1)))
-	a.InDelta(5.7, r[1].(*vector.FloatVector).Values()[1], 0.01)
-	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[1], 0.01)
+	a.InDelta(56999.9, r[1].(*vector.FloatVector).Values()[1], 0.1)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[1], 0.1)
 
 }
 
