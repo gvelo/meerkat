@@ -15,7 +15,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage/io"
@@ -32,8 +31,6 @@ func ReadSegment(path string) (*segment, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("file len", len(f.Bytes))
 
 	br := f.NewBinaryReader()
 
@@ -112,8 +109,6 @@ func (s *segment) read() error {
 
 	cd := make([]colData, s.numOfCol)
 
-	fmt.Println("numofcol", s.numOfCol, s.numOfRows)
-
 	for i := 0; i < s.numOfCol; i++ {
 		c := colData{}
 		c.id = br.ReadString()
@@ -139,8 +134,6 @@ func (s *segment) read() error {
 func (s *segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
-
-		fmt.Printf("================ cdata %v \n", cData)
 
 		//var col Column
 		var col interface{}

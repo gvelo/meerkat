@@ -14,7 +14,6 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
@@ -39,7 +38,7 @@ func TestSegmentWriter(t *testing.T) {
 
 	filePath := path.Join(os.TempDir(), "segment_test")
 
-	fmt.Println("path ", filePath)
+	//fmt.Println("path ", filePath)
 
 	sid := uuid.New()
 
@@ -169,23 +168,18 @@ func createIndexInfo() schema.IndexInfo {
 
 func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffer) {
 
-	fmt.Println("===========================")
-	fmt.Println("testing col", field.Id)
-	fmt.Println("===========================")
+	t.Log("Testing field ", field)
+
 	switch field.FieldType {
 	case schema.FieldType_TIMESTAMP:
-		//testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 	case schema.FieldType_INT:
-		//testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 	default:
 		t.Fatal("unknown column type")
 	}
-
-	fmt.Println()
-	fmt.Println()
-	fmt.Println()
-	fmt.Println()
 
 }
 
@@ -237,20 +231,21 @@ func testReadINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.
 
 	}
 
-	//fmt.Println(rids)
-	fmt.Println(len(rids))
-	fmt.Println(v.Cap())
-
 	r := col.Reader()
 
 	vec := r.Read(rids)
 
-	var val []int
+	for i, rid := range rids {
 
-	for _, rid := range rids {
-		val = append(val, buf.Values()[rid])
+		if f.Nullable {
+			assert.Equal(t, !buf.Nulls()[rid], vec.IsValid(i))
+			if !buf.Nulls()[rid] {
+				assert.Equal(t, buf.Values()[rid], vec.Values()[i])
+			}
+		} else {
+			assert.Equal(t, buf.Values()[rid], vec.Values()[i])
+		}
+
 	}
-
-	assert.Equal(t, val, vec.Values())
 
 }

@@ -14,7 +14,6 @@
 package index
 
 import (
-	"fmt"
 	"meerkat/internal/storage/io"
 	"meerkat/internal/util/sliceutil"
 )
@@ -35,8 +34,6 @@ func NewBlockIndexReader(b []byte, bounds io.Bounds) *blockIndexReader {
 
 	levelOffsets := br.ReadVarUintSlice()
 	leafLevel := len(levelOffsets) - 1
-
-	fmt.Println("level offsets ", levelOffsets)
 
 	return &blockIndexReader{
 		b:            b,

@@ -14,7 +14,6 @@
 package encoding
 
 import (
-	"fmt"
 	"meerkat/internal/storage/io"
 )
 
@@ -117,7 +116,6 @@ func (r *ScalarPlainBlockReader) Next() Block {
 }
 
 func (r *ScalarPlainBlockReader) HasNext() bool {
-	fmt.Println("has next ", r.br.Offset(), r.bounds.End, r.br.Offset() < r.bounds.End)
 	return r.br.Offset() < r.bounds.End
 }
 
@@ -132,21 +130,21 @@ func (r *ScalarPlainBlockReader) readBlock() Block {
 	}
 
 	blockEnd := r.br.Offset() + r.blockSize
-	fmt.Println("r.blockSize ", r.blockSize)
+
 	if blockEnd > r.bounds.End {
 
 		blockEnd = r.bounds.End
 
-		fmt.Println("********************  ", r.br.Offset(), blockEnd)
 		size := blockEnd - r.br.Offset()
+
 		if (size % 8) != 0 {
 			panic("error reading block")
 		}
+
 		b.l = size / 8
-		fmt.Println("b.l", b.l)
 
 	}
-	fmt.Println(" =================== read block offsets ", r.br.Offset(), blockEnd, b.l)
+
 	b.bytes = r.br.ReadSlice(r.br.Offset(), blockEnd)
 
 	return b
