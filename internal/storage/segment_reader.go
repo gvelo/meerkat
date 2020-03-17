@@ -18,13 +18,21 @@ import (
 	"github.com/google/uuid"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage/io"
+	"time"
 )
 
 const (
 	SegmentVersion1 = 1
 )
 
-func ReadSegment(path string) (*segment, error) {
+type colData struct {
+	colType schema.FieldType
+	id      string
+	name    string
+	bounds  io.Bounds
+}
+
+func ReadSegment(path string) (*Segment, error) {
 
 	f, err := io.MMap(path)
 
@@ -55,14 +63,14 @@ func ReadSegment(path string) (*segment, error) {
 
 }
 
-func NewSegment(f *io.MMFile) *segment {
-	return &segment{
+func NewSegment(f *io.MMFile) *Segment {
+	return &Segment{
 		f:       f,
 		columns: make(map[string]interface{}),
 	}
 }
 
-type segment struct {
+type Segment struct {
 	f         *io.MMFile
 	id        uuid.UUID
 	from      int
@@ -76,15 +84,8 @@ type segment struct {
 	columns map[string]interface{}
 }
 
-type colData struct {
-	colType schema.FieldType
-	id      string
-	name    string
-	bounds  io.Bounds
-}
-
 // start = entry
-func (s *segment) read() error {
+func (s *Segment) read() error {
 
 	// magicNumber + version
 	s.start = len(MagicNumber) + 1
@@ -131,7 +132,7 @@ func (s *segment) read() error {
 
 }
 
-func (s *segment) readColumns(cd []colData) {
+func (s *Segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
@@ -155,4 +156,28 @@ func (s *segment) readColumns(cd []colData) {
 
 	}
 
+}
+
+func (s *Segment) IndexName() string {
+	panic("implement me")
+}
+
+func (s *Segment) IndexID() string {
+	panic("implement me")
+}
+
+func (s *Segment) From() time.Time {
+	return time.Unix(0, int64(s.from))
+}
+
+func (s *Segment) To() time.Time {
+	return time.Unix(0, int64(s.to))
+}
+
+func (s *Segment) Rows() int {
+	return s.numOfRows
+}
+
+func (s *Segment) Col(id string) interface{} {
+	return s.columns[id]
 }

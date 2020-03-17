@@ -20,17 +20,8 @@ import (
 	"time"
 )
 
-type Segment interface {
-	IndexName() string
-	IndexID() string
-	From() time.Time
-	To() time.Time
-	Rows() int
-	Col(id string) Column
-}
-
 type SegmentRegistry interface {
-	Segment(indexId []byte, from *time.Time, to *time.Time) []Segment
+	Segment(indexId []byte, from *time.Time, to *time.Time) []*Segment
 }
 
 type Column interface {

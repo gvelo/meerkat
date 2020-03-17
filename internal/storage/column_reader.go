@@ -22,150 +22,6 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-type IntColumnIterator struct {
-	dec    encoding.IntDecoder
-	br     encoding.BlockReader
-	pool   vector.Pool
-	colLen int
-	rid    int
-}
-
-func NewIntColumnIterator(
-	dec encoding.IntDecoder,
-	br encoding.BlockReader,
-	pool vector.Pool,
-	colLen int,
-) *IntColumnIterator {
-
-	return &IntColumnIterator{
-		dec:    dec,
-		br:     br,
-		pool:   pool,
-		colLen: colLen,
-	}
-
-}
-
-func (i *IntColumnIterator) Next() vector.IntVector {
-
-	if i.rid >= i.colLen {
-		panic("column EOF")
-	}
-
-	v := i.pool.GetIntVector()
-	l := 0
-
-	for i.rid < i.colLen && v.RemainingLen() > 0 {
-		b := i.br.Next()
-		i.dec.Decode(b.Bytes(), v.Remaining())
-		i.rid += b.Len()
-		l += b.Len()
-		v.SetLen(l)
-	}
-
-	return v
-
-}
-
-func (i *IntColumnIterator) HasNext() bool {
-	return i.rid < i.colLen
-}
-
-type IntNullColumnIterator struct {
-	decoder  encoding.IntDecoder
-	br       encoding.BlockReader
-	validity *roaring.Bitmap
-	pool     vector.Pool
-	buf      []int
-	bufLen   int
-	valid    []uint32
-	valIter  roaring.ManyIntIterable
-	pos      int
-	rid      uint32
-	colLen   int
-	eof      bool
-}
-
-func NewIntNullColumnIterator(
-	decoder encoding.IntDecoder,
-	br encoding.BlockReader,
-	validity *roaring.Bitmap,
-	colLen int,
-	pool vector.Pool,
-) *IntNullColumnIterator {
-
-	return &IntNullColumnIterator{
-		decoder:  decoder,
-		br:       br,
-		validity: validity,
-		pool:     pool,
-		buf:      make([]int, blockLen),
-		valid:    make([]uint32, blockLen),
-		valIter:  validity.ManyIterator(),
-		colLen:   colLen,
-	}
-
-}
-
-func (i *IntNullColumnIterator) Next() vector.IntVector {
-
-	if int(i.rid) >= i.colLen {
-		panic("column EOF")
-	}
-
-	v := i.pool.GetIntVector()
-	vbuf := v.Buf()
-
-	r := 0
-
-	for r < v.Cap() && int(i.rid) < i.colLen {
-
-		if (i.pos == i.bufLen || i.bufLen == 0) && !i.eof {
-
-			i.pos = 0
-
-			if i.br.HasNext() {
-				i.readBlock()
-			} else {
-				i.eof = true
-			}
-
-		}
-
-		if !i.eof && (i.rid == i.valid[i.pos]) {
-			vbuf[r] = i.buf[i.pos]
-			v.SetValid(r)
-			i.pos++
-		} else {
-			v.SetInvalid(r)
-		}
-
-		i.rid++
-		r++
-
-	}
-
-	v.SetLen(r)
-
-	return v
-}
-
-func (i *IntNullColumnIterator) readBlock() {
-	b := i.br.Next()
-	i.bufLen = b.Len()
-	i.decoder.Decode(b.Bytes(), i.buf)
-	vn := i.valIter.NextMany(i.valid)
-
-	if vn != i.bufLen {
-		panic("validity block length doesn't match value block length")
-	}
-
-}
-
-func (i *IntNullColumnIterator) HasNext() bool {
-	return int(i.rid) < i.colLen
-}
-
 type intColumn struct {
 	b              []byte
 	valid          *roaring.Bitmap
@@ -341,6 +197,150 @@ func (cr *intColumn) Reader() IntColumnReader {
 		cr.numOfRows,
 		cr.blockLen,
 	)
+}
+
+type IntColumnIterator struct {
+	dec    encoding.IntDecoder
+	br     encoding.BlockReader
+	pool   vector.Pool
+	colLen int
+	rid    int
+}
+
+func NewIntColumnIterator(
+	dec encoding.IntDecoder,
+	br encoding.BlockReader,
+	pool vector.Pool,
+	colLen int,
+) *IntColumnIterator {
+
+	return &IntColumnIterator{
+		dec:    dec,
+		br:     br,
+		pool:   pool,
+		colLen: colLen,
+	}
+
+}
+
+func (i *IntColumnIterator) Next() vector.IntVector {
+
+	if i.rid >= i.colLen {
+		panic("column EOF")
+	}
+
+	v := i.pool.GetIntVector()
+	l := 0
+
+	for i.rid < i.colLen && v.RemainingLen() > 0 {
+		b := i.br.Next()
+		i.dec.Decode(b.Bytes(), v.Remaining())
+		i.rid += b.Len()
+		l += b.Len()
+		v.SetLen(l)
+	}
+
+	return v
+
+}
+
+func (i *IntColumnIterator) HasNext() bool {
+	return i.rid < i.colLen
+}
+
+type IntNullColumnIterator struct {
+	decoder  encoding.IntDecoder
+	br       encoding.BlockReader
+	validity *roaring.Bitmap
+	pool     vector.Pool
+	buf      []int
+	bufLen   int
+	valid    []uint32
+	valIter  roaring.ManyIntIterable
+	pos      int
+	rid      uint32
+	colLen   int
+	eof      bool
+}
+
+func NewIntNullColumnIterator(
+	decoder encoding.IntDecoder,
+	br encoding.BlockReader,
+	validity *roaring.Bitmap,
+	colLen int,
+	pool vector.Pool,
+) *IntNullColumnIterator {
+
+	return &IntNullColumnIterator{
+		decoder:  decoder,
+		br:       br,
+		validity: validity,
+		pool:     pool,
+		buf:      make([]int, blockLen),
+		valid:    make([]uint32, blockLen),
+		valIter:  validity.ManyIterator(),
+		colLen:   colLen,
+	}
+
+}
+
+func (i *IntNullColumnIterator) Next() vector.IntVector {
+
+	if int(i.rid) >= i.colLen {
+		panic("column EOF")
+	}
+
+	v := i.pool.GetIntVector()
+	vbuf := v.Buf()
+
+	r := 0
+
+	for r < v.Cap() && int(i.rid) < i.colLen {
+
+		if (i.pos == i.bufLen || i.bufLen == 0) && !i.eof {
+
+			i.pos = 0
+
+			if i.br.HasNext() {
+				i.readBlock()
+			} else {
+				i.eof = true
+			}
+
+		}
+
+		if !i.eof && (i.rid == i.valid[i.pos]) {
+			vbuf[r] = i.buf[i.pos]
+			v.SetValid(r)
+			i.pos++
+		} else {
+			v.SetInvalid(r)
+		}
+
+		i.rid++
+		r++
+
+	}
+
+	v.SetLen(r)
+
+	return v
+}
+
+func (i *IntNullColumnIterator) readBlock() {
+	b := i.br.Next()
+	i.bufLen = b.Len()
+	i.decoder.Decode(b.Bytes(), i.buf)
+	vn := i.valIter.NextMany(i.valid)
+
+	if vn != i.bufLen {
+		panic("validity block length doesn't match value block length")
+	}
+
+}
+
+func (i *IntNullColumnIterator) HasNext() bool {
+	return int(i.rid) < i.colLen
 }
 
 type intColumnReader struct {
