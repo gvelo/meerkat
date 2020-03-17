@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"meerkat/internal/storage/vector"
 )
 
@@ -62,8 +63,7 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 			k := createKey(n, r.keyCols, i)
 
 			// check the key
-			if _, ok := mKey[string(k)]; ok != true {
-
+			if _, ok := mKey[string(k)]; ok == true {
 				key, agg := createResultVector(n, r.keyCols, r.aggCols, i)
 				// sets the key's position in the resulting slice
 				mKey[string(k)] = len(rKey)
@@ -177,8 +177,9 @@ func createKey(n []vector.Vector, keyCols []int, index int) []byte {
 		case *vector.ByteSliceVector:
 			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
 		case *vector.IntVector:
+			err = binary.Write(buf, binary.LittleEndian, int64(t.Values()[index]))
 		case *vector.FloatVector:
-			err = binary.Write(buf, binary.LittleEndian, &t.Values()[index])
+			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Values()[index]))
 		}
 		if err != nil {
 			panic(fmt.Sprint("binary.Write failed:", err))
@@ -218,5 +219,128 @@ func (r *SortedAggregateOperator) Destroy() {
 }
 
 func (r *SortedAggregateOperator) Next() []vector.Vector {
-	return nil
+
+	mKey := make(map[string]int)
+
+	rKey := make([][]interface{}, 0)
+	rAgg := make([][]interface{}, 0)
+
+	n := r.child.Next()
+
+	// Iterate over all vectors...
+	for ; n != nil; n = r.child.Next() {
+
+		l1 := n[0].Len()
+		var keyAnt []byte
+		// iterate over all "rows"
+		for i := 0; i < l1; i++ {
+
+			// create the key
+			k := createKey(n, r.keyCols, i)
+
+			// check the key
+			if !bytes.Equal(keyAnt, k) {
+				key, agg := createResultVector(n, r.keyCols, r.aggCols, i)
+				// sets the key's position in the resulting slice
+				mKey[string(k)] = len(rKey)
+				rKey = append(rKey, key)
+				rAgg = append(rAgg, agg)
+				keyAnt = k
+			}
+
+			// TODO: Usando contadores se repiten por ahora...
+			for x, it := range r.aggCols {
+
+				counter := rAgg[mKey[string(k)]][x].(Counter)
+				// aca tenemos que separar los operadores.
+				switch col := n[it.AggCol].(type) {
+				case *vector.IntVector:
+					counter.Update(float64(col.Values()[i]))
+				case *vector.FloatVector:
+					counter.Update(col.Values()[i])
+				case *vector.ByteSliceVector:
+					counter.Update(1)
+				}
+
+			}
+		}
+
+	}
+
+	// Create columns
+	resKey := make([]interface{}, 0)
+	resAgg := make([]interface{}, 0)
+
+	if kv, ok := r.ctx.Get(ColumnIndexToColumnName); ok == true {
+		okv := kv.(map[int][]byte)
+		// create key slices
+		for i, _ := range rKey[0] {
+			resKey = append(resKey, createSlice(okv[i], r.ctx))
+		}
+
+		// create aggregation slices
+		for i, _ := range rAgg[0] {
+			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], r.ctx))
+
+		}
+	} else {
+		panic("Error")
+	}
+
+	for j := 0; j < len(resKey); j++ { // columns
+		switch resKey[j].(type) {
+		case []int:
+			for i := 0; i < len(rKey); i++ { // rows
+				resKey[j] = append(resKey[j].([]int), rKey[i][j].(int))
+			}
+		case []float64:
+			for i := 0; i < len(rKey); i++ { // rows
+				resKey[j] = append(resKey[j].([]float64), rKey[i][j].(float64))
+			}
+		case [][]byte:
+			for i := 0; i < len(rKey); i++ { // rows
+				resKey[j] = append(resKey[j].([][]byte), rKey[i][j].([]byte))
+			}
+		}
+	}
+
+	for j := 0; j < len(resAgg); j++ { // columns
+		switch resAgg[j].(type) {
+		case []int:
+			for i := 0; i < len(rAgg); i++ { // rows
+				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType)))
+			}
+		case []float64:
+			for i := 0; i < len(rAgg); i++ { // rows
+				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
+			}
+		case [][]byte:
+			panic("?????")
+		}
+	}
+
+	resVec := make([]vector.Vector, 0)
+	res := append(resKey, resAgg...)
+	for _, it := range res {
+		switch it.(type) {
+		case []int:
+			v := vector.NewIntVector(it.([]int), []uint64{})
+			resVec = append(resVec, &v)
+		case []float64:
+			v := vector.NewFloatVector(it.([]float64), []uint64{})
+			resVec = append(resVec, &v)
+		case [][]byte:
+			s := it.([][]byte)
+			offsets := make([]int, len(s))
+			sum := 0
+			for i, it := range s {
+				sum = sum + len(it)
+				offsets[i] = sum
+			}
+			v := vector.NewByteSliceVector(bytes.Join(s, nil), []uint64{}, offsets)
+			resVec = append(resVec, &v)
+		}
+	}
+
+	return resVec
 }
