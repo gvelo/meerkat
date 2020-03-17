@@ -15,6 +15,7 @@ package encoding
 
 import (
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/io"
 )
 
 type EncodingType int
@@ -33,6 +34,9 @@ type BlockWriter interface {
 
 type Encoder interface {
 	Flush()
+	// TODO(gvelo) remove FlushBlocks, the encode api
+	//  is block oriented and do not buffer blocks.
+	//  roaringbitmap ?????
 	FlushBlocks()
 	Type() EncodingType
 }
@@ -40,6 +44,11 @@ type Encoder interface {
 type IntEncoder interface {
 	Encoder
 	Encode(v colval.IntColValues)
+}
+
+type IntDecoderReader interface {
+	Decoder() IntDecoder
+	BlockReader() BlockReader
 }
 
 type IntDecoder interface {
@@ -100,4 +109,20 @@ func DeltaDecode(src []int, dst []int) {
 		dst[i] = dst[i-1] + src[i]
 	}
 
+}
+
+func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (IntDecoder, BlockReader) {
+
+	var dec IntDecoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewIntPlainDecoder()
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
 }

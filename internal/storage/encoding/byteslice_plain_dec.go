@@ -31,6 +31,8 @@ func NewByteSlicePlainDecoder() *ByteSlicePlainDecoder {
 
 func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int) {
 
+	// TODO(gvelo) dec methods should be thread safe thread safe
+
 	d.buf.SetBytes(block)
 
 	// discard the block length

@@ -18,8 +18,8 @@ package vector
 
 
 type {{.Name}}Vector struct {
-	nulls []uint64
-	data  []{{.Type}}
+	valid []uint64
+	buf  []{{.Type}}
 	l     int
 }
 
@@ -27,26 +27,46 @@ func (v *{{.Name}}Vector) Len() int {
 	return v.l
 }
 
+func (v *{{.Name}}Vector) Cap() int {
+	return len(v.buf)
+}
+
+func (v *{{.Name}}Vector) RemainingLen() int {
+	return len(v.buf)-v.l
+}
+
+func (v *{{.Name}}Vector) Remaining() []{{.Type}} {
+	return v.buf[v.l:]
+}
+
 func (v *{{.Name}}Vector) SetLen(l int) {
 	v.l = l
 }
 
 func (v *{{.Name}}Vector) Values() []{{.Type}} {
-	return v.data[:v.l]
+	return v.buf[:v.l]
 }
 
-func (v *{{.Name}}Vector) IsNull(i int) bool {
-	return v.nulls[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
+func (v *{{.Name}}Vector) Buf() []{{.Type}} {
+	return v.buf
 }
 
-func (v *{{.Name}}Vector) SetNull(i int) {
-	v.nulls[uint(i)>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
+func (v *{{.Name}}Vector) IsValid(i int) bool {
+	return v.valid[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }
 
-func New{{.Name}}Vector(data []{{.Type}}, nulls []uint64) {{.Name}}Vector {
+func (v *{{.Name}}Vector) SetValid(i int) {
+	v.valid[uint(i)>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
+}
+
+func (v *{{.Name}}Vector) SetInvalid(i int) {
+	v.valid[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
+}
+
+func New{{.Name}}Vector(buf []{{.Type}}, valid []uint64) {{.Name}}Vector {
 	return {{.Name}}Vector{
-		data:  data,
-		nulls: nulls,
+		buf:  buf,
+		valid: valid,
 	}
 }
 

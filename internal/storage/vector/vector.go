@@ -26,9 +26,14 @@ type Vector interface {
 	SetNull(i int)
 }
 
+type Pool interface {
+	GetIntVector() IntVector
+	PutIntVector(vector IntVector)
+}
+
 type ByteSliceVector struct {
 	nulls   []uint64
-	data    []byte
+	buf     []byte
 	offsets []int
 	l       int
 }
@@ -42,7 +47,11 @@ func (v *ByteSliceVector) SetLen(l int) {
 }
 
 func (v *ByteSliceVector) Data() []byte {
-	return v.data[:v.l]
+	return v.buf[:v.l]
+}
+
+func (v *ByteSliceVector) Buf() []byte {
+	return v.buf
 }
 
 func (v *ByteSliceVector) Offsets() []int {
@@ -65,14 +74,32 @@ func (v *ByteSliceVector) Get(i int) []byte {
 		start = v.offsets[i-1]
 	}
 
-	return v.data[start:v.offsets[i]]
+	return v.buf[start:v.offsets[i]]
 
 }
 
 func NewByteSliceVector(data []byte, nulls []uint64, offsets []int) ByteSliceVector {
 	return ByteSliceVector{
 		offsets: offsets,
-		data:    data,
+		buf:     data,
 		nulls:   nulls,
 	}
+}
+
+func DefaultVectorPool() Pool {
+	return &defaultPool{}
+}
+
+type defaultPool struct {
+}
+
+func (*defaultPool) GetIntVector() IntVector {
+	return IntVector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]int, 8192*2),
+	}
+}
+
+func (*defaultPool) PutIntVector(vector IntVector) {
+	panic("implement me")
 }

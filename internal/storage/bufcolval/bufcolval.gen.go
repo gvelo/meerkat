@@ -183,13 +183,13 @@ func (cs *IntBufColSource) Next() colval.IntColValues {
 
 }
 
-func NewIntBufColSource(buf *buffer.IntBuffer, dstSize int, permMap []int) *IntBufColSource {
+func NewIntBufColSource(buf *buffer.IntBuffer, dstLen int, permMap []int) *IntBufColSource {
 
 	return &IntBufColSource{
 		srcBuf:   buf.Values(),
-		dstBuf:   make([]int, dstSize),
+		dstBuf:   make([]int, dstLen),
 		nulls:    buf.Nulls(),
-		rid:      make([]uint32, dstSize),
+		rid:      make([]uint32, dstLen),
 		permMap:  permMap,
 		hasNulls: buf.Nullable(),
 	}

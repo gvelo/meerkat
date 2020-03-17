@@ -152,7 +152,37 @@ func (br *BinaryReader) ReadVarUintSlice() []int {
 
 }
 
+func (br *BinaryReader) ReadSlice(from, to int) []byte {
+	br.offset = to
+	return br.bytes[from:to]
+}
+
 func (br *BinaryReader) Entry() {
 	br.offset = br.size - 8
 	br.offset = br.ReadFixed64()
+}
+
+func (br *BinaryReader) Read(b []byte) (int, error) {
+
+	n := copy(b, br.bytes)
+
+	if n < len(b) {
+		panic("error reading from file")
+	}
+
+	br.offset += n
+
+	return n, nil
+}
+
+func (br *BinaryReader) ReadRaw(b []byte) {
+
+	n := copy(b, br.bytes[br.offset:])
+
+	if n < len(b) {
+		panic("error reading from file")
+	}
+
+	br.offset += n
+
 }

@@ -11,26 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package io
 
-import (
-	"meerkat/internal/storage/index"
-	"meerkat/internal/storage/io"
-)
-
-type blockWriter struct {
-	bw *io.BinaryWriter
-	bi index.BlockIndexWriter
-}
-
-func NewBlockWriter(bw *io.BinaryWriter, bi index.BlockIndexWriter) *blockWriter {
-	return &blockWriter{
-		bw: bw,
-		bi: bi,
-	}
-}
-
-func (w *blockWriter) WriteBlock(block []byte, baseRid uint32) {
-	w.bi.IndexBlock(block, w.bw.Offset(), baseRid)
-	w.bw.WriteRaw(block)
+type Bounds struct {
+	Start int
+	End   int
 }
