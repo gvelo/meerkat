@@ -114,7 +114,8 @@ func (op *BucketOperator) Next() vector.Vector {
 			}
 		}
 
-		//return storage.NewIntVector(ts)
+		v := vector.NewIntVector(ts, []uint64{})
+		return &v
 	} else {
 		return nil
 	}

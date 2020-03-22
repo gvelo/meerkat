@@ -40,9 +40,9 @@ func (op *TestOperator) Init() {
 
 func (op *TestOperator) Next() vector.Vector {
 	if op.i < len(op.val) {
-		// sc := storage.NewIntVector(op.val[op.i])
+		sc := vector.NewIntVector(op.val[op.i], []uint64{})
 		op.i++
-		return nil
+		return &sc
 	}
 	return nil
 }
@@ -122,7 +122,7 @@ func TestTopAsc(t *testing.T) {
 
 }
 
-//TODO: make a benchmark more expensive for timsort to check how it goes
+//TODO: make a benchmark more complex for timsort to check how it goes
 func BenchmarkTop(b *testing.B) {
 	list := setUpTopN(b.N)
 

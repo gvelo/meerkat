@@ -103,9 +103,9 @@ func TestTimeBucketInSecs(t *testing.T) {
 		keys = append(keys, k)
 	}
 
-	a.Equal(30, m[keys[0]]) // 10,11,12 secs
-	a.Equal(50, m[keys[1]]) // 13,14,15,16,17 secs
-	a.Equal(30, m[keys[2]]) // 18,19,20 secs
+	a.Equal(30, m[keys[0]])
+	a.Equal(50, m[keys[1]])
+	a.Equal(30, m[keys[2]])
 
 }
 
