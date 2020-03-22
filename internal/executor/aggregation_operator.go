@@ -63,7 +63,7 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 			k := createKey(n, r.keyCols, i)
 
 			// check the key
-			if _, ok := mKey[string(k)]; ok == true {
+			if _, ok := mKey[string(k)]; ok != true {
 				key, agg := createResultVector(n, r.keyCols, r.aggCols, i)
 				// sets the key's position in the resulting slice
 				mKey[string(k)] = len(rKey)
