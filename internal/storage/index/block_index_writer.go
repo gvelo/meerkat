@@ -43,7 +43,6 @@ type nodeWriter func(start, end int)
 type blockIndexWriter struct {
 	chunkOffsetList []int
 	baseRIDList     []uint32
-	offset          int
 	chunkSize       int
 	baseRID         uint32
 	chunkStart      int
@@ -69,11 +68,11 @@ func (w *blockIndexWriter) Flush() {
 
 }
 
-func (w *blockIndexWriter) IndexBlock(block []byte, baseRID uint32) {
+func (w *blockIndexWriter) IndexBlock(block []byte, offset int, baseRID uint32) {
 
 	if w.chunkSize == 0 {
 		w.baseRID = baseRID
-		w.chunkStart = w.offset
+		w.chunkStart = offset
 	}
 
 	blockSize := len(block)
@@ -83,8 +82,6 @@ func (w *blockIndexWriter) IndexBlock(block []byte, baseRID uint32) {
 	if w.chunkSize >= maxChunkSize {
 		w.appendBlock()
 	}
-
-	w.offset = w.offset + blockSize
 
 }
 

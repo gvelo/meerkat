@@ -49,10 +49,14 @@ type BoolIndexWriter interface {
 
 type BlockIndexWriter interface {
 	Flush()
-	IndexBlock(block []byte, baseRID uint32)
+	IndexBlock(block []byte, offset int, baseRID uint32)
 }
 
 type ValidityIndexWriter interface {
 	IndexWriter
 	Index(rid []uint32)
+}
+
+type BlockIndexReader interface {
+	Lookup(rid uint32) (uint32, int)
 }

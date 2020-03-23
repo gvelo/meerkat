@@ -19,37 +19,48 @@ import (
 )
 
 type ByteSliceSnappyDecoder struct {
-	buf        *io.DecoderBuffer
-	offsetsBuf []int
+	buf     *io.DecoderBuffer
+	offsets []int
+	data    []byte
 }
 
 func NewByteSliceSnappyDecoder() *ByteSliceSnappyDecoder {
 	return &ByteSliceSnappyDecoder{
-		buf:        io.NewDecoderBuffer(),
-		offsetsBuf: make([]int, maxSlicesPerBlock),
+		buf:     io.NewDecoderBuffer(),
+		offsets: make([]int, 1024*4),
 	}
 }
 
-func (d *ByteSliceSnappyDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int) {
+func (d *ByteSliceSnappyDecoder) Decode(block []byte) ([]byte, []int) {
 
+	d.offsets = d.offsets[0:cap(d.offsets)]
 	d.buf.SetBytes(block)
 
-	// discard the block length
-	_ = d.buf.ReadUvarint()
+	// read the len of the offsets slice
+	l := d.buf.ReadUvarint()
 
-	// read the offsets
-	ol := d.buf.ReadVarUintSlice(d.offsetsBuf)
+	// grow the offset buffer if needed
+	if l > len(d.offsets) {
+		d.offsets = make([]int, l)
+	}
+
+	for i := 0; i < l; i++ {
+		d.offsets[i] = d.buf.ReadUvarint()
+	}
+
+	d.offsets = d.offsets[:l]
 
 	// decode offsets
-	DeltaDecode(d.offsetsBuf[:ol], offsets)
+	DeltaDecode(d.offsets)
 
 	// decode data
-	r, err := snappy.Decode(data, d.buf.Remaining())
+	var err error
+	d.data, err = snappy.Decode(d.data, d.buf.Remaining())
 
 	if err != nil {
 		panic(err)
 	}
 
-	return r, offsets[:ol]
+	return d.data, d.offsets
 
 }

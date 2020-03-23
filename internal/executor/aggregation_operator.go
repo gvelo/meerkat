@@ -192,7 +192,7 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 	resAgg := make([]interface{}, 0)
 
 	if kv, ok := ctx.Get(ColumnIndexToColumnName); ok == true {
-		okv := kv.(map[int][]byte)
+		okv := kv.(map[int]string)
 		// create key slices
 		for i, _ := range rKey[0] {
 			resKey = append(resKey, createSlice(okv[i], ctx))
@@ -257,7 +257,7 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 				sum = sum + len(it)
 				offsets[i] = sum
 			}
-			v := vector.NewByteSliceVector(bytes.Join(s, nil), []uint64{}, offsets)
+			v := vector.NewByteSliceVector(bytes.Join(s, nil), offsets, []uint64{})
 			resVec = append(resVec, &v)
 		}
 	}

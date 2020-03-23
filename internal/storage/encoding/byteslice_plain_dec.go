@@ -18,33 +18,45 @@ import (
 )
 
 type ByteSlicePlainDecoder struct {
-	buf        *io.DecoderBuffer
-	offsetsBuf []int
+	buf     *io.DecoderBuffer
+	offsets []int
 }
 
 func NewByteSlicePlainDecoder() *ByteSlicePlainDecoder {
 	return &ByteSlicePlainDecoder{
-		buf:        io.NewDecoderBuffer(),
-		offsetsBuf: make([]int, maxSlicesPerBlock),
+		buf:     io.NewDecoderBuffer(),
+		offsets: make([]int, 1024*4),
 	}
 }
 
-func (d *ByteSlicePlainDecoder) Decode(block []byte, data []byte, offsets []int) ([]byte, []int) {
+func (d *ByteSlicePlainDecoder) Decode(block []byte) ([]byte, []int) {
+
+	// TODO(gvelo) dec methods should be thread safe thread safe
+
+	d.offsets = d.offsets[0:cap(d.offsets)]
 
 	d.buf.SetBytes(block)
 
-	// discard the block length
-	_ = d.buf.ReadUvarint()
+	// read the len of the offsets slice
+	l := d.buf.ReadUvarint()
 
-	// read the offsets
-	ol := d.buf.ReadVarUintSlice(d.offsetsBuf)
+	// grow the offset buffer if needed
+	if l > len(d.offsets) {
+		d.offsets = make([]int, l)
+	}
+
+	for i := 0; i < l; i++ {
+		d.offsets[i] = d.buf.ReadUvarint()
+	}
+
+	d.offsets = d.offsets[:l]
 
 	// decode offsets
-	DeltaDecode(d.offsetsBuf[:ol], offsets)
+	DeltaDecode(d.offsets)
 
 	// read data
-	dl := d.buf.ReadBytes(data)
+	data := d.buf.Remaining()
 
-	return data[:dl], offsets[:ol]
+	return data, d.offsets
 
 }

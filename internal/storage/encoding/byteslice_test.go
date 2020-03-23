@@ -62,7 +62,7 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d ByteSliceDecoder) {
 	data := make([]byte, len(v.Data())*2)
 	offsets := make([]int, s)
 
-	data, offsets = d.Decode(pw.block, data, offsets)
+	data, offsets = d.Decode(pw.block)
 	assert.Equal(t, v.Data(), data, "decoded data doesn't match")
 	assert.Equal(t, v.Offsets(), offsets, "decoded offsets doesn't match")
 

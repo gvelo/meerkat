@@ -18,23 +18,29 @@ import (
 	"meerkat/internal/util/sliceutil"
 )
 
+// thread safe
 type blockIndexReader struct {
 	levelOffsets []int
 	leafLevel    int
-	br           *io.BinaryReader
+	bounds       io.Bounds
+	b            []byte
 }
 
-func NewBlockIndexReader(br *io.BinaryReader) *blockIndexReader {
+func NewBlockIndexReader(b []byte, bounds io.Bounds) *blockIndexReader {
+
+	br := io.NewBinaryReader(b)
+	br.SetOffset(bounds.End - 8)
+	br.SetOffset(br.ReadFixed64())
+
+	levelOffsets := br.ReadVarUintSlice()
+	leafLevel := len(levelOffsets) - 1
+
 	return &blockIndexReader{
-		br: br,
+		b:            b,
+		bounds:       bounds,
+		levelOffsets: levelOffsets,
+		leafLevel:    leafLevel,
 	}
-}
-
-func (p *blockIndexReader) read() {
-
-	p.levelOffsets = p.br.ReadVarUintSlice()
-	p.leafLevel = len(p.levelOffsets) - 1
-
 }
 
 func (p *blockIndexReader) lookup(level int, pos int, rid uint32) (uint32, int) {
@@ -82,7 +88,7 @@ func (p *blockIndexReader) readLeaf(pos int) ([]uint32, []int) {
 
 	pageOffset := p.levelOffsets[p.leafLevel] + (pos * pageSize)
 
-	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
+	page := p.b[pageOffset : pageOffset+pageSize-1]
 
 	ridList := sliceutil.B2U32(page[0:ridLeafSize])
 	offsets := sliceutil.B2I(page[ridLeafSize : ridLeafSize+offsetLeafSize])
@@ -95,7 +101,7 @@ func (p *blockIndexReader) readNode(level int, pos int) []uint32 {
 
 	pageOffset := p.levelOffsets[level] + (pos * pageSize)
 
-	page := p.br.Bytes()[pageOffset : pageOffset+pageSize-1]
+	page := p.b[pageOffset : pageOffset+pageSize-1]
 
 	ridList := sliceutil.B2U32(page)
 

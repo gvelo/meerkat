@@ -39,7 +39,7 @@ func (b *EncoderBuffer) Free() []byte {
 
 func (b *EncoderBuffer) Reset(size int) {
 
-	if cap(b.buf) < size {
+	if size > cap(b.buf) {
 		b.buf = make([]byte, size)
 	}
 

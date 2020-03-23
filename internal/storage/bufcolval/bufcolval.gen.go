@@ -143,7 +143,7 @@ type BoolColSource interface {
 type IntBufColSource struct {
 	srcBuf   []int
 	dstBuf   []int
-	nulls    []uint64
+	nulls    []bool
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -168,8 +168,7 @@ func (cs *IntBufColSource) Next() colval.IntColValues {
 
 		j := cs.permMap[cs.pos]
 
-		// TODO:fix
-		if cs.hasNulls && false {
+		if cs.hasNulls && cs.nulls[j] {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -184,13 +183,13 @@ func (cs *IntBufColSource) Next() colval.IntColValues {
 
 }
 
-func NewIntBufColSource(buf *buffer.IntBuffer, dstSize int, permMap []int) *IntBufColSource {
+func NewIntBufColSource(buf *buffer.IntBuffer, dstLen int, permMap []int) *IntBufColSource {
 
 	return &IntBufColSource{
 		srcBuf:   buf.Values(),
-		dstBuf:   make([]int, dstSize),
+		dstBuf:   make([]int, dstLen),
 		nulls:    buf.Nulls(),
-		rid:      make([]uint32, dstSize),
+		rid:      make([]uint32, dstLen),
 		permMap:  permMap,
 		hasNulls: buf.Nullable(),
 	}
@@ -200,7 +199,7 @@ func NewIntBufColSource(buf *buffer.IntBuffer, dstSize int, permMap []int) *IntB
 type UintBufColSource struct {
 	srcBuf   []uint
 	dstBuf   []uint
-	nulls    []uint64
+	nulls    []bool
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -225,8 +224,7 @@ func (cs *UintBufColSource) Next() colval.UintColValues {
 
 		j := cs.permMap[cs.pos]
 
-		//TODO: fix
-		if cs.HasNulls() && false {
+		if cs.hasNulls && cs.nulls[j] {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -257,7 +255,7 @@ func NewUintBufColSource(buf *buffer.UintBuffer, dstSize int, permMap []int) *Ui
 type FloatBufColSource struct {
 	srcBuf   []float64
 	dstBuf   []float64
-	nulls    []uint64
+	nulls    []bool
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -282,8 +280,7 @@ func (cs *FloatBufColSource) Next() colval.FloatColValues {
 
 		j := cs.permMap[cs.pos]
 
-		//TODO: fix
-		if cs.HasNulls() && false {
+		if cs.hasNulls && cs.nulls[j] {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]
@@ -314,7 +311,7 @@ func NewFloatBufColSource(buf *buffer.FloatBuffer, dstSize int, permMap []int) *
 type BoolBufColSource struct {
 	srcBuf   []bool
 	dstBuf   []bool
-	nulls    []uint64
+	nulls    []bool
 	rid      []uint32
 	permMap  []int
 	pos      int
@@ -339,8 +336,7 @@ func (cs *BoolBufColSource) Next() colval.BoolColValues {
 
 		j := cs.permMap[cs.pos]
 
-		//TODO: fix
-		if cs.HasNulls() && false {
+		if cs.hasNulls && cs.nulls[j] {
 			i--
 		} else {
 			cs.dstBuf[i] = cs.srcBuf[j]

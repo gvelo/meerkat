@@ -23,7 +23,7 @@ const ColumnIndexToColumnName = "COLUMN_INDEX_TO_COLUMN_NAME"
 type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
-	Segment() storage.Segment
+	Segment() *storage.Segment
 	BatchLen() int
 }
 
@@ -45,8 +45,8 @@ func (c ctx) Get(key string) (interface{}, bool) {
 	return i, ok
 }
 
-func (c ctx) Segment() storage.Segment {
-	return c.segment
+func (c ctx) Segment() *storage.Segment {
+	return &c.segment
 }
 
 func (c ctx) BatchLen() int {

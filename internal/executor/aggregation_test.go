@@ -170,7 +170,7 @@ func (f *fakeStringColumn) DictEncodedIterator() storage.IntIterator {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Iterator() storage.ByteSliceIterator {
+func (f *fakeStringColumn) Iterator() vector.ByteSliceVector {
 	panic("implement me")
 }
 
@@ -184,7 +184,7 @@ func TestHAggScenario1(t *testing.T) {
 	vec = append(vec, &v)
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
 	vec = append(vec, &v1)
-	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []uint64{}, []int{3, 6, 9, 12, 15})
+	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []int{3, 6, 9, 12, 15}, []uint64{})
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -307,7 +307,7 @@ func TestHAggScenario2(t *testing.T) {
 	v1 := vector.NewIntVector(rv1, rn1)
 	vec = append(vec, &v1)
 	rv2, rn2, ro2 := multiplyBsVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13}, times)
-	v2 := vector.NewByteSliceVector(rv2, rn2, ro2)
+	v2 := vector.NewByteSliceVector(rv2, ro2, rn2)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -372,7 +372,7 @@ func TestSortScenario(t *testing.T) {
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
 	vec = append(vec, &v1)
 
-	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13})
+	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -437,7 +437,7 @@ func TestSortScenario2(t *testing.T) {
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
 	vec = append(vec, &v1)
 
-	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13})
+	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -449,7 +449,7 @@ func TestSortScenario2(t *testing.T) {
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
-	fs := &fakeSegment{sMap: sMap}
+	fs := fakeSegment{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,

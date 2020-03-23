@@ -15,6 +15,7 @@ package encoding
 
 import (
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/io"
 )
 
 type EncodingType int
@@ -33,6 +34,9 @@ type BlockWriter interface {
 
 type Encoder interface {
 	Flush()
+	// TODO(gvelo) remove FlushBlocks, the encode api
+	//  is block oriented and do not buffer blocks.
+	//  roaringbitmap ?????
 	FlushBlocks()
 	Type() EncodingType
 }
@@ -40,6 +44,11 @@ type Encoder interface {
 type IntEncoder interface {
 	Encoder
 	Encode(v colval.IntColValues)
+}
+
+type IntDecoderReader interface {
+	Decoder() IntDecoder
+	BlockReader() BlockReader
 }
 
 type IntDecoder interface {
@@ -70,7 +79,7 @@ type ByteSliceEncoder interface {
 }
 
 type ByteSliceDecoder interface {
-	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
+	Decode(block []byte) ([]byte, []int)
 }
 
 type BoolEncoder interface {
@@ -92,12 +101,45 @@ func DeltaEncode(src []int, dst []int) {
 
 }
 
-func DeltaDecode(src []int, dst []int) {
+func DeltaDecode(data []int) {
 
-	dst[0] = src[0]
-
-	for i := 1; i < len(src); i++ {
-		dst[i] = dst[i-1] + src[i]
+	for i := 1; i < len(data); i++ {
+		data[i] = data[i-1] + data[i]
 	}
 
+}
+
+func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (IntDecoder, BlockReader) {
+
+	var dec IntDecoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewIntPlainDecoder()
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
+}
+
+func GetBinaryDecoder(d EncodingType, b []byte, bounds io.Bounds) (ByteSliceDecoder, BlockReader) {
+
+	var dec ByteSliceDecoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewByteSlicePlainDecoder()
+		br = NewByteSliceBlockReader(b, bounds)
+	case Snappy:
+		dec = NewByteSliceSnappyDecoder()
+		br = NewByteSliceBlockReader(b, bounds)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
 }

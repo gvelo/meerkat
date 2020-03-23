@@ -134,7 +134,7 @@ func (c *counter) ValueOf(aggType AggType) float64 {
 	}
 }
 
-func createSlice(idx []byte, ctx Context) interface{} {
+func createSlice(idx string, ctx Context) interface{} {
 	c := ctx.Segment().Col(idx)
 
 	// Not found this should be an aggregated column.
@@ -146,7 +146,7 @@ func createSlice(idx []byte, ctx Context) interface{} {
 	}
 
 	// try to find the column
-	c = ctx.Segment().Col([]byte(str))
+	c = ctx.Segment().Col(str)
 	switch c.(type) {
 
 	case storage.FloatColumn:
@@ -191,13 +191,13 @@ type Aggregation struct {
 	AggCol  int
 }
 
-func createNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) map[int][]byte {
+func createNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) map[int]string {
 	// new index column map
-	nkv := make(map[int][]byte)
+	nkv := make(map[int]string)
 	// old index column map
 	if kv, ok := ctx.Get(ColumnIndexToColumnName); ok == true {
 
-		okv := kv.(map[int][]byte)
+		okv := kv.(map[int]string)
 
 		// for each key (group by) col we a create a result vector
 		last := 0
@@ -208,15 +208,8 @@ func createNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) map[int]
 
 		// for each aggregated column we create a result vector
 		for x := 0; x < len(aggCols); x++ {
-
 			agg := aggCols[x]
-
-			resName := make([]byte, 0)
-			resName = append(resName, okv[agg.AggCol]...)
-			resName = append(resName, '_')
-			resName = append(resName, []byte(agg.AggType.String())...)
-
-			nkv[last+x] = resName
+			nkv[last+x] = okv[agg.AggCol] + "_" + agg.AggType.String()
 		}
 
 	} else {

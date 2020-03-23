@@ -23,7 +23,7 @@ import (
 type Buffer interface {
 	Len() int
 	Size() int
-	Nulls() []uint64
+	Nulls() []bool
 	AppendNull()
 	Append(interface{})
 	AppendBuffer(interface{})
@@ -31,7 +31,7 @@ type Buffer interface {
 }
 
 type ByteSliceBuffer struct {
-	nulls    []uint64
+	nulls    []bool
 	buf      []byte
 	offsets  []int
 	nullable bool
@@ -45,7 +45,7 @@ func NewByteSliceBuffer(nullable bool, capacity int) *ByteSliceBuffer {
 	}
 
 	if nullable {
-		b.nulls = make([]uint64, 0, capacity)
+		b.nulls = make([]bool, 0, capacity)
 	}
 
 	return b
@@ -60,12 +60,12 @@ func (b *ByteSliceBuffer) Size() int {
 	return (len(b.buf) + len(b.offsets)) * 8
 }
 
-func (b *ByteSliceBuffer) Nulls() []uint64 {
+func (b *ByteSliceBuffer) Nulls() []bool {
 	return b.nulls
 }
 
 func (b *ByteSliceBuffer) AppendNull() {
-	b.nulls = append(b.nulls, 0)
+	b.nulls = append(b.nulls, false)
 	b.offsets = append(b.offsets, len(b.buf))
 }
 
@@ -79,7 +79,7 @@ func (b *ByteSliceBuffer) AppendSlice(s []byte) {
 	b.offsets = append(b.offsets, len(b.buf))
 
 	if b.nullable {
-		b.nulls = append(b.nulls, 0)
+		b.nulls = append(b.nulls, false)
 	}
 
 }
@@ -90,7 +90,7 @@ func (b *ByteSliceBuffer) AppendString(s string) {
 	b.offsets = append(b.offsets, len(b.buf))
 
 	if b.nullable {
-		b.nulls = append(b.nulls, 0)
+		b.nulls = append(b.nulls, false)
 	}
 
 }

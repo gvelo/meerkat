@@ -171,7 +171,7 @@ func (op *IndexScanOperator) Destroy() {
 
 func (op *IndexScanOperator) Next() *roaring.Bitmap {
 
-	c := op.ctx.Segment().Col([]byte(op.fieldName))
+	c := op.ctx.Segment().Col(op.fieldName)
 
 	switch col := c.(type) {
 	case storage.StringColumn:
@@ -348,8 +348,8 @@ func (r *ReaderOperator) Next() vector.Vector {
 	buff := make([]uint32, 0, 1000)
 	s := r.it.NextMany(buff)
 	if s != 0 {
-		c := r.ctx.Segment().Col([]byte(r.colName))
-		v := c.(storage.IntColumn).Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
+		c := r.ctx.Segment().Col(r.colName)
+		v := c.(storage.IntColumn).Reader().Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
 		return &v
 	} else {
 		return nil
@@ -440,7 +440,7 @@ func (r *MaterializeOperator) Next() []vector.Vector {
 				res[i] = vec
 			case *vector.IntVector:
 				fName := keys[i]
-				col := r.ctx.Segment().Col(fName)
+				col := r.ctx.Segment().Col(string(fName))
 				_, ok := col.(storage.StringColumn) // c
 				if ok {                             // Its a string col, we should dict decode here.
 					// Here we sould create a vector
