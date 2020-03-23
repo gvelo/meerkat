@@ -72,120 +72,12 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 			}
 
 			// update values.
-			// TODO: Usando contadores se repiten por ahora...
-			for x, it := range r.aggCols {
-
-				counter := rAgg[mKey[string(k)]][x].(Counter)
-				// aca tenemos que separar los operadores.
-				switch col := n[it.AggCol].(type) {
-				case *vector.IntVector:
-					counter.Update(float64(col.Values()[i]))
-				case *vector.FloatVector:
-					counter.Update(col.Values()[i])
-				case *vector.ByteSliceVector:
-					counter.Update(1)
-				}
-
-			}
+			updateCounters(n, rAgg[mKey[string(k)]], r.aggCols, i)
 		}
 
 	}
 
-	// Create columns
-	resKey := make([]interface{}, 0)
-	resAgg := make([]interface{}, 0)
-
-	if kv, ok := r.ctx.Get(ColumnIndexToColumnName); ok == true {
-		okv := kv.(map[int][]byte)
-		// create key slices
-		for i, _ := range rKey[0] {
-			resKey = append(resKey, createSlice(okv[i], r.ctx))
-		}
-
-		// create aggregation slices
-		for i, _ := range rAgg[0] {
-			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], r.ctx))
-
-		}
-	} else {
-		panic("Error")
-	}
-
-	for j := 0; j < len(resKey); j++ { // columns
-		switch resKey[j].(type) {
-		case []int:
-			for i := 0; i < len(rKey); i++ { // rows
-				resKey[j] = append(resKey[j].([]int), rKey[i][j].(int))
-			}
-		case []float64:
-			for i := 0; i < len(rKey); i++ { // rows
-				resKey[j] = append(resKey[j].([]float64), rKey[i][j].(float64))
-			}
-		case [][]byte:
-			for i := 0; i < len(rKey); i++ { // rows
-				resKey[j] = append(resKey[j].([][]byte), rKey[i][j].([]byte))
-			}
-		}
-	}
-
-	for j := 0; j < len(resAgg); j++ { // columns
-		switch resAgg[j].(type) {
-		case []int:
-			for i := 0; i < len(rAgg); i++ { // rows
-				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType)))
-			}
-		case []float64:
-			for i := 0; i < len(rAgg); i++ { // rows
-				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
-			}
-		case [][]byte:
-			panic("?????")
-		}
-	}
-
-	resVec := make([]vector.Vector, 0)
-	res := append(resKey, resAgg...)
-	for _, it := range res {
-		switch it.(type) {
-		case []int:
-			v := vector.NewIntVector(it.([]int), []uint64{})
-			resVec = append(resVec, &v)
-		case []float64:
-			v := vector.NewFloatVector(it.([]float64), []uint64{})
-			resVec = append(resVec, &v)
-		case [][]byte:
-			s := it.([][]byte)
-			offsets := make([]int, len(s))
-			sum := 0
-			for i, it := range s {
-				sum = sum + len(it)
-				offsets[i] = sum
-			}
-			v := vector.NewByteSliceVector(bytes.Join(s, nil), []uint64{}, offsets)
-			resVec = append(resVec, &v)
-		}
-	}
-
-	return resVec
-}
-
-func createKey(n []vector.Vector, keyCols []int, index int) []byte {
-	buf := new(bytes.Buffer)
-	var err error
-	for _, it := range keyCols {
-		switch t := n[it].(type) {
-		case *vector.ByteSliceVector:
-			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
-		case *vector.IntVector:
-			err = binary.Write(buf, binary.LittleEndian, int64(t.Values()[index]))
-		case *vector.FloatVector:
-			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Values()[index]))
-		}
-		if err != nil {
-			panic(fmt.Sprint("binary.Write failed:", err))
-		}
-	}
-	return buf.Bytes()
+	return pivotAndBuildVectors(r.ctx, rKey, rAgg, r.aggCols)
 }
 
 // SortedAggregateOperator
@@ -248,39 +140,67 @@ func (r *SortedAggregateOperator) Next() []vector.Vector {
 				keyAnt = k
 			}
 
-			// TODO: Usando contadores se repiten por ahora...
-			for x, it := range r.aggCols {
-
-				counter := rAgg[mKey[string(k)]][x].(Counter)
-				// aca tenemos que separar los operadores.
-				switch col := n[it.AggCol].(type) {
-				case *vector.IntVector:
-					counter.Update(float64(col.Values()[i]))
-				case *vector.FloatVector:
-					counter.Update(col.Values()[i])
-				case *vector.ByteSliceVector:
-					counter.Update(1)
-				}
-
-			}
+			// update values.
+			updateCounters(n, rAgg[mKey[string(k)]], r.aggCols, i)
 		}
 
 	}
 
+	return pivotAndBuildVectors(r.ctx, rKey, rAgg, r.aggCols)
+}
+
+func updateCounters(n []vector.Vector, rAgg []interface{}, aggCols []Aggregation, i int) {
+	// TODO: Usando contadores se repiten por ahora...
+	for x, it := range aggCols {
+
+		counter := rAgg[x].(Counter)
+		// aca tenemos que separar los operadores.
+		switch col := n[it.AggCol].(type) {
+		case *vector.IntVector:
+			counter.Update(float64(col.Values()[i]))
+		case *vector.FloatVector:
+			counter.Update(col.Values()[i])
+		case *vector.ByteSliceVector:
+			counter.Update(1)
+		}
+
+	}
+}
+
+func createKey(n []vector.Vector, keyCols []int, index int) []byte {
+	buf := new(bytes.Buffer)
+	var err error
+	for _, it := range keyCols {
+		switch t := n[it].(type) {
+		case *vector.ByteSliceVector:
+			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
+		case *vector.IntVector:
+			err = binary.Write(buf, binary.LittleEndian, int64(t.Values()[index]))
+		case *vector.FloatVector:
+			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Values()[index]))
+		}
+		if err != nil {
+			panic(fmt.Sprint("binary.Write failed:", err))
+		}
+	}
+	return buf.Bytes()
+}
+
+func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{}, aggCols []Aggregation) []vector.Vector {
 	// Create columns
 	resKey := make([]interface{}, 0)
 	resAgg := make([]interface{}, 0)
 
-	if kv, ok := r.ctx.Get(ColumnIndexToColumnName); ok == true {
+	if kv, ok := ctx.Get(ColumnIndexToColumnName); ok == true {
 		okv := kv.(map[int][]byte)
 		// create key slices
 		for i, _ := range rKey[0] {
-			resKey = append(resKey, createSlice(okv[i], r.ctx))
+			resKey = append(resKey, createSlice(okv[i], ctx))
 		}
 
 		// create aggregation slices
 		for i, _ := range rAgg[0] {
-			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], r.ctx))
+			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], ctx))
 
 		}
 	} else {
@@ -308,11 +228,11 @@ func (r *SortedAggregateOperator) Next() []vector.Vector {
 		switch resAgg[j].(type) {
 		case []int:
 			for i := 0; i < len(rAgg); i++ { // rows
-				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType)))
+				resAgg[j] = append(resAgg[j].([]int), int(rAgg[i][j].(Counter).ValueOf(aggCols[j].AggType)))
 			}
 		case []float64:
 			for i := 0; i < len(rAgg); i++ { // rows
-				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(r.aggCols[j].AggType))
+				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(aggCols[j].AggType))
 			}
 		case [][]byte:
 			panic("?????")
