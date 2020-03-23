@@ -33,32 +33,12 @@ func (f *fakeMultiVectorOperator) Next() []vector.Vector {
 	return f.vec
 }
 
-type fakeSegment struct {
+type fakeColFinder struct {
 	sMap map[string]storage.Column
 }
 
-func (f *fakeSegment) IndexName() string {
-	panic("implement me")
-}
-
-func (f *fakeSegment) IndexID() []byte {
-	panic("implement me")
-}
-
-func (f *fakeSegment) From() time.Time {
-	panic("implement me")
-}
-
-func (f *fakeSegment) To() time.Time {
-	panic("implement me")
-}
-
-func (f *fakeSegment) Rows() int {
-	panic("implement me")
-}
-
-func (f *fakeSegment) Col(id []byte) storage.Column {
-	return f.sMap[string(id)]
+func (f *fakeColFinder) Col(id string) interface{} {
+	return f.sMap[id]
 }
 
 type fakeFloatColumn struct {
@@ -134,43 +114,43 @@ func (f *fakeIntColumn) Iterator() storage.IntIterator {
 type fakeStringColumn struct {
 }
 
-func (f *fakeStringColumn) Encoding() encoding2.EncodingType {
+func (f fakeStringColumn) Encoding() encoding2.EncodingType {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Validity() *roaring.Bitmap {
+func (f fakeStringColumn) Validity() *roaring.Bitmap {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) HasNulls() bool {
+func (f fakeStringColumn) HasNulls() bool {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Stats() *storage.Stats {
+func (f fakeStringColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Dict() storage.ByteSliceDict {
+func (f fakeStringColumn) Dict() storage.ByteSliceDict {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Index() storage.ByteSliceIndex {
+func (f fakeStringColumn) Index() storage.ByteSliceIndex {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) ReadDictEnc(pos []uint32) vector.IntVector {
+func (f fakeStringColumn) DictEncReader() storage.IntColumnReader {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Read(pos []uint32) vector.ByteSliceVector {
+func (f fakeStringColumn) Reader() storage.ByteSliceReader {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) DictEncodedIterator() storage.IntIterator {
+func (f fakeStringColumn) Iterator() storage.BinaryIterator {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Iterator() vector.ByteSliceVector {
+func (f fakeStringColumn) DictEncIterator() storage.IntIterator {
 	panic("implement me")
 }
 
@@ -181,22 +161,25 @@ func TestHAggScenario1(t *testing.T) {
 	// Set up child
 	vec := make([]vector.Vector, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	v.SetLen(5)
 	vec = append(vec, &v)
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	v1.SetLen(5)
 	vec = append(vec, &v1)
 	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []int{3, 6, 9, 12, 15}, []uint64{})
+	v2.SetLen(5)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
 	}
 
-	// Set up segment
+	// Set up cf
 	sMap := make(map[string]storage.Column)
 	sMap["c1"] = &fakeFloatColumn{}
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
-	fs := &fakeSegment{sMap: sMap}
+	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -210,10 +193,10 @@ func TestHAggScenario1(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs)
-	m := make(map[int][]byte)
-	m[0] = []byte("c1")
-	m[1] = []byte("c2")
-	m[2] = []byte("c3")
+	m := make(map[int]string)
+	m[0] = "c1"
+	m[1] = "c2"
+	m[2] = "c3"
 	ctx.Value(ColumnIndexToColumnName, m)
 
 	op := NewHashAggregateOperator(ctx, f, ag, g)
@@ -302,24 +285,27 @@ func TestHAggScenario2(t *testing.T) {
 	vec := make([]vector.Vector, 0)
 	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
 	v := vector.NewFloatVector(rv, rn)
+	v.SetLen(5 * times)
 	vec = append(vec, &v)
 	rv1, rn1 := multiplyIntVector([]int{2, 2, 4, 5, 6}, []uint64{}, times)
 	v1 := vector.NewIntVector(rv1, rn1)
+	v1.SetLen(5 * times)
 	vec = append(vec, &v1)
 	rv2, rn2, ro2 := multiplyBsVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13}, times)
 	v2 := vector.NewByteSliceVector(rv2, ro2, rn2)
+	v2.SetLen(5 * times)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
 	}
 
-	// Set up segment
+	// Set up cf
 	sMap := make(map[string]storage.Column)
 	sMap["c1"] = &fakeFloatColumn{}
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
-	fs := &fakeSegment{sMap: sMap}
+	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -333,10 +319,10 @@ func TestHAggScenario2(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs)
-	m := make(map[int][]byte)
-	m[0] = []byte("c1")
-	m[1] = []byte("c2")
-	m[2] = []byte("c3")
+	m := make(map[int]string)
+	m[0] = "c1"
+	m[1] = "c2"
+	m[2] = "c3"
 	ctx.Value(ColumnIndexToColumnName, m)
 
 	op := NewHashAggregateOperator(ctx, f, ag, g)
@@ -367,24 +353,27 @@ func TestSortScenario(t *testing.T) {
 	// Set up child
 	vec := make([]vector.Vector, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	v.SetLen(5)
 	vec = append(vec, &v)
 
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	v1.SetLen(5)
 	vec = append(vec, &v1)
 
 	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
+	v2.SetLen(5)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
 	}
 
-	// Set up segment
+	// Set up cf
 	sMap := make(map[string]storage.Column)
 	sMap["c1"] = &fakeFloatColumn{}
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
-	fs := &fakeSegment{sMap: sMap}
+	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -398,10 +387,10 @@ func TestSortScenario(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs)
-	m := make(map[int][]byte)
-	m[0] = []byte("c1")
-	m[1] = []byte("c2")
-	m[2] = []byte("c3")
+	m := make(map[int]string)
+	m[0] = "c1"
+	m[1] = "c2"
+	m[2] = "c3"
 	ctx.Value(ColumnIndexToColumnName, m)
 
 	op := NewSortedAggregateOperator(ctx, f, ag, g)
@@ -432,24 +421,27 @@ func TestSortScenario2(t *testing.T) {
 	// Set up child
 	vec := make([]vector.Vector, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	v.SetLen(5)
 	vec = append(vec, &v)
 
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	v1.SetLen(5)
 	vec = append(vec, &v1)
 
 	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
+	v2.SetLen(5)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
 	}
 
-	// Set up segment
+	// Set up cf
 	sMap := make(map[string]storage.Column)
 	sMap["c1"] = &fakeFloatColumn{}
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
-	fs := fakeSegment{sMap: sMap}
+	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -463,10 +455,10 @@ func TestSortScenario2(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs)
-	m := make(map[int][]byte)
-	m[0] = []byte("c1")
-	m[1] = []byte("c2")
-	m[2] = []byte("c3")
+	m := make(map[int]string)
+	m[0] = "c1"
+	m[1] = "c2"
+	m[2] = "c3"
 	ctx.Value(ColumnIndexToColumnName, m)
 
 	op := NewSortedAggregateOperator(ctx, f, ag, g)

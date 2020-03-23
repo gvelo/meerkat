@@ -26,7 +26,7 @@ import (
 func TestQuery1(t *testing.T) {
 	// a := assert.New(t)
 
-	var s storage.Segment
+	var s storage.ColumnFinder
 
 	ctx := NewContext(s)
 	ctx.Value(ColumnIndexToColumnName, []string{"F", "C1", "C2", "C3"})
@@ -69,7 +69,7 @@ func TestQuery1(t *testing.T) {
 func TestQuery2(t *testing.T) {
 	// a := assert.New(t)
 
-	var s storage.Segment
+	var s storage.ColumnFinder
 
 	ctx := NewContext(s)
 	ctx.Value(ColumnIndexToColumnName, []string{"_ts"})

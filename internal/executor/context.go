@@ -17,23 +17,22 @@ import (
 	"meerkat/internal/storage"
 )
 
-// save a slice that maps the vector index to column ids in segment.
+// save a slice that maps the vector index to column ids in cf.
 const ColumnIndexToColumnName = "COLUMN_INDEX_TO_COLUMN_NAME"
 
 type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
-	Segment() *storage.Segment
-	BatchLen() int
+	Segment() storage.ColumnFinder
 }
 
 type ctx struct {
-	segment storage.Segment
-	m       map[string]interface{}
+	cf storage.ColumnFinder
+	m  map[string]interface{}
 }
 
-func NewContext(s storage.Segment) Context {
-	return &ctx{segment: s, m: make(map[string]interface{})}
+func NewContext(s storage.ColumnFinder) Context {
+	return &ctx{cf: s, m: make(map[string]interface{})}
 }
 
 func (c ctx) Value(key string, value interface{}) {
@@ -45,10 +44,6 @@ func (c ctx) Get(key string) (interface{}, bool) {
 	return i, ok
 }
 
-func (c ctx) Segment() *storage.Segment {
-	return &c.segment
-}
-
-func (c ctx) BatchLen() int {
-	return 1000
+func (c ctx) Segment() storage.ColumnFinder {
+	return c.cf
 }

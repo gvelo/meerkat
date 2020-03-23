@@ -175,6 +175,7 @@ func NewFloatVector(buf []float64, valid []uint64) FloatVector {
 	return FloatVector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 

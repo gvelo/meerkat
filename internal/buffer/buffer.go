@@ -65,7 +65,7 @@ func (b *ByteSliceBuffer) Nulls() []bool {
 }
 
 func (b *ByteSliceBuffer) AppendNull() {
-	b.nulls = append(b.nulls, false)
+	b.nulls = append(b.nulls, true)
 	b.offsets = append(b.offsets, len(b.buf))
 }
 
