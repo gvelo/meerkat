@@ -123,6 +123,7 @@ func NewByteSliceVector(data []byte, offsets []int, valid []uint64) ByteSliceVec
 		offsets: offsets,
 		buf:     data,
 		valid:   valid,
+		l:       len(offsets),
 	}
 }
 

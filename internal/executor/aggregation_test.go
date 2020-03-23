@@ -60,10 +60,6 @@ func (f *fakeFloatColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f *fakeFloatColumn) Dict() storage.FloatDict {
-	panic("implement me")
-}
-
 func (f *fakeFloatColumn) Index() storage.FloatIndex {
 	panic("implement me")
 }
@@ -95,15 +91,11 @@ func (f *fakeIntColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f *fakeIntColumn) Dict() storage.IntDict {
-	panic("implement me")
-}
-
 func (f *fakeIntColumn) Index() storage.IntIndex {
 	panic("implement me")
 }
 
-func (f *fakeIntColumn) Read(pos []uint32) vector.IntVector {
+func (f *fakeIntColumn) Reader() storage.IntColumnReader {
 	panic("implement me")
 }
 
@@ -114,43 +106,43 @@ func (f *fakeIntColumn) Iterator() storage.IntIterator {
 type fakeStringColumn struct {
 }
 
-func (f fakeStringColumn) Encoding() encoding2.EncodingType {
+func (f *fakeStringColumn) Encoding() encoding2.EncodingType {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Validity() *roaring.Bitmap {
+func (f *fakeStringColumn) Validity() *roaring.Bitmap {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) HasNulls() bool {
+func (f *fakeStringColumn) HasNulls() bool {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Stats() *storage.Stats {
+func (f *fakeStringColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Dict() storage.ByteSliceDict {
+func (f *fakeStringColumn) Dict() storage.ByteSliceDict {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Index() storage.ByteSliceIndex {
+func (f *fakeStringColumn) Index() storage.ByteSliceIndex {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) DictEncReader() storage.IntColumnReader {
+func (f *fakeStringColumn) DictEncReader() storage.IntColumnReader {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Reader() storage.ByteSliceReader {
+func (f *fakeStringColumn) Reader() storage.ByteSliceReader {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) Iterator() storage.BinaryIterator {
+func (f *fakeStringColumn) Iterator() storage.BinaryIterator {
 	panic("implement me")
 }
 
-func (f fakeStringColumn) DictEncIterator() storage.IntIterator {
+func (f *fakeStringColumn) DictEncIterator() storage.IntIterator {
 	panic("implement me")
 }
 
@@ -285,15 +277,12 @@ func TestHAggScenario2(t *testing.T) {
 	vec := make([]vector.Vector, 0)
 	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
 	v := vector.NewFloatVector(rv, rn)
-	v.SetLen(5 * times)
 	vec = append(vec, &v)
 	rv1, rn1 := multiplyIntVector([]int{2, 2, 4, 5, 6}, []uint64{}, times)
 	v1 := vector.NewIntVector(rv1, rn1)
-	v1.SetLen(5 * times)
 	vec = append(vec, &v1)
 	rv2, rn2, ro2 := multiplyBsVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13}, times)
 	v2 := vector.NewByteSliceVector(rv2, ro2, rn2)
-	v2.SetLen(5 * times)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -353,15 +342,12 @@ func TestSortScenario(t *testing.T) {
 	// Set up child
 	vec := make([]vector.Vector, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
-	v.SetLen(5)
 	vec = append(vec, &v)
 
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
-	v1.SetLen(5)
 	vec = append(vec, &v1)
 
 	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
-	v2.SetLen(5)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
@@ -421,15 +407,12 @@ func TestSortScenario2(t *testing.T) {
 	// Set up child
 	vec := make([]vector.Vector, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
-	v.SetLen(5)
 	vec = append(vec, &v)
 
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
-	v1.SetLen(5)
 	vec = append(vec, &v1)
 
 	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
-	v2.SetLen(5)
 	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,

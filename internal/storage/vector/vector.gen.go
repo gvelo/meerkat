@@ -69,6 +69,7 @@ func NewIntVector(buf []int, valid []uint64) IntVector {
 	return IntVector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 
@@ -122,6 +123,7 @@ func NewUintVector(buf []uint, valid []uint64) UintVector {
 	return UintVector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 
@@ -229,5 +231,6 @@ func NewBoolVector(buf []bool, valid []uint64) BoolVector {
 	return BoolVector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
