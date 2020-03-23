@@ -661,7 +661,7 @@ func (cr *binaryColumn) read() {
 
 }
 
-func (cr *binaryColumn) Iterator() ByteSliceIterator {
+func (cr *binaryColumn) Iterator() BinaryIterator {
 
 	dec, blockReader := encoding.GetBinaryDecoder(
 		cr.encoding,
@@ -689,32 +689,31 @@ func (cr *binaryColumn) Iterator() ByteSliceIterator {
 
 }
 
-//func (cr *binaryColumn) Reader() BinaryColumnReader {
-//
-//	dec, blockReader := encoding.GetBinaryDecoder(
-//		cr.encoding,
-//		cr.b,
-//		cr.blkBounds,
-//	)
-//
-//	if cr.valid != nil {
-//		return NewBinaryNullableColumnReader(blockReader,
-//			cr.blkIdx,
-//			dec,
-//			cr.valid,
-//			cr.numOfRows,
-//			cr.vectorPool,
-//		)
-//	}
-//
-//	return NewBinaryColumnReader(blockReader,
-//		cr.blkIdx,
-//		dec,
-//		cr.vectorPool,
-//		cr.numOfRows,
-//		cr.blockLen,
-//	)
-//}
+func (cr *binaryColumn) Reader() ByteSliceReader {
+
+	dec, blockReader := encoding.GetBinaryDecoder(
+		cr.encoding,
+		cr.b,
+		cr.blkBounds,
+	)
+
+	if cr.valid != nil {
+		return NewBinaryNullColumnReader(blockReader,
+			cr.blkIdx,
+			dec,
+			cr.valid,
+			cr.numOfRows,
+			cr.vectorPool,
+		)
+	}
+
+	return NewBinaryColumnReader(blockReader,
+		cr.blkIdx,
+		dec,
+		cr.vectorPool,
+		cr.numOfRows,
+	)
+}
 
 type BinaryColumnIterator struct {
 	dec     encoding.ByteSliceDecoder
@@ -890,4 +889,210 @@ func (i *BinaryNullColumnIterator) readBlock() {
 
 func (i *BinaryNullColumnIterator) HasNext() bool {
 	return int(i.rid) < i.colLen
+}
+
+type BinaryColumnReader struct {
+	idx     index.BlockIndexReader
+	br      encoding.BlockReader
+	dec     encoding.ByteSliceDecoder
+	pool    vector.Pool
+	colLen  int
+	buf     []byte
+	offsets []int
+	bufLen  int
+	baseRID uint32
+	nextRid uint32 // next block RID
+}
+
+func NewBinaryColumnReader(br encoding.BlockReader,
+	idx index.BlockIndexReader,
+	dec encoding.ByteSliceDecoder,
+	pool vector.Pool,
+	colLen int,
+) *BinaryColumnReader {
+
+	return &BinaryColumnReader{
+		br:     br,
+		idx:    idx,
+		dec:    dec,
+		pool:   pool,
+		colLen: colLen,
+	}
+}
+
+func (r *BinaryColumnReader) Read(rids []uint32) vector.ByteSliceVector {
+
+	v := r.pool.GetByteSliceVector()
+
+	for _, rid := range rids {
+
+		if r.bufLen == 0 || rid >= r.nextRid {
+			r.ReadBlock(rid)
+		}
+
+		j := rid - r.baseRID
+
+		var start int
+
+		if j > 0 {
+			start = r.offsets[j-1]
+		}
+
+		v.AppendSlice(r.buf[start:r.offsets[j]])
+
+	}
+
+	return v
+
+}
+
+func (r *BinaryColumnReader) ReadBlock(rid uint32) {
+	var b encoding.Block
+	b, r.baseRID, r.nextRid = r.FindBlock(rid)
+	r.buf, r.offsets = r.dec.Decode(b.Bytes())
+	r.bufLen = b.Len()
+}
+
+func (r *BinaryColumnReader) FindBlock(rid uint32) (encoding.Block, uint32, uint32) {
+
+	blockRid, offset := r.idx.Lookup(rid)
+
+	var nextRid uint32
+
+	for {
+
+		b := r.br.ReadBlock(offset)
+
+		nextRid = blockRid + uint32(b.Len())
+
+		if nextRid > rid {
+			return b, blockRid, nextRid
+		}
+
+		blockRid = nextRid
+
+	}
+
+}
+
+type BinaryNullColumnReader struct {
+	idx      index.BlockIndexReader
+	br       encoding.BlockReader
+	dec      encoding.ByteSliceDecoder
+	validity *roaring.Bitmap
+	valIter  roaring.IntPeekable
+	pool     vector.Pool
+	buf      []byte
+	offsets  []int
+	bRID     []uint32
+	bufLen   int
+	minRID   uint32
+	maxRID   uint32
+	colLen   int
+	pos      int // the position into the decoded buffer
+}
+
+func NewBinaryNullColumnReader(br encoding.BlockReader,
+	idx index.BlockIndexReader,
+	dec encoding.ByteSliceDecoder,
+	validity *roaring.Bitmap,
+	colLen int,
+	pool vector.Pool,
+) *BinaryNullColumnReader {
+
+	return &BinaryNullColumnReader{
+		br:       br,
+		idx:      idx,
+		dec:      dec,
+		validity: validity,
+		pool:     pool,
+		colLen:   colLen,
+		valIter:  validity.Iterator(),
+	}
+}
+
+func (r *BinaryNullColumnReader) Read(rids []uint32) vector.ByteSliceVector {
+
+	v := r.pool.GetByteSliceVector()
+
+	for _, rid := range rids {
+
+		if int(rid) < r.colLen && r.validity.Contains(rid) {
+
+			if r.bufLen == 0 || rid > r.maxRID {
+				r.ReadBlock(rid)
+				r.pos = 0
+			}
+
+			for ; r.pos < r.bufLen; r.pos++ {
+
+				if rid == r.bRID[r.pos] {
+
+					var start int
+
+					if r.pos > 0 {
+						start = r.offsets[r.pos-1]
+					}
+
+					v.AppendSlice(r.buf[start:r.offsets[r.pos]])
+
+					break
+
+				}
+
+			}
+
+			// if the loop exited without a match
+			// something is wrong
+			if r.pos == r.bufLen {
+				panic("cannot find RID in buffer")
+			}
+
+		} else {
+			// TODO(gvelo) use setmem(0) in vec initialization
+			//  to avoid this branch
+			v.AppendNull()
+		}
+
+	}
+
+	return v
+
+}
+
+func (r *BinaryNullColumnReader) ReadBlock(rid uint32) {
+	var b encoding.Block
+	b, r.minRID, r.maxRID = r.FindBlock(rid)
+	r.buf, r.offsets = r.dec.Decode(b.Bytes())
+	r.bufLen = b.Len()
+}
+
+func (r *BinaryNullColumnReader) FindBlock(rid uint32) (encoding.Block, uint32, uint32) {
+
+	minRID, offset := r.idx.Lookup(rid)
+
+	r.valIter.AdvanceIfNeeded(minRID)
+
+	for {
+
+		b := r.br.ReadBlock(offset)
+
+		if b.Len() > cap(r.bRID) {
+			r.bRID = make([]uint32, b.Len()*2)
+		}
+
+		r.bRID = r.bRID[:b.Len()]
+
+		for i := 0; i < b.Len(); i++ {
+			r.bRID[i] = r.valIter.Next()
+		}
+
+		maxRID := r.bRID[b.Len()-1]
+
+		if maxRID >= rid {
+			return b, minRID, maxRID
+		}
+
+	}
+
 }

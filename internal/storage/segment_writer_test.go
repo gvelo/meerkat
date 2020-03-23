@@ -201,7 +201,7 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 	case schema.FieldType_STRING:
 		testIterStringField(t, field, col.(*binaryColumn), buf.(*buffer.ByteSliceBuffer))
-
+		testReadStringField(t, field, col.(*binaryColumn), buf.(*buffer.ByteSliceBuffer))
 	default:
 		t.Fatal("unknown column type")
 	}
@@ -314,6 +314,40 @@ func testIterStringField(t *testing.T, f schema.Field, col *binaryColumn, buf *b
 
 	if f.Nullable {
 		assert.Equal(t, buf.Nulls(), nulls)
+	}
+
+}
+
+func testReadStringField(t *testing.T, f schema.Field, col *binaryColumn, buf *buffer.ByteSliceBuffer) {
+
+	v := vector.DefaultVectorPool().GetByteSliceVector()
+	l := v.Cap()
+
+	var rids []uint32
+
+	for i := 0; i < testLen && len(rids) < l; i++ {
+
+		if rand.Intn(20) == 0 {
+			rids = append(rids, uint32(i))
+		}
+
+	}
+
+	r := col.Reader()
+
+	vec := r.Read(rids)
+
+	for i, rid := range rids {
+
+		if f.Nullable {
+			assert.Equal(t, !buf.Nulls()[rid], vec.IsValid(i))
+			if !buf.Nulls()[rid] {
+				assert.Equal(t, buf.Get(int(rid)), vec.Get(i))
+			}
+		} else {
+			assert.Equal(t, buf.Get(int(rid)), vec.Get(i))
+		}
+
 	}
 
 }

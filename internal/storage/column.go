@@ -61,19 +61,19 @@ type StringColumn interface {
 	Index() ByteSliceIndex
 	DictEncReader() IntColumnReader
 	Reader() ByteSliceReader
-	Iterator() ByteSliceIterator
+	Iterator() BinaryIterator
 	DictEncIterator() IntIterator
 }
 
 type ByteSliceReader interface {
-	Read(pos []uint32) vector.FloatVector
+	Read(pos []uint32) vector.ByteSliceVector
 }
 
 type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
 	Reader() ByteSliceReader
-	Iterator() ByteSliceIterator
+	Iterator() BinaryIterator
 }
 
 type TimeColumn interface {
@@ -97,7 +97,7 @@ type FloatIterator interface {
 	Next() vector.FloatVector
 }
 
-type ByteSliceIterator interface {
+type BinaryIterator interface {
 	Iterator
 	Next() vector.ByteSliceVector
 }
