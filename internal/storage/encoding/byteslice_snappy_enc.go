@@ -30,7 +30,7 @@ func NewByteSliceSnappyEncodeer(bw BlockWriter) *ByteSliceSnappyEncoder {
 	return &ByteSliceSnappyEncoder{
 		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
-		offsetBuf: make([]int, maxSlicesPerBlock),
+		offsetBuf: make([]int, 1024*4),
 	}
 }
 
@@ -49,14 +49,20 @@ func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 	// make sure that the buffer has enough space to accommodate
 	// the offsets slice plus the encoded data. We need to avoid
 	// allocation inside the snappy encoder.
+	// ( header size + offset slice size ) * MaxVarintLen64 + enc data size
 	size := binary.MaxVarintLen64*(v.Len()+2) + snappy.MaxEncodedLen(len(v.Data()))
 
+	// reset and ensure size
 	e.buf.Reset(size)
+
+	if v.Len() > len(e.offsetBuf) {
+		e.offsetBuf = make([]int, v.Len()*2)
+	}
 
 	DeltaEncode(v.Offsets(), e.offsetBuf)
 
 	// left enough room at the beginning of the block to write the
-	// block length encoded as uvarint
+	// header ( block length encoded as uvarint )
 	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:v.Len()])
 
 	// as we have enough room in the dst buffer the encoder will not

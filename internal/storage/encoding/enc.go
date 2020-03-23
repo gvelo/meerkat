@@ -79,7 +79,7 @@ type ByteSliceEncoder interface {
 }
 
 type ByteSliceDecoder interface {
-	Decode(block []byte, data []byte, offsets []int) ([]byte, []int)
+	Decode(block []byte) ([]byte, []int)
 }
 
 type BoolEncoder interface {
@@ -101,12 +101,10 @@ func DeltaEncode(src []int, dst []int) {
 
 }
 
-func DeltaDecode(src []int, dst []int) {
+func DeltaDecode(data []int) {
 
-	dst[0] = src[0]
-
-	for i := 1; i < len(src); i++ {
-		dst[i] = dst[i-1] + src[i]
+	for i := 1; i < len(data); i++ {
+		data[i] = data[i-1] + data[i]
 	}
 
 }
@@ -120,6 +118,25 @@ func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (In
 	case Plain:
 		dec = NewIntPlainDecoder()
 		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
+}
+
+func GetBinaryDecoder(d EncodingType, b []byte, bounds io.Bounds) (ByteSliceDecoder, BlockReader) {
+
+	var dec ByteSliceDecoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewByteSlicePlainDecoder()
+		br = NewByteSliceBlockReader(b, bounds)
+	case Snappy:
+		dec = NewByteSliceSnappyDecoder()
+		br = NewByteSliceBlockReader(b, bounds)
 	default:
 		panic("unknown encoding type")
 	}

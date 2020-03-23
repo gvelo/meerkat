@@ -23,20 +23,18 @@ func TestDeltaEnc(t *testing.T) {
 
 	s := 1024
 
-	src := make([]int, s)
-	dst := make([]int, s)
-
+	data := make([]int, s)
 	r := make([]int, s)
 
-	src[0] = 10
+	data[0] = 10
 
 	for i := 1; i < s; i++ {
-		src[i] = src[i-1] + rand.Intn(20)
+		data[i] = data[i-1] + rand.Intn(20)
 	}
 
-	DeltaEncode(src, dst)
-	DeltaDecode(dst, r)
+	DeltaEncode(data, r)
+	DeltaDecode(r)
 
-	assert.Equal(t, src, r, "slice doesn't match")
+	assert.Equal(t, data, r, "slice doesn't match")
 
 }

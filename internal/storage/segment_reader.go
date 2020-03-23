@@ -147,7 +147,9 @@ func (s *Segment) readColumns(cd []colData) {
 		case schema.FieldType_UINT:
 		case schema.FieldType_FLOAT:
 		case schema.FieldType_STRING:
+			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		case schema.FieldType_TEXT:
+			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:
 			panic("unknown column type")
 		}

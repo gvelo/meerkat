@@ -57,14 +57,20 @@ func (r *ByteSliceBlockReader) Next() Block {
 }
 
 func (r *ByteSliceBlockReader) readBlock() Block {
+
 	b := Block{}
-	s := r.br.ReadUVarint()
+
+	size := r.br.ReadUVarint()
+	start := r.br.Offset()
 	b.l = r.br.ReadUVarint()
-	b.bytes = r.br.ReadSlice(r.br.Offset(), r.br.Offset()+s)
+	b.bytes = r.br.ReadSlice(start, start+size)
+
 	if r.br.Offset() > r.bounds.End {
 		panic("read out of column bounds")
 	}
+
 	return b
+
 }
 
 func NewByteSliceBlockReader(bytes []byte, bounds io.Bounds) *ByteSliceBlockReader {
@@ -78,6 +84,7 @@ func NewByteSliceBlockReader(bytes []byte, bounds io.Bounds) *ByteSliceBlockRead
 	}
 
 	return b
+
 }
 
 type ScalarPlainBlockReader struct {
@@ -148,4 +155,5 @@ func (r *ScalarPlainBlockReader) readBlock() Block {
 	b.bytes = r.br.ReadSlice(r.br.Offset(), blockEnd)
 
 	return b
+
 }

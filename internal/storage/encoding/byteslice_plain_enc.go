@@ -19,10 +19,6 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-const (
-	maxSlicesPerBlock = 1024 * 32
-)
-
 type ByteSlicePlainEncoder struct {
 	bw        BlockWriter
 	buf       *io.EncoderBuffer
@@ -33,7 +29,7 @@ func NewByteSlicePlainEncodeer(bw BlockWriter) *ByteSlicePlainEncoder {
 	return &ByteSlicePlainEncoder{
 		bw:        bw,
 		buf:       io.NewEncoderBuffer(64 * 1024),
-		offsetBuf: make([]int, maxSlicesPerBlock),
+		offsetBuf: make([]int, 1024*4),
 	}
 }
 
@@ -49,9 +45,17 @@ func (e *ByteSlicePlainEncoder) Type() EncodingType {
 
 func (e *ByteSlicePlainEncoder) Encode(v colval.ByteSliceColValues) {
 
+	// make sure that the buffer has enough space to accommodate
+	// the offsets slice plus the encoded data.
+	// ( header size + offset slice size ) * MaxVarintLen64 + enc data size
+
 	size := binary.MaxVarintLen64*(v.Len()+2) + len(v.Data())
 
 	e.buf.Reset(size)
+
+	if v.Len() > len(e.offsetBuf) {
+		e.offsetBuf = make([]int, v.Len()*2)
+	}
 
 	DeltaEncode(v.Offsets(), e.offsetBuf)
 

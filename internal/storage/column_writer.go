@@ -38,7 +38,12 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
+
 	var validity index.ValidityIndexWriter
+
+	if buf.Nullable() {
+		validity = index.NewValidityBitmapIndex(bw)
+	}
 
 	switch fieldType {
 	case schema.FieldType_INT:
@@ -47,15 +52,13 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 		//              column's value width.
 		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
 		enc := encoding.NewIntPlainEncoder(blkWriter)
-		if src.HasNulls() {
-			validity = index.NewValidityBitmapIndex(bw)
-		}
+
 		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, validity, bw)
 
 	case schema.FieldType_STRING:
 		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
-		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, nil, bw)
+		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, validity, bw)
 
 	default:
 		panic("unknown fieldType")

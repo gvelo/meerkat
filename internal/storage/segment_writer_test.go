@@ -20,6 +20,7 @@ import (
 	"meerkat/internal/buffer"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage/vector"
+	"meerkat/internal/util/testutil"
 	"os"
 	"path"
 	"testing"
@@ -102,9 +103,20 @@ func createBuffers(indexInfo schema.IndexInfo) *buffer.Table {
 				} else {
 					r.AddCol(f.Id, rand.Int())
 				}
+			case schema.FieldType_STRING:
+				if f.Nullable {
+					if rand.Intn(3) == 2 {
+						r.AddCol(f.Id, testutil.RandomString(25))
+					}
+				} else {
+					r.AddCol(f.Id, testutil.RandomString(25))
+				}
 			}
+
 		}
+
 		table.AppendRow(r)
+
 	}
 
 	return table
@@ -151,16 +163,26 @@ func createIndexInfo() schema.IndexInfo {
 				Created:   time.Time{},
 				Updated:   time.Time{},
 			},
-			//{
-			//	Id:        "stringFieldId",
-			//	Name:      "stringField",
-			//	Desc:      "",
-			//	IndexId:   "test-index",
-			//	FieldType: schema.FieldType_STRING,
-			//	Nullable:  false,
-			//	Created:   time.Time{},
-			//	Updated:   time.Time{},
-			//},
+			{
+				Id:        "stringFieldId",
+				Name:      "stringField",
+				Desc:      "",
+				IndexId:   "test-index",
+				FieldType: schema.FieldType_STRING,
+				Nullable:  false,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			},
+			{
+				Id:        "stringNullFieldId",
+				Name:      "stringNullField",
+				Desc:      "",
+				IndexId:   "test-index",
+				FieldType: schema.FieldType_STRING,
+				Nullable:  true,
+				Created:   time.Time{},
+				Updated:   time.Time{},
+			},
 		},
 	}
 
@@ -177,6 +199,9 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 	case schema.FieldType_INT:
 		testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
 		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+	case schema.FieldType_STRING:
+		testIterStringField(t, field, col.(*binaryColumn), buf.(*buffer.ByteSliceBuffer))
+
 	default:
 		t.Fatal("unknown column type")
 	}
@@ -194,7 +219,9 @@ func testIterINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.
 	for iter.HasNext() {
 
 		v := iter.Next()
+
 		values = append(values, v.Values()...)
+
 		if f.Nullable {
 			for n := 0; n < v.Len(); n++ {
 				if v.IsValid(n) {
@@ -246,6 +273,47 @@ func testReadINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.
 			assert.Equal(t, buf.Values()[rid], vec.Values()[i])
 		}
 
+	}
+
+}
+
+func testIterStringField(t *testing.T, f schema.Field, col *binaryColumn, buf *buffer.ByteSliceBuffer) {
+
+	var values [][]byte
+	var nulls []bool
+	var valids int
+
+	iter := col.Iterator()
+
+	for iter.HasNext() {
+
+		v := iter.Next()
+
+		for i := 0; i < v.Len(); i++ {
+			values = append(values, v.Get(i))
+		}
+
+		if f.Nullable {
+			for n := 0; n < v.Len(); n++ {
+				if v.IsValid(n) {
+					valids++
+					nulls = append(nulls, false)
+				} else {
+					nulls = append(nulls, true)
+				}
+			}
+		}
+
+	}
+
+	assert.Equal(t, buf.Len(), len(values))
+
+	for i := 0; i < buf.Len(); i++ {
+		assert.Equal(t, buf.Get(i), values[i])
+	}
+
+	if f.Nullable {
+		assert.Equal(t, buf.Nulls(), nulls)
 	}
 
 }
