@@ -36,3 +36,7 @@ func (s *SegmentWriterPool) Start() {
 func (s *SegmentWriterPool) Stop() {
 
 }
+
+func (s *SegmentWriterPool) InChan() chan *buffer.Table {
+	return s.inChan
+}
