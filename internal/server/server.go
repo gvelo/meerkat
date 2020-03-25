@@ -108,7 +108,9 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create schema")
 	}
 
-	m.writePool = storage.NewSegmentWriterPool(1024, 10)
+	m.writePool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
+
+	m.writePool.Start()
 
 	// TODO(gvelo): use conf values.
 	sbf := segments.NewSegmentBufferFactory(1024, time.Second, m.writePool.InChan())
