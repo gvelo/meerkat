@@ -110,7 +110,11 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	m.writePool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
 
-	m.writePool.Start()
+	err = m.writePool.Start()
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
+	}
 
 	// TODO(gvelo): use conf values.
 	sbf := segments.NewSegmentBufferFactory(1024, time.Second, m.writePool.InChan())

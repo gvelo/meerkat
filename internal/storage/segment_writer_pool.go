@@ -16,8 +16,8 @@ package storage
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
-	"log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/buffer"
 	"os"
 	"path"
@@ -29,6 +29,7 @@ func NewSegmentWriterPool(chanSize int, poolSize int, dbPath string) *SegmentWri
 		inChan:   make(chan *buffer.Table, chanSize),
 		done:     make(chan struct{}),
 		path:     dbPath,
+		log:      log.With().Str("src", "SegmentWriterPool").Logger(),
 	}
 }
 
@@ -37,28 +38,36 @@ type SegmentWriterPool struct {
 	inChan   chan *buffer.Table
 	done     chan struct{}
 	path     string
+	log      zerolog.Logger
 }
 
-func (s *SegmentWriterPool) Start() {
+func (s *SegmentWriterPool) Start() error {
+
+	s.log.Info().Msg("start")
 
 	s.path = path.Join(s.path, "segments")
 
 	err := os.MkdirAll(s.path, 0770)
 
 	if err != nil {
-		panic(fmt.Sprintf("Could not create dir %v , %v", s.path, err))
+		return fmt.Errorf("could not create dir %v , %v", s.path, err)
 	}
 
 	for i := 0; i < s.poolSize; i++ {
 
-		worker := segmentWriterWorker{
+		worker := &segmentWriterWorker{
 			id:     i,
 			inChan: s.inChan,
 			done:   s.done,
 			path:   s.path,
+			log:    log.With().Str("src", "SegmentWriterWorker").Int("id", i).Logger(),
 		}
+
 		go func() { worker.Start() }()
+
 	}
+
+	return nil
 
 }
 
@@ -71,32 +80,38 @@ type segmentWriterWorker struct {
 	inChan chan *buffer.Table
 	done   chan struct{}
 	path   string
+	log    zerolog.Logger
 }
 
 // start worker
-func (w segmentWriterWorker) Start() {
+func (w *segmentWriterWorker) Start() {
 
 	for {
 		select {
-		case table := <-w.inChan:
+		case table, ok := <-w.inChan:
+			if !ok {
+				w.log.Info().Msg("inChan closed, quiting")
+				return
+			}
 			w.writeTable(table)
 		case <-w.done:
+			w.log.Info().Msg("done")
 			return
 		}
 	}
 }
 
-func (w segmentWriterWorker) writeTable(t *buffer.Table) {
-	// TODO: meter en la config.
-
-	viper.Get("")
+func (w *segmentWriterWorker) writeTable(t *buffer.Table) {
 
 	sid := uuid.New()
-	sw := NewSegmentWriter(w.path, sid, t)
 
-	if err := sw.Write(); err != nil {
+	w.log.Debug().Str("sid", sid.String()).Msg("writing segment")
+
+	err := WriteSegment(w.path, sid, t)
+
+	if err != nil {
 		// TODO: (sebad) what to do in this case?
-		log.Printf("Error writing segment %v %v", sid, err)
+		w.log.Error().Err(err).Str("sid", sid.String()).Msg("error writing segment")
 	}
 
 }
