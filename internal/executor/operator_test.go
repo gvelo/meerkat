@@ -14,11 +14,121 @@
 package executor
 
 import (
+	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage"
 	"testing"
 )
 
-// TODO:  ARMAR LAS NOTIFICACIONES!!!
+type expected struct {
+	cardinality []int
+	values      interface{}
+}
+
+type queryTestCase struct {
+	fieldName string
+	name      string
+	batch     int
+	in        interface{}
+	out       expected
+	op        ComparisonOperation
+	value     interface{}
+}
+
+func (tc *queryTestCase) init() error {
+	return nil
+}
+
+func createColFinder(in interface{}) storage.ColumnFinder {
+
+	m := make(map[string]storage.Column)
+	m["intFieldId"] = NewFakeIntColumn(in.([][]int))
+	s := NewFakeColFinder(m)
+	return s
+}
+
+func newColumnScanOperator(ctx Context, op ComparisonOperation, value interface{}, fieldName string, batch int) Uint32Operator {
+
+	return NewIntColumnScanOperator(ctx, op, value.(int), fieldName, batch)
+
+}
+
+func TestQueryScanOperators(t *testing.T) {
+	testCases := []queryTestCase{
+		{
+			fieldName: "intFieldId",
+			name:      "Check batch 5",
+			batch:     5,
+			in:        [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
+			out: expected{
+				cardinality: []int{2, 3},
+				values:      [][]uint32{{1, 2, 3, 4, 5}, {6}},
+			},
+			op:    gt,
+			value: 1,
+		},
+		{
+			fieldName: "intFieldId",
+			name:      "Check batch 3 more input",
+			batch:     3,
+			in:        [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
+			out: expected{
+				cardinality: []int{2, 3},
+				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+			},
+			op:    gt,
+			value: 1,
+		},
+
+		{
+			fieldName: "intFieldId",
+			name:      "Check batch 3",
+			batch:     3,
+			in:        [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
+			out: expected{
+				cardinality: []int{2, 3},
+				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}},
+			},
+			op:    gt,
+			value: 1,
+		},
+		{
+			fieldName: "intFieldId",
+			name:      "Check batch 10",
+			batch:     10,
+			in:        [][]int{{-1, 4, 5, 43, 4, 5, 7}},
+			out: expected{
+				cardinality: []int{2, 3},
+				values:      [][]uint32{{1, 2, 3, 4, 5, 6}},
+			},
+			op:    gt,
+			value: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			if err := tc.init(); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx := NewContext(createColFinder(tc.in))
+
+			op1 := newColumnScanOperator(ctx, tc.op, tc.value, tc.fieldName, tc.batch)
+			op1.Init()
+			var i = 0
+			n := op1.Next()
+			for ; n != nil; n = op1.Next() {
+				// assert.Equal(t, tc.out.cardinality[i], len(n), "length does not match.")
+				for x := 0; x < len(n); x++ {
+					assert.Equal(t, n[x], tc.out.values.([][]uint32)[i][x], "Not the same values")
+				}
+				i++
+			}
+		})
+	}
+}
+
 // Select * From Index Where c1 = 12 and ts Between  F1 AND F2 limit 100
 // C1, F1 indexed
 // C2 = string
@@ -38,10 +148,6 @@ func TestQuery1(t *testing.T) {
 	op4 := NewIndexScanOperator(ctx, eq, 12, "C1")     // C1 == 12
 
 	op5 := NewBinaryBitmapOperator(ctx, and, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
-
-	// este operador va a ser el mas complejo, materializa bufferea, ect ect tiene que saber que hacer en todos los campos
-	// quizas los histogramas y demas los podemos mapear como liteners o cosas por el estilo.
-	// tenenmos que ver si pasar un contexto, para abajo para compltar cosas, ejemplo Limit. ...
 
 	op6 := NewReaderOperator(ctx, op5, "F")
 	op7 := NewReaderOperator(ctx, op5, "C1")

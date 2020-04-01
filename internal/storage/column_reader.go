@@ -40,6 +40,26 @@ type intColumn struct {
 	vectorPool     vector.Pool
 }
 
+func (cr *intColumn) Encoding() encoding.EncodingType {
+	return cr.encoding
+}
+
+func (cr *intColumn) Validity() *roaring.Bitmap {
+	return cr.valid
+}
+
+func (cr *intColumn) HasNulls() bool {
+	return cr.valid != nil
+}
+
+func (cr *intColumn) Stats() *Stats {
+	return nil
+}
+
+func (cr *intColumn) Index() IntIndex {
+	panic("Implement me")
+}
+
 func (cr *intColumn) String() string {
 	return fmt.Sprintf(`
 	encoding       %v

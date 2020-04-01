@@ -33,6 +33,10 @@ func (f *fakeMultiVectorOperator) Next() []vector.Vector {
 	return f.vec
 }
 
+func NewFakeColFinder(m map[string]storage.Column) storage.ColumnFinder {
+	return &fakeColFinder{m}
+}
+
 type fakeColFinder struct {
 	sMap map[string]storage.Column
 }
@@ -72,7 +76,41 @@ func (f *fakeFloatColumn) Iterator() storage.FloatIterator {
 	panic("implement me")
 }
 
+type fakeIntIterator struct {
+	v [][]int
+	i int
+}
+
+func (f *fakeIntIterator) HasNext() bool {
+	return f.i < len(f.v)
+}
+
+func (f *fakeIntIterator) Next() vector.IntVector {
+	v1 := vector.NewIntVector(f.v[f.i], []uint64{})
+	f.i++
+	return v1
+}
+
+func NewFakeIntIterator(values [][]int) storage.IntIterator {
+
+	return &fakeIntIterator{
+		v: values,
+	}
+}
+
+func NewFakeIntColumn(values interface{}) storage.Column {
+	switch v := values.(type) {
+	case [][]int:
+		return &fakeIntColumn{
+			v: v,
+		}
+	}
+	panic("Not implemented")
+	return nil
+}
+
 type fakeIntColumn struct {
+	v [][]int
 }
 
 func (f *fakeIntColumn) Encoding() encoding2.EncodingType {
@@ -100,7 +138,7 @@ func (f *fakeIntColumn) Reader() storage.IntColumnReader {
 }
 
 func (f *fakeIntColumn) Iterator() storage.IntIterator {
-	panic("implement me")
+	return NewFakeIntIterator(f.v)
 }
 
 type fakeStringColumn struct {

@@ -21,8 +21,7 @@ import (
 	"meerkat/internal/schema"
 	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/testutil"
-	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -37,7 +36,7 @@ func TestSegmentWriter(t *testing.T) {
 	indexInfo := createIndexInfo()
 	buf := createBuffers(indexInfo)
 
-	filePath := path.Join(os.TempDir(), "segment_test")
+	filePath := "/Users/sebad/meerkat/segments"
 
 	//fmt.Println("path ", filePath)
 
@@ -50,6 +49,8 @@ func TestSegmentWriter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	filePath = filepath.Join(filePath, sid.String())
 
 	seg, err := ReadSegment(filePath)
 

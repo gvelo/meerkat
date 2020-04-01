@@ -13,6 +13,8 @@
 
 package executor
 
+// TODO: hacer un operador por tipo asi sacamos los switchs.
+
 import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
@@ -38,6 +40,7 @@ const (
 	gt
 	ge
 	ne
+	isNull
 	rex
 	pref
 )
@@ -71,6 +74,17 @@ type BitmapOperator interface {
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
 	Next() *roaring.Bitmap
+}
+
+// Uint32Operator is an Operator that []uint32 bitmaps as output
+type Uint32Operator interface {
+	Operator
+
+	// Next returns the next result from this operator or nil
+	// if there is no more data to process.
+	// TODO(gvelo) should we destroy the operator automatically when
+	//  there is no more data ?
+	Next() []uint32
 }
 
 // VectorOperator is an Operator that produces Vector as output
@@ -138,27 +152,26 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 	case xor:
 		return roaring.Xor(l, r)
 	}
-	//TODO: What do we return in this case?
-	return nil
+	panic("Operator not supported")
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
 func NewIndexScanOperator(ctx Context, op ComparisonOperation, value interface{}, fieldName string) BitmapOperator {
 	return &IndexScanOperator{
-		ctx:       ctx,
-		op:        op,
-		fieldName: fieldName,
-		value:     value,
+		ctx:   ctx,
+		op:    op,
+		fn:    fieldName,
+		value: value,
 	}
 }
 
 // IndexScanOperator executes a search in a column and returns the bitmap of positions
 // that meet that condition.
 type IndexScanOperator struct {
-	ctx       Context
-	op        ComparisonOperation
-	fieldName string
-	value     interface{}
+	ctx   Context
+	op    ComparisonOperation
+	fn    string
+	value interface{}
 }
 
 func (op *IndexScanOperator) Init() {
@@ -171,10 +184,19 @@ func (op *IndexScanOperator) Destroy() {
 
 func (op *IndexScanOperator) Next() *roaring.Bitmap {
 
-	c := op.ctx.Segment().Col(op.fieldName)
-
+	c := op.ctx.Segment().Col(op.fn)
 	switch col := c.(type) {
 	case storage.StringColumn:
+		switch op.op {
+		case eq:
+			return col.Index().Search(op.value.([]byte))
+		case rex:
+			return col.Index().Regex(op.value.([]byte))
+		case pref:
+			return col.Index().Prefix(op.value.([]byte))
+		}
+		panic("Operator not supported")
+
 	case storage.TextColumn:
 		switch op.op {
 		case eq:
@@ -184,6 +206,7 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 		case pref:
 			return col.Index().Prefix(op.value.([]byte))
 		}
+		panic("Operator not supported")
 
 	case storage.IntColumn:
 		switch op.op {
@@ -200,6 +223,7 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 		case gt:
 			return col.Index().Gt(op.value.(int))
 		}
+		panic("Operator not supported")
 
 	case storage.FloatColumn:
 		switch op.op {
@@ -216,63 +240,137 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 		case gt:
 			return col.Index().Gt(op.value.(float64))
 		}
-
+		panic("Operator not supported")
 	}
 
-	return nil
+	panic("Column type does not exists")
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewColumnScanOperator(p []int, c storage.Column) MultiVectorOperator {
-	return &ColumnScanOperator{
-		c: c,
+func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, size int) Uint32Operator {
+	var v func(x, y int) bool
+	switch op {
+	case eq:
+		v = func(x, y int) bool {
+			return x == y
+		}
+	case gt:
+		v = func(x, y int) bool {
+			return x > y
+		}
+	case ge:
+		v = func(x, y int) bool {
+			return x >= y
+		}
+	case le:
+		v = func(x, y int) bool {
+			return x <= y
+		}
+	case lt:
+		v = func(x, y int) bool {
+			return x < y
+		}
+	case ne:
+		v = func(x, y int) bool {
+			return x != y
+		}
+	case isNull:
+		v = nil
+	}
+
+	return &IntColumnScanOperator{
+		ctx:   ctx,
+		opFn:  v,
+		value: value,
+		fn:    fieldName,
+		sz:    size,
 	}
 }
 
-//
-// ColumnScanOperator takes a array of positions and a condition
-// it scans a non indexed column, search for that condition in the positions
-// provided and returns 2 Vectors:
-//
-// 1 . position vector that meet the conditions
-// 2 . values that meet the conditions
-//
-// if the arrays of positions is empty it scan all
-//
-type ColumnScanOperator struct {
-	ctx Context
-	c   storage.Column
+type IntColumnScanOperator struct {
+	ctx      Context
+	opFn     func(x, y int) bool
+	fn       string
+	value    int
+	sz       int
+	iterator storage.IntIterator
+	scanLeft []int
+	lastRid  uint32
 }
 
-func (op *ColumnScanOperator) Init() {
+func (op *IntColumnScanOperator) Init() {
+	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
+	op.iterator = c.Iterator()
 }
 
-func (op *ColumnScanOperator) Destroy() {
+func (op *IntColumnScanOperator) Destroy() {
 }
 
-func (op *ColumnScanOperator) Next() []vector.Vector {
+func (op *IntColumnScanOperator) processVector(src []int, x int) []uint32 {
 
-	//TODO: What do we return in this case?
-	return nil
+	r := make([]uint32, 0, op.sz)
+
+	for ; x < len(src) && len(r) < op.sz; x++ {
+		if op.opFn(src[x], op.value) {
+			r = append(r, op.lastRid)
+		}
+		op.lastRid++
+	}
+
+	if len(r) == op.sz {
+		op.scanLeft = src[x:]
+	}
+
+	return r
 }
 
-// ByteArrayScanOperator scans a non indexed column, search for the []pos
-// registers and returns the bitmap that meets that condition.
-//
-type ByteArrayScanOperator struct {
-	ctx Context
-	pos []int
-}
+func (op *IntColumnScanOperator) Next() []uint32 {
 
-func (op *ByteArrayScanOperator) Init() {
-}
+	r := make([]uint32, 0, op.sz)
 
-func (op *ByteArrayScanOperator) Destroy() {
-}
+	if len(op.scanLeft) > 0 {
 
-func (op *ByteArrayScanOperator) Next() *roaring.Bitmap {
-	//TODO: What do we return in this case?
-	return nil
+		x := 0
+		for ; x < len(op.scanLeft) && len(r) < op.sz; x++ {
+			if op.opFn(op.scanLeft[x], op.value) {
+				r = append(r, op.lastRid)
+			}
+			op.lastRid++
+		}
+
+		if len(r) == op.sz {
+			op.scanLeft = op.scanLeft[x:]
+			return r
+		}
+	}
+
+	for op.iterator.HasNext() {
+
+		intVector := op.iterator.Next()
+		values := intVector.Values()
+
+		x := 0
+		for ; x < len(values) && len(r) < op.sz; x++ {
+			if op.opFn(values[x], op.value) {
+				r = append(r, op.lastRid)
+			}
+			op.lastRid++
+		}
+
+		if len(r) == op.sz {
+			op.scanLeft = values[x:]
+			return r
+		}
+
+	}
+
+	op.scanLeft = nil
+	if len(r) > 0 {
+		return r
+	} else {
+		return nil
+	}
+
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
@@ -436,6 +534,7 @@ func (r *MaterializeOperator) Next() []vector.Vector {
 			switch vec := n[i].(type) {
 
 			case *vector.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
+				res[i] = vec
 			case *vector.FloatVector:
 				res[i] = vec
 			case *vector.IntVector:
