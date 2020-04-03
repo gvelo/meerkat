@@ -12,6 +12,11 @@ import (
 
 // FAKES
 
+const (
+	log2WordSize = uint(6)
+	wordSize     = uint(64)
+)
+
 type fakeMultiVectorOperator struct {
 	vec []vector.Vector
 	idx int
@@ -77,8 +82,10 @@ func (f *fakeFloatColumn) Iterator() storage.FloatIterator {
 }
 
 type fakeIntIterator struct {
-	v [][]int
-	i int
+	v        [][]int
+	i        int
+	validity [][]uint64
+	length   []int
 }
 
 func (f *fakeIntIterator) HasNext() bool {
@@ -86,23 +93,35 @@ func (f *fakeIntIterator) HasNext() bool {
 }
 
 func (f *fakeIntIterator) Next() vector.IntVector {
-	v1 := vector.NewIntVector(f.v[f.i], []uint64{})
+	var v1 vector.IntVector
+	if len(f.validity) > 0 {
+		v1 = vector.NewIntVector(f.v[f.i], f.validity[f.i])
+		v1.SetLen(f.length[f.i])
+	} else {
+		v1 = vector.NewIntVector(f.v[f.i], []uint64{})
+	}
+
 	f.i++
 	return v1
 }
 
-func NewFakeIntIterator(values [][]int) storage.IntIterator {
+func NewFakeIntIterator(values [][]int, validity [][]uint64, length []int) storage.IntIterator {
 
 	return &fakeIntIterator{
-		v: values,
+		v:        values,
+		validity: validity,
+		length:   length,
 	}
 }
 
 func NewFakeIntColumn(values interface{}) storage.Column {
-	switch v := values.(type) {
+	in := values.(input)
+	switch v := in.values.(type) {
 	case [][]int:
 		return &fakeIntColumn{
-			v: v,
+			v:        v,
+			validity: in.validity,
+			length:   in.length,
 		}
 	}
 	panic("Not implemented")
@@ -110,7 +129,9 @@ func NewFakeIntColumn(values interface{}) storage.Column {
 }
 
 type fakeIntColumn struct {
-	v [][]int
+	v        [][]int
+	validity [][]uint64
+	length   []int
 }
 
 func (f *fakeIntColumn) Encoding() encoding2.EncodingType {
@@ -122,7 +143,7 @@ func (f *fakeIntColumn) Validity() *roaring.Bitmap {
 }
 
 func (f *fakeIntColumn) HasNulls() bool {
-	panic("implement me")
+	return len(f.validity) > 0
 }
 
 func (f *fakeIntColumn) Stats() *storage.Stats {
@@ -138,7 +159,7 @@ func (f *fakeIntColumn) Reader() storage.IntColumnReader {
 }
 
 func (f *fakeIntColumn) Iterator() storage.IntIterator {
-	return NewFakeIntIterator(f.v)
+	return NewFakeIntIterator(f.v, f.validity, f.length)
 }
 
 type fakeStringColumn struct {
