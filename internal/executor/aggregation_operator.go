@@ -25,6 +25,7 @@ type HashAggregateOperator struct {
 	child   MultiVectorOperator
 	aggCols []Aggregation // Aggregation columns
 	keyCols []int         // Group by columns
+	sz      int
 }
 
 func (r *HashAggregateOperator) Init() {
@@ -39,16 +40,14 @@ func (r *HashAggregateOperator) Destroy() {
 }
 
 /*
-  This method iterates over the children Vectors and
-
   TODO(sebad): We need to spill out to disk we we do not have memory
 */
 func (r *HashAggregateOperator) Next() []vector.Vector {
 
 	mKey := make(map[string]int)
 
-	rKey := make([][]interface{}, 0)
-	rAgg := make([][]interface{}, 0)
+	rKey := make([][]interface{}, 0, r.sz)
+	rAgg := make([][]interface{}, 0, r.sz)
 
 	n := r.child.Next()
 
@@ -245,9 +244,11 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 		switch it.(type) {
 		case []int:
 			v := vector.NewIntVector(it.([]int), []uint64{})
+			v.SetLen(len(it.([]int)))
 			resVec = append(resVec, &v)
 		case []float64:
 			v := vector.NewFloatVector(it.([]float64), []uint64{})
+			v.SetLen(len(it.([]float64)))
 			resVec = append(resVec, &v)
 		case [][]byte:
 			s := it.([][]byte)

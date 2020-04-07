@@ -43,6 +43,7 @@ type TopOperator struct {
 }
 
 // NewTopOperator creates a new vector operator.
+// TODO:(sebad) this operator shouldn't sort the items.
 func NewTopOperator(child VectorOperator, n int, asc bool) MultiVectorOperator {
 	return &TopOperator{
 		n,

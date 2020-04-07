@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// FAKES
+// FAKES //TODO(sebad): make code more compact and legible, remove duplicates, use switchs.
 
 const (
 	log2WordSize = uint(6)
@@ -106,7 +106,6 @@ func (f *fakeIntIterator) Next() vector.IntVector {
 }
 
 func NewFakeIntIterator(values [][]int, validity [][]uint64, length []int) storage.IntIterator {
-
 	return &fakeIntIterator{
 		v:        values,
 		validity: validity,
@@ -114,11 +113,17 @@ func NewFakeIntIterator(values [][]int, validity [][]uint64, length []int) stora
 	}
 }
 
-func NewFakeIntColumn(values interface{}) storage.Column {
+func NewFakeColumn(values interface{}) storage.Column {
 	in := values.(input)
 	switch v := in.values.(type) {
 	case [][]int:
 		return &fakeIntColumn{
+			v:        v,
+			validity: in.validity,
+			length:   in.length,
+		}
+	case [][]string:
+		return &fakeStringColumn{
 			v:        v,
 			validity: in.validity,
 			length:   in.length,
@@ -162,7 +167,53 @@ func (f *fakeIntColumn) Iterator() storage.IntIterator {
 	return NewFakeIntIterator(f.v, f.validity, f.length)
 }
 
+type fakeBinaryIterator struct {
+	v        [][]string
+	i        int
+	validity [][]uint64
+	length   []int
+}
+
+func (f *fakeBinaryIterator) HasNext() bool {
+	return f.i < len(f.v)
+
+}
+
+func (f *fakeBinaryIterator) Next() vector.ByteSliceVector {
+	var v1 vector.ByteSliceVector
+	/*if len(f.validity) > 0 {
+		v1 = vector.NewByteSliceVector(f.v[f.i], f.validity[f.i])
+	} else {*/
+	data := make([]byte, 0, 1000)
+	offset := make([]int, 0, 1000)
+	idx := 0
+	for _, y := range f.v[f.i] {
+		data = append(data, []byte(y)...)
+		idx = idx + len(y)
+		offset = append(offset, idx)
+
+	}
+	v1 = vector.NewByteSliceVector(data, offset, []uint64{})
+	// }
+	v1.SetLen(len(offset))
+	f.i++
+	return v1
+}
+
+func NewFakeBinaryIterator(values [][]string, validity [][]uint64, length []int) storage.BinaryIterator {
+	return &fakeBinaryIterator{
+		v:        values,
+		i:        0,
+		validity: validity,
+		length:   length,
+	}
+
+}
+
 type fakeStringColumn struct {
+	v        [][]string
+	validity [][]uint64
+	length   []int
 }
 
 func (f *fakeStringColumn) Encoding() encoding2.EncodingType {
@@ -198,7 +249,7 @@ func (f *fakeStringColumn) Reader() storage.ByteSliceReader {
 }
 
 func (f *fakeStringColumn) Iterator() storage.BinaryIterator {
-	panic("implement me")
+	return NewFakeBinaryIterator(f.v, f.validity, f.length)
 }
 
 func (f *fakeStringColumn) DictEncIterator() storage.IntIterator {

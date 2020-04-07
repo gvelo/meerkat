@@ -20,8 +20,7 @@ import (
 )
 
 type expected struct {
-	cardinality []int
-	values      interface{}
+	values interface{}
 }
 
 type input struct {
@@ -40,49 +39,91 @@ type queryTestCase struct {
 	value     interface{}
 }
 
+func TestQueryStringScanOperators(t *testing.T) {
+
+	testCases := []queryTestCase{
+		{
+			fieldName: "col",
+			name:      "Check batch 3  input not Null",
+			batch:     3,
+			in: input{
+				values: [][]string{{"bbb", "aaa1", "aaa2", "aaa3", "aaa4", "bbbb"}, {"aaa01", "aaa02", "aaa03", "aaa04"}},
+			},
+			out: expected{
+				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
+			},
+			op:    contains,
+			value: "a",
+		},
+		{
+			fieldName: "col",
+			name:      "Check batch 3 input Null",
+			batch:     3,
+			in: input{
+				validity: [][]uint64{{63}, {15}}, // all valid
+				length:   []int{6, 6},
+				values:   [][]string{{"bbb", "aaa1", "aaa2", "aaa3", "aaa4", "bbbb"}, {"aaa01", "aaa02", "aaa03", "aaa04", "23234", "234234"}},
+			},
+			out: expected{
+				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
+			},
+			op:    contains,
+			value: "a",
+		},
+	}
+
+	// RUN TC
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			if err := tc.init(); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx := NewContext(createColFinder(tc.in))
+
+			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(string), tc)
+			op1.Init()
+			var i = 0
+			n := op1.Next()
+			for ; n != nil; n = op1.Next() {
+				// assert.Equal(t, tc.out.cardinality[i], len(n), "length does not match.")
+				for x := 0; x < len(n); x++ {
+					assert.Equal(t, tc.out.values.([][]uint32)[i][x], n[x], "Not the same values")
+				}
+				i++
+			}
+		})
+	}
+}
+
 func (tc *queryTestCase) init() error {
 	return nil
 }
 
 func createColFinder(in interface{}) storage.ColumnFinder {
-
 	m := make(map[string]storage.Column)
-	m["intFieldId"] = NewFakeIntColumn(in)
+	m["col"] = NewFakeColumn(in)
 	s := NewFakeColFinder(m)
 	return s
+
 }
 
 func newColumnScanOperator(ctx Context, op ComparisonOperation, value interface{}, tc queryTestCase) Uint32Operator {
-
-	if len(tc.in.validity) > 0 {
-		return NewIntNullColumnScanOperator(ctx, op, value.(int), tc.fieldName, tc.batch)
-	} else {
-		return NewIntColumnScanOperator(ctx, op, value.(int), tc.fieldName, tc.batch)
+	switch v := value.(type) {
+	case int:
+		return NewIntColumnScanOperator(ctx, op, v, tc.fieldName, tc.batch, len(tc.in.validity) > 0)
+	case string:
+		return NewStringColumnScanOperator(ctx, op, v, tc.fieldName, tc.batch, len(tc.in.validity) > 0)
 	}
-
+	return nil
 }
 
-func TestQueryScanOperators(t *testing.T) {
+func TestQueryIntScanOperators(t *testing.T) {
 
 	testCases := []queryTestCase{
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 3 more input Null",
-			batch:     3,
-			in: input{
-				validity: [][]uint64{{255}, {255}}, // all valid
-				length:   []int{6, 4},
-				values:   [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
-			},
-			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
-			},
-			op:    gt,
-			value: 1,
-		},
-		{
-			fieldName: "intFieldId",
+			fieldName: "col",
 			name:      "Check batch 5 Not Null",
 			batch:     5,
 			in: input{
@@ -90,14 +131,13 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3, 4, 5}, {6}},
+				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
+			fieldName: "col",
 			name:      "Check batch 5 Null",
 			batch:     5,
 			in: input{
@@ -106,30 +146,28 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3, 4, 5}, {6}},
+				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 3 more input Not Null",
+			fieldName: "col",
+			name:      "Check batch 3 more input Null",
 			batch:     3,
 			in: input{
 				validity: nil,
 				values:   [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 3 more input Null",
+			fieldName: "col",
+			name:      "Check batch 3 more input Not Null",
 			batch:     3,
 			in: input{
 				validity: [][]uint64{{255}, {255}}, // all valid
@@ -137,29 +175,27 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 3 Not Null",
+			fieldName: "col",
+			name:      "Check batch 3 Null",
 			batch:     3,
 			in: input{
 				validity: nil,
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}},
+				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
+			fieldName: "col",
 			name:      "Check batch 3 Not Null",
 			batch:     3,
 			in: input{
@@ -168,31 +204,29 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3}, {4, 5, 6}},
+				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 10 Not Null",
+			fieldName: "col",
+			name:      "Check batch 10 Null one vec",
 			batch:     10,
 			in: input{
 				validity: nil,
 				values:   [][]int{{-1, 4, 5, 43, 4, 5, 7}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3, 4, 5, 6}},
+				values: [][]uint32{{1, 2, 3, 4, 5, 6}},
 			},
 			op:    gt,
 			value: 1,
 		},
 
 		{
-			fieldName: "intFieldId",
-			name:      "Check batch 10 Null",
+			fieldName: "col",
+			name:      "Check batch 10 Not Null",
 			batch:     10,
 			in: input{
 				validity: [][]uint64{{255}, {255}}, // 0000 1111 1111 , 0000 1111 1111
@@ -200,14 +234,13 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 23, 32}, {-1, 5, 5, 33, 51, 54, 34, 32, 2, 3}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3, 4, 5, 6, 7, 11, 12, 13}, {14, 15, 16, 17}},
+				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7, 11, 12, 13}, {14, 15, 16, 17}},
 			},
 			op:    gt,
 			value: 1,
 		},
 		{
-			fieldName: "intFieldId",
+			fieldName: "col",
 			name:      "Check batch 10 Null",
 			batch:     10,
 			in: input{
@@ -216,8 +249,7 @@ func TestQueryScanOperators(t *testing.T) {
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 33232, 22323233}},
 			},
 			out: expected{
-				cardinality: []int{2, 3},
-				values:      [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
+				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
 			},
 			op:    gt,
 			value: 1,
@@ -234,14 +266,14 @@ func TestQueryScanOperators(t *testing.T) {
 
 			ctx := NewContext(createColFinder(tc.in))
 
-			op1 := newColumnScanOperator(ctx, tc.op, tc.value, tc)
+			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(int), tc)
 			op1.Init()
 			var i = 0
 			n := op1.Next()
 			for ; n != nil; n = op1.Next() {
 				// assert.Equal(t, tc.out.cardinality[i], len(n), "length does not match.")
 				for x := 0; x < len(n); x++ {
-					assert.Equal(t, n[x], tc.out.values.([][]uint32)[i][x], "Not the same values")
+					assert.Equal(t, tc.out.values.([][]uint32)[i][x], n[x], "Not the same values")
 				}
 				i++
 			}

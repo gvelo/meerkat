@@ -41,6 +41,7 @@ func (op *TestOperator) Init() {
 func (op *TestOperator) Next() vector.Vector {
 	if op.i < len(op.val) {
 		sc := vector.NewIntVector(op.val[op.i], []uint64{})
+		sc.SetLen(len(op.val[op.i]))
 		op.i++
 		return &sc
 	}

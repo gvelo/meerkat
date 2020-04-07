@@ -115,6 +115,7 @@ func (op *BucketOperator) Next() vector.Vector {
 		}
 
 		v := vector.NewIntVector(ts, []uint64{})
+		v.SetLen(len(ts))
 		return &v
 	} else {
 		return nil

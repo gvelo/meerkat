@@ -16,7 +16,173 @@ package executor
 import (
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
+	"meerkat/internal/util/sliceutil"
+	"strings"
 )
+
+func selectStringOpFn(op ComparisonOperation) func(x []byte, y string) bool {
+	// TODO(sebad) check this...
+	var v func(x []byte, y string) bool
+	switch op {
+	case eq:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) == y
+		}
+	case gt:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) > y
+		}
+	case ge:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) >= y
+		}
+	case le:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) <= y
+		}
+	case lt:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) < y
+		}
+	case ne:
+		v = func(x []byte, y string) bool {
+			return sliceutil.BS2S(x) != y
+		}
+	case contains:
+		v = func(x []byte, y string) bool {
+			return strings.Contains(sliceutil.BS2S(x), y)
+		}
+	case isNull:
+		v = nil
+	default:
+		panic("Operator Not found.")
+	}
+	return v
+}
+
+// NewColumnScanOperator creates a ColumnScanOperator
+func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value string, fieldName string, size int, nullable bool) Uint32Operator {
+	v := &StringColumnScanOperator{
+		ctx:   ctx,
+		opFn:  selectStringOpFn(op),
+		value: value,
+		fn:    fieldName,
+		sz:    size,
+	}
+	if nullable {
+		v.processFn = v.processNullVector
+	} else {
+		v.processFn = v.processVector
+	}
+	return v
+}
+
+type StringColumnScanOperator struct {
+	ctx           Context
+	opFn          func(x []byte, y string) bool
+	fn            string
+	value         string
+	sz            int
+	iterator      storage.BinaryIterator
+	lastRid       uint32
+	resultLeft    []uint32
+	lastCheckedId int
+	lastValuePos  int
+	lastVector    *vector.ByteSliceVector
+	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
+}
+
+func (op *StringColumnScanOperator) Next() []uint32 {
+	r := make([]uint32, 0, op.sz)
+
+	if op.lastVector != nil {
+
+		r = append(r, op.resultLeft...)
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+		if len(r) >= op.sz {
+			op.resultLeft = r[op.sz:]
+			return r[:op.sz]
+		}
+
+	}
+
+	for op.iterator.HasNext() {
+
+		intVector := op.iterator.Next()
+		op.lastVector = &intVector
+
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+
+		if len(r) >= op.sz {
+			op.resultLeft = r[op.sz:]
+			return r[:op.sz]
+		}
+
+	}
+
+	op.lastVector = nil
+	op.lastCheckedId = 0
+	op.lastValuePos = 0
+	if len(r) > 0 {
+		return r
+	} else {
+		return nil
+	}
+}
+
+func (op *StringColumnScanOperator) Init() {
+	c := op.ctx.Segment().Col(op.fn).(storage.StringColumn)
+	op.iterator = c.Iterator()
+}
+
+func (op *StringColumnScanOperator) Destroy() {
+}
+
+func (op *StringColumnScanOperator) processVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
+
+	i := lastValuePos
+	x := lastCheckedId
+
+	for ; x < op.lastVector.Len(); x++ {
+		if op.opFn(op.lastVector.Get(x), op.value) {
+			r = append(r, op.lastRid)
+			i++
+		}
+		op.lastRid++
+	}
+
+	if len(r) >= op.sz {
+		op.lastCheckedId = x
+		op.lastValuePos = i
+		return r
+	}
+
+	return r
+}
+
+func (op *StringColumnScanOperator) processNullVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
+
+	i := lastValuePos
+	x := lastCheckedId
+
+	for ; x < op.lastVector.Len(); x++ {
+		if op.lastVector.IsValid(x) {
+			if op.opFn(op.lastVector.Get(x), op.value) {
+				r = append(r, op.lastRid)
+				i++
+			}
+		}
+		op.lastRid++
+	}
+
+	if len(r) >= op.sz {
+		op.lastCheckedId = x
+		op.lastValuePos = i
+		return r
+	}
+
+	return r
+}
 
 func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
 	var v func(x, y int) bool
@@ -54,99 +220,24 @@ func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, size int) Uint32Operator {
+func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, size int, nullable bool) Uint32Operator {
 
-	return &IntColumnScanOperator{
+	v := &IntColumnScanOperator{
 		ctx:   ctx,
 		opFn:  selectIntOpFn(op),
 		value: value,
 		fn:    fieldName,
 		sz:    size,
 	}
+	if nullable {
+		v.processFn = v.processNullVector
+	} else {
+		v.processFn = v.processVector
+	}
+	return v
 }
 
 type IntColumnScanOperator struct {
-	ctx      Context
-	opFn     func(x, y int) bool
-	fn       string
-	value    int
-	sz       int
-	iterator storage.IntIterator
-	scanLeft []int
-	lastRid  uint32
-}
-
-func (op *IntColumnScanOperator) Init() {
-	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
-	op.iterator = c.Iterator()
-}
-
-func (op *IntColumnScanOperator) Destroy() {
-}
-
-func (op *IntColumnScanOperator) processVector(src []int, r []uint32) []uint32 {
-
-	x := 0
-	for ; x < len(src) && len(r) < op.sz; x++ {
-		if op.opFn(src[x], op.value) {
-			r = append(r, op.lastRid)
-		}
-		op.lastRid++
-	}
-
-	if len(r) == op.sz {
-		op.scanLeft = src[x:]
-	}
-
-	return r
-}
-
-func (op *IntColumnScanOperator) Next() []uint32 {
-
-	r := make([]uint32, 0, op.sz)
-
-	if len(op.scanLeft) > 0 {
-
-		r = op.processVector(op.scanLeft, r)
-		if len(r) == op.sz {
-			return r
-		}
-
-	}
-
-	for op.iterator.HasNext() {
-
-		intVector := op.iterator.Next()
-		values := intVector.Values()
-
-		r = op.processVector(values, r)
-		if len(r) == op.sz {
-			return r
-		}
-	}
-
-	op.scanLeft = nil
-	if len(r) > 0 {
-		return r
-	} else {
-		return nil
-	}
-
-}
-
-// NewColumnScanOperator creates a ColumnScanOperator
-func NewIntNullColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, size int) Uint32Operator {
-
-	return &IntNullColumnScanOperator{
-		ctx:   ctx,
-		opFn:  selectIntOpFn(op),
-		value: value,
-		fn:    fieldName,
-		sz:    size,
-	}
-}
-
-type IntNullColumnScanOperator struct {
 	ctx           Context
 	opFn          func(x, y int) bool
 	fn            string
@@ -157,25 +248,48 @@ type IntNullColumnScanOperator struct {
 	resultLeft    []uint32
 	lastCheckedId int
 	lastValuePos  int
-	lastIntVector *vector.IntVector
+	lastVector    *vector.IntVector
+	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
 }
 
-func (op *IntNullColumnScanOperator) Init() {
+func (op *IntColumnScanOperator) Init() {
 	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
 	op.iterator = c.Iterator()
 }
 
-func (op *IntNullColumnScanOperator) Destroy() {
+func (op *IntColumnScanOperator) Destroy() {
 }
 
-func (op *IntNullColumnScanOperator) processVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
+func (op *IntColumnScanOperator) processVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
 
 	i := lastValuePos
 	x := lastCheckedId
 
-	for ; x < op.lastIntVector.Len(); x++ {
-		if op.lastIntVector.IsValid(x) {
-			if op.opFn(op.lastIntVector.Values()[x], op.value) {
+	for ; x < op.lastVector.Len(); x++ {
+		if op.opFn(op.lastVector.Values()[x], op.value) {
+			r = append(r, op.lastRid)
+			i++
+		}
+		op.lastRid++
+	}
+
+	if len(r) >= op.sz {
+		op.lastCheckedId = x
+		op.lastValuePos = i
+		return r
+	}
+
+	return r
+}
+
+func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
+
+	i := lastValuePos
+	x := lastCheckedId
+
+	for ; x < op.lastVector.Len(); x++ {
+		if op.lastVector.IsValid(x) {
+			if op.opFn(op.lastVector.Values()[x], op.value) {
 				r = append(r, op.lastRid)
 				i++
 			}
@@ -192,14 +306,14 @@ func (op *IntNullColumnScanOperator) processVector(lastValuePos, lastCheckedId i
 	return r
 }
 
-func (op *IntNullColumnScanOperator) Next() []uint32 {
+func (op *IntColumnScanOperator) Next() []uint32 {
 
 	r := make([]uint32, 0, op.sz)
 
-	if op.lastIntVector != nil {
+	if op.lastVector != nil {
 
 		r = append(r, op.resultLeft...)
-		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
 		if len(r) >= op.sz {
 			op.resultLeft = r[op.sz:]
 			return r[:op.sz]
@@ -210,9 +324,9 @@ func (op *IntNullColumnScanOperator) Next() []uint32 {
 	for op.iterator.HasNext() {
 
 		intVector := op.iterator.Next()
-		op.lastIntVector = &intVector
+		op.lastVector = &intVector
 
-		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
 
 		if len(r) >= op.sz {
 			op.resultLeft = r[op.sz:]
@@ -221,7 +335,7 @@ func (op *IntNullColumnScanOperator) Next() []uint32 {
 
 	}
 
-	op.lastIntVector = nil
+	op.lastVector = nil
 	op.lastCheckedId = 0
 	op.lastValuePos = 0
 	if len(r) > 0 {

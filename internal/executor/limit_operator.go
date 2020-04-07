@@ -13,30 +13,35 @@
 
 package executor
 
-import (
-	"meerkat/internal/storage/vector"
-)
+import "meerkat/internal/storage/vector"
 
-func NewSortOperator(child MultiVectorOperator, colIds []int) *SortOperator {
-	return &SortOperator{child: child, colIds: colIds}
+// NewLimitOperator creates a ColumnScanOperator
+func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
+	return &LimitOperator{
+		ctx:   ctx,
+		child: child,
+		limit: limit,
+	}
 }
 
-// SortOperator
-type SortOperator struct {
-	child  MultiVectorOperator // (Positions to review)
-	colIds []int
-	sz     int
+// LimitOperator scans a non indexed column, search for the []pos
+// registers and returns the bitmap that meets that condition.
+//
+type LimitOperator struct {
+	ctx   Context
+	child MultiVectorOperator
+	limit int
 }
 
-func (op *SortOperator) Init() {
+func (op *LimitOperator) Init() {
 	op.child.Init()
 }
 
-func (op *SortOperator) Destroy() {
+func (op *LimitOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *SortOperator) Next() []vector.Vector {
+func (op *LimitOperator) Next() []vector.Vector {
 	n := op.child.Next()
 
 	return n

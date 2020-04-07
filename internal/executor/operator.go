@@ -40,6 +40,7 @@ const (
 	gt
 	ge
 	ne
+	contains
 	isNull
 	rex
 	pref
@@ -109,132 +110,15 @@ type MultiVectorOperator interface {
 	Next() []vector.Vector
 }
 
-// NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewBinaryBitmapOperator(ctx Context, op BinaryOperation, left BitmapOperator, right BitmapOperator) *BinaryBitmapOperator {
-	return &BinaryBitmapOperator{
-		ctx:   ctx,
-		op:    op,
-		left:  left,
-		right: right,
-	}
-}
-
-// BinaryBitmapOperator executes a binary operation between two bitmaps
-// and returns a new bitmap.
-type BinaryBitmapOperator struct {
-	ctx   Context
-	op    BinaryOperation
-	left  BitmapOperator
-	right BitmapOperator
-}
-
-func (op *BinaryBitmapOperator) Init() {
-	op.left.Init()
-	op.right.Init()
-}
-
-func (op *BinaryBitmapOperator) Destroy() {
-	op.left.Destroy()
-	op.right.Destroy()
-}
-
-func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
-
-	// parallelize
-	l := op.left.Next()
-	r := op.left.Next()
-
-	switch op.op {
-	case and:
-		return roaring.And(l, r)
-	case or:
-		return roaring.Or(l, r)
-	case xor:
-		return roaring.Xor(l, r)
-	}
-	panic("Operator not supported")
-}
-
-// NewColumnScanOperator creates a ColumnScanOperator
-func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
-	return &LimitOperator{
+// Decodifica el diccionario y lo manda....
+func NewMaterialize(ctx Context, child MultiVectorOperator) MaterializeOperator {
+	return MaterializeOperator{
 		ctx:   ctx,
 		child: child,
-		limit: limit,
 	}
 }
 
-// LimitOperator scans a non indexed column, search for the []pos
-// registers and returns the bitmap that meets that condition.
-//
-type LimitOperator struct {
-	ctx   Context
-	child MultiVectorOperator
-	limit int
-}
-
-func (op *LimitOperator) Init() {
-	op.child.Init()
-}
-
-func (op *LimitOperator) Destroy() {
-	op.child.Destroy()
-}
-
-func (op *LimitOperator) Next() []vector.Vector {
-	n := op.child.Next()
-
-	return n
-}
-
-func NewReaderOperator(ctx Context, child BitmapOperator, colName string) VectorOperator {
-	return &ReaderOperator{
-		ctx:     ctx,
-		child:   child,
-		colName: colName,
-	}
-}
-
-// ReaderOperator reads all positions in the bitmap
-type ReaderOperator struct {
-	ctx     Context
-	child   BitmapOperator
-	colName string
-	it      roaring.ManyIntIterable
-}
-
-func (r *ReaderOperator) Init() {
-	r.child.Init()
-	n := r.child.Next()
-	if n != nil {
-		r.it = n.ManyIterator()
-	}
-}
-
-func (r *ReaderOperator) GetName() string {
-	return r.colName
-}
-
-func (r *ReaderOperator) Destroy() {
-	r.child.Destroy()
-}
-
-func (r *ReaderOperator) Next() vector.Vector {
-
-	if r.it == nil {
-		return nil
-	}
-
-	buff := make([]uint32, 0, 1000)
-	s := r.it.NextMany(buff)
-	if s != 0 {
-		c := r.ctx.Segment().Col(r.colName)
-		v := c.(storage.IntColumn).Reader().Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
-		return &v
-	} else {
-		return nil
-	}
-}
+// TODO(sebad): check these operators.
 
 func NewBufferOperator(ctx Context, children []VectorOperator) MultiVectorOperator {
 	return &BufferOperator{
@@ -274,14 +158,6 @@ func (r *BufferOperator) Next() []vector.Vector {
 
 	}
 	return op
-}
-
-// Decodifica el diccionario y lo manda....
-func NewMaterialize(ctx Context, child MultiVectorOperator) MaterializeOperator {
-	return MaterializeOperator{
-		ctx:   ctx,
-		child: child,
-	}
 }
 
 // MaterializeOperator operator

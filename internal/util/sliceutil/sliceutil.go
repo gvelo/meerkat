@@ -37,6 +37,10 @@ func I2B(s []int) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
+func BS2S(bs []byte) string {
+	return *(*string)(unsafe.Pointer(&bs))
+}
+
 func U642B(s []uint64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
