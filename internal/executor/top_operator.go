@@ -61,7 +61,7 @@ func (op *TopOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *TopOperator) Next() []vector.Vector {
+func (op *TopOperator) Next() []interface{} {
 
 	m := make(map[int]int, op.n)
 

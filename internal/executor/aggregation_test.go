@@ -3,6 +3,7 @@ package executor
 import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/stretchr/testify/assert"
+	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	encoding2 "meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
@@ -11,14 +12,8 @@ import (
 )
 
 // FAKES //TODO(sebad): make code more compact and legible, remove duplicates, use switchs.
-
-const (
-	log2WordSize = uint(6)
-	wordSize     = uint(64)
-)
-
 type fakeMultiVectorOperator struct {
-	vec []vector.Vector
+	vec []interface{}
 	idx int
 }
 
@@ -30,7 +25,7 @@ func (f *fakeMultiVectorOperator) Destroy() {
 	// nothing to do
 }
 
-func (f *fakeMultiVectorOperator) Next() []vector.Vector {
+func (f *fakeMultiVectorOperator) Next() []interface{} {
 	if f.idx == 1 {
 		return nil
 	}
@@ -73,7 +68,7 @@ func (f *fakeFloatColumn) Index() storage.FloatIndex {
 	panic("implement me")
 }
 
-func (f *fakeFloatColumn) Read(pos []uint32) vector.FloatVector {
+func (f *fakeFloatColumn) Reader() storage.FloatColumnReader {
 	panic("implement me")
 }
 
@@ -179,6 +174,44 @@ func (f *fakeBinaryIterator) HasNext() bool {
 
 }
 
+type field struct {
+	name     string
+	t        schema.FieldType
+	nullable bool
+}
+
+func createIndexInfo(name string, fields ...field) *schema.IndexInfo {
+
+	ii := &schema.IndexInfo{
+		Id:             "1",
+		Name:           name,
+		Desc:           "Aca estan los logs",
+		Created:        time.Time{},
+		Updated:        time.Time{},
+		PartitionAlloc: schema.PartitionAlloc{},
+	}
+
+	fList := make([]schema.Field, 0)
+	for _, it := range fields {
+		ft := schema.Field{
+			Id:        it.name,
+			Name:      it.name,
+			Desc:      it.name,
+			IndexId:   ii.Id,
+			FieldType: it.t,
+			Nullable:  it.nullable,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}
+
+		fList = append(fList, ft)
+	}
+
+	ii.Fields = fList
+
+	return ii
+}
+
 func (f *fakeBinaryIterator) Next() vector.ByteSliceVector {
 	var v1 vector.ByteSliceVector
 	/*if len(f.validity) > 0 {
@@ -261,7 +294,7 @@ func TestHAggScenario1(t *testing.T) {
 	a := assert.New(t)
 
 	// Set up child
-	vec := make([]vector.Vector, 0)
+	vec := make([]interface{}, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
 	v.SetLen(5)
 	vec = append(vec, &v)
@@ -281,6 +314,26 @@ func TestHAggScenario1(t *testing.T) {
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
+	fields := []field{
+		{
+			name:     "c1",
+			t:        schema.FieldType_FLOAT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_INT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_STRING,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+
 	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
@@ -294,7 +347,7 @@ func TestHAggScenario1(t *testing.T) {
 	g := []int{2}
 
 	// Create ctx
-	ctx := NewContext(fs)
+	ctx := NewContext(fs, ii)
 	m := make(map[int]string)
 	m[0] = "c1"
 	m[1] = "c2"
@@ -384,7 +437,7 @@ func TestHAggScenario2(t *testing.T) {
 	a := assert.New(t)
 	times := 1000000
 	// Set up child
-	vec := make([]vector.Vector, 0)
+	vec := make([]interface{}, 0)
 	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
 	v := vector.NewFloatVector(rv, rn)
 	vec = append(vec, &v)
@@ -416,8 +469,28 @@ func TestHAggScenario2(t *testing.T) {
 
 	g := []int{2}
 
+	fields := []field{
+		{
+			name:     "c1",
+			t:        schema.FieldType_FLOAT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_INT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_STRING,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+
 	// Create ctx
-	ctx := NewContext(fs)
+	ctx := NewContext(fs, ii)
 	m := make(map[int]string)
 	m[0] = "c1"
 	m[1] = "c2"
@@ -450,7 +523,7 @@ func TestSortScenario(t *testing.T) {
 
 	a := assert.New(t)
 	// Set up child
-	vec := make([]vector.Vector, 0)
+	vec := make([]interface{}, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
 	vec = append(vec, &v)
 
@@ -481,8 +554,27 @@ func TestSortScenario(t *testing.T) {
 
 	g := []int{2}
 
+	fields := []field{
+		{
+			name:     "c1",
+			t:        schema.FieldType_FLOAT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_INT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_STRING,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs)
+	ctx := NewContext(fs, ii)
 	m := make(map[int]string)
 	m[0] = "c1"
 	m[1] = "c2"
@@ -515,7 +607,7 @@ func TestSortScenario2(t *testing.T) {
 
 	a := assert.New(t)
 	// Set up child
-	vec := make([]vector.Vector, 0)
+	vec := make([]interface{}, 0)
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
 	vec = append(vec, &v)
 
@@ -546,8 +638,27 @@ func TestSortScenario2(t *testing.T) {
 
 	g := []int{1, 2}
 
+	fields := []field{
+		{
+			name:     "c1",
+			t:        schema.FieldType_FLOAT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_INT,
+			nullable: false,
+		},
+		{
+			name:     "c2",
+			t:        schema.FieldType_STRING,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs)
+	ctx := NewContext(fs, ii)
 	m := make(map[int]string)
 	m[0] = "c1"
 	m[1] = "c2"

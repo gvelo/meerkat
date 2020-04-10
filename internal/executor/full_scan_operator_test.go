@@ -80,7 +80,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ctx := NewContext(createColFinder(tc.in))
+			ctx := NewContext(createColFinder(tc.in), nil)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(string), tc)
 			op1.Init()
@@ -245,7 +245,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			batch:     10,
 			in: input{
 				validity: [][]uint64{{255}}, // all valid but last 2 0000 1111 1111
-				length:   []int{10},
+				length:   []int{10},         // TODO: revisar esto tambien en este caso podriamos meter un null en el medio.
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 33232, 22323233}},
 			},
 			out: expected{
@@ -264,7 +264,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ctx := NewContext(createColFinder(tc.in))
+			ctx := NewContext(createColFinder(tc.in), nil)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(int), tc)
 			op1.Init()

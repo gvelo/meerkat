@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 )
 
@@ -24,15 +25,21 @@ type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
 	Segment() storage.ColumnFinder
+	IndexInfo() *schema.IndexInfo
 }
 
 type ctx struct {
 	cf storage.ColumnFinder
 	m  map[string]interface{}
+	ii *schema.IndexInfo
 }
 
-func NewContext(s storage.ColumnFinder) Context {
-	return &ctx{cf: s, m: make(map[string]interface{})}
+func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo) Context {
+	return &ctx{
+		cf: s,
+		m:  make(map[string]interface{}),
+		ii: ii,
+	}
 }
 
 func (c ctx) Value(key string, value interface{}) {
@@ -46,4 +53,8 @@ func (c ctx) Get(key string) (interface{}, bool) {
 
 func (c ctx) Segment() storage.ColumnFinder {
 	return c.cf
+}
+
+func (c ctx) IndexInfo() *schema.IndexInfo {
+	return c.ii
 }

@@ -21,7 +21,6 @@ import (
 )
 
 func selectStringOpFn(op ComparisonOperation) func(x []byte, y string) bool {
-	// TODO(sebad) check this...
 	var v func(x []byte, y string) bool
 	switch op {
 	case eq:
@@ -108,8 +107,8 @@ func (op *StringColumnScanOperator) Next() []uint32 {
 
 	for op.iterator.HasNext() {
 
-		intVector := op.iterator.Next()
-		op.lastVector = &intVector
+		v := op.iterator.Next()
+		op.lastVector = &v
 
 		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
 
@@ -313,7 +312,7 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 	if op.lastVector != nil {
 
 		r = append(r, op.resultLeft...)
-		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
 		if len(r) >= op.sz {
 			op.resultLeft = r[op.sz:]
 			return r[:op.sz]
@@ -323,10 +322,150 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 
 	for op.iterator.HasNext() {
 
-		intVector := op.iterator.Next()
-		op.lastVector = &intVector
+		v := op.iterator.Next()
+		op.lastVector = &v
 
-		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+
+		if len(r) >= op.sz {
+			op.resultLeft = r[op.sz:]
+			return r[:op.sz]
+		}
+
+	}
+
+	op.lastVector = nil
+	op.lastCheckedId = 0
+	op.lastValuePos = 0
+	if len(r) > 0 {
+		return r
+	} else {
+		return nil
+	}
+
+}
+
+func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
+	var v func(x, y, z int) bool
+	switch op {
+	case eq:
+		v = func(x, y, z int) bool {
+			return x == y
+		}
+	case gt:
+		v = func(x, y, z int) bool {
+			return x > y
+		}
+	case between:
+		v = func(x, y, z int) bool {
+			return x > y
+		}
+	case ge:
+		v = func(x, y, z int) bool {
+			return x >= y
+		}
+	case le:
+		v = func(x, y, z int) bool {
+			return x <= y
+		}
+	case lt:
+		v = func(x, y, z int) bool {
+			return x < y
+		}
+	case ne:
+		v = func(x, y, z int) bool {
+			return x != y
+		}
+	case isNull:
+		v = nil
+	default:
+		panic("Operator Not found.")
+	}
+	return v
+}
+
+// NewTimeColumnScanOperator creates a TimeColumnScanOperator
+func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, valueTo int, fieldName string, size int, nullable bool) Uint32Operator {
+
+	v := &TimeColumnScanOperator{
+		ctx:     ctx,
+		opFn:    selectTimeOpFn(op),
+		value:   valueFrom,
+		valueTo: valueTo,
+		fn:      fieldName,
+		sz:      size,
+	}
+
+	return v
+}
+
+type TimeColumnScanOperator struct {
+	ctx           Context
+	opFn          func(x, y, z int) bool
+	fn            string
+	value         int
+	valueTo       int
+	sz            int
+	iterator      storage.IntIterator
+	lastRid       uint32
+	resultLeft    []uint32
+	lastCheckedId int
+	lastValuePos  int
+	lastVector    *vector.IntVector
+	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
+}
+
+func (op *TimeColumnScanOperator) Init() {
+	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
+	op.iterator = c.Iterator()
+}
+
+func (op *TimeColumnScanOperator) Destroy() {
+}
+
+func (op *TimeColumnScanOperator) processVector(lastValuePos, lastCheckedId int, r []uint32) []uint32 {
+
+	i := lastValuePos
+	x := lastCheckedId
+
+	for ; x < op.lastVector.Len(); x++ {
+		if op.opFn(op.lastVector.Values()[x], op.value, op.valueTo) {
+			r = append(r, op.lastRid)
+			i++
+		}
+		op.lastRid++
+	}
+
+	if len(r) >= op.sz {
+		op.lastCheckedId = x
+		op.lastValuePos = i
+		return r
+	}
+
+	return r
+}
+
+func (op *TimeColumnScanOperator) Next() []uint32 {
+
+	r := make([]uint32, 0, op.sz)
+
+	if op.lastVector != nil {
+
+		r = append(r, op.resultLeft...)
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+		if len(r) >= op.sz {
+			op.resultLeft = r[op.sz:]
+			return r[:op.sz]
+		}
+
+	}
+
+	for op.iterator.HasNext() {
+
+		v := op.iterator.Next()
+		op.lastVector = &v
+
+		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
 
 		if len(r) >= op.sz {
 			op.resultLeft = r[op.sz:]

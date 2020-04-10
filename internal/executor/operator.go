@@ -19,6 +19,7 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
+	"sync"
 )
 
 // BinaryOperation represents an operation between two expressions
@@ -41,6 +42,7 @@ const (
 	ge
 	ne
 	contains
+	between
 	isNull
 	rex
 	pref
@@ -107,28 +109,19 @@ type MultiVectorOperator interface {
 	// if there is no more data to process.
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
-	Next() []vector.Vector
-}
-
-// Decodifica el diccionario y lo manda....
-func NewMaterialize(ctx Context, child MultiVectorOperator) MaterializeOperator {
-	return MaterializeOperator{
-		ctx:   ctx,
-		child: child,
-	}
+	Next() []interface{}
 }
 
 // TODO(sebad): check these operators.
 
-func NewBufferOperator(ctx Context, children []VectorOperator) MultiVectorOperator {
+func NewBufferOperator(ctx Context, child Uint32Operator, filter []string) Operator {
 	return &BufferOperator{
-		ctx:      ctx,
-		children: children,
+		ctx: ctx,
+		//children: children,
 	}
 }
 
 // BufferOperator reads all positions in the bitmap
-// and other and
 type BufferOperator struct {
 	ctx      Context
 	vKeys    [][]byte
@@ -160,55 +153,68 @@ func (r *BufferOperator) Next() []vector.Vector {
 	return op
 }
 
+func NewMaterializeOperator(ctx Context, child Uint32Operator, filter []string) *MaterializeOperator {
+	return &MaterializeOperator{
+		ctx:    ctx,
+		child:  child,
+		filter: filter,
+	}
+}
+
 // MaterializeOperator operator
 type MaterializeOperator struct {
-	ctx   Context
-	child MultiVectorOperator
+	ctx    Context
+	child  Uint32Operator
+	filter []string
+	cols   []interface{}
 }
 
-func (r *MaterializeOperator) Init() {
-	r.child.Init()
-}
-
-func (r *MaterializeOperator) Destroy() {
-	r.child.Destroy()
-}
-
-func (r *MaterializeOperator) Next() []vector.Vector {
-	n := r.child.Next()
-	var keys [][]byte
-	v, ok := r.ctx.Get(ColumnIndexToColumnName)
-	if ok {
-		keys = v.([][]byte)
-	} else {
-		panic("No ColumnIndexToColumnName")
-	}
-
-	// Aca tengo los valores de los objetos... que son null o no segun el vector lo tengo que validar
-	if n != nil {
-		res := make([]vector.Vector, 0, len(n))
-		for i, _ := range n {
-
-			switch vec := n[i].(type) {
-
-			case *vector.ByteSliceVector: // No estoy seguro que pueda caer a esta algura.
-				res[i] = vec
-			case *vector.FloatVector:
-				res[i] = vec
-			case *vector.IntVector:
-				fName := keys[i]
-				col := r.ctx.Segment().Col(string(fName))
-				_, ok := col.(storage.StringColumn) // c
-				if ok {                             // Its a string col, we should dict decode here.
-					// Here we sould create a vector
-					// b, err := c.Dict().DecodeByteSlice()
-					res[i] = vec
-				} else {
-					res[i] = vec
-				}
-			}
+func (op *MaterializeOperator) Init() {
+	op.child.Init()
+	op.cols = make([]interface{}, 0)
+	if op.filter != nil {
+		for _, it := range op.filter {
+			op.cols = append(op.cols, op.ctx.Segment().Col(it))
 		}
-		return res
+	} else {
+		for _, it := range op.ctx.IndexInfo().Fields {
+			op.cols = append(op.cols, op.ctx.Segment().Col(it.Name))
+		}
 	}
-	return nil
+}
+
+func (op *MaterializeOperator) Destroy() {
+	op.child.Destroy()
+}
+
+func (op *MaterializeOperator) Next() []interface{} {
+
+	n := op.child.Next()
+	res := make([]interface{}, 0)
+	var wg sync.WaitGroup
+
+	for ; n != nil; op.child.Next() {
+
+		for i := 0; i < len(op.cols); i++ {
+			switch c := op.cols[i].(type) {
+			case storage.IntColumn:
+				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
+				wg.Add(1)
+			case storage.StringColumn:
+				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
+				wg.Add(1)
+			case storage.FloatColumn:
+				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
+				wg.Add(1)
+			case storage.TimeColumn:
+				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
+				wg.Add(1)
+			}
+
+		}
+		wg.Wait()
+
+	}
+	return res
+
 }

@@ -42,7 +42,7 @@ func (r *HashAggregateOperator) Destroy() {
 /*
   TODO(sebad): We need to spill out to disk we we do not have memory
 */
-func (r *HashAggregateOperator) Next() []vector.Vector {
+func (r *HashAggregateOperator) Next() []interface{} {
 
 	mKey := make(map[string]int)
 
@@ -54,7 +54,7 @@ func (r *HashAggregateOperator) Next() []vector.Vector {
 	// Iterate over all vectors...
 	for ; n != nil; n = r.child.Next() {
 
-		l1 := n[0].Len()
+		l1 := n[0].(vector.Vector).Len()
 		// iterate over all "rows"
 		for i := 0; i < l1; i++ {
 
@@ -109,7 +109,7 @@ func (r *SortedAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *SortedAggregateOperator) Next() []vector.Vector {
+func (r *SortedAggregateOperator) Next() []interface{} {
 
 	mKey := make(map[string]int)
 
@@ -121,7 +121,7 @@ func (r *SortedAggregateOperator) Next() []vector.Vector {
 	// Iterate over all vectors...
 	for ; n != nil; n = r.child.Next() {
 
-		l1 := n[0].Len()
+		l1 := n[0].(vector.Vector).Len()
 		var keyAnt []byte
 		// iterate over all "rows"
 		for i := 0; i < l1; i++ {
@@ -148,7 +148,7 @@ func (r *SortedAggregateOperator) Next() []vector.Vector {
 	return pivotAndBuildVectors(r.ctx, rKey, rAgg, r.aggCols)
 }
 
-func updateCounters(n []vector.Vector, rAgg []interface{}, aggCols []Aggregation, i int) {
+func updateCounters(n []interface{}, rAgg []interface{}, aggCols []Aggregation, i int) {
 	// TODO: Usando contadores se repiten por ahora...
 	for x, it := range aggCols {
 
@@ -166,7 +166,7 @@ func updateCounters(n []vector.Vector, rAgg []interface{}, aggCols []Aggregation
 	}
 }
 
-func createKey(n []vector.Vector, keyCols []int, index int) []byte {
+func createKey(n []interface{}, keyCols []int, index int) []byte {
 	buf := new(bytes.Buffer)
 	var err error
 	for _, it := range keyCols {
@@ -185,7 +185,7 @@ func createKey(n []vector.Vector, keyCols []int, index int) []byte {
 	return buf.Bytes()
 }
 
-func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{}, aggCols []Aggregation) []vector.Vector {
+func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{}, aggCols []Aggregation) []interface{} {
 	// Create columns
 	resKey := make([]interface{}, 0)
 	resAgg := make([]interface{}, 0)
@@ -238,7 +238,7 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 		}
 	}
 
-	resVec := make([]vector.Vector, 0)
+	resVec := make([]interface{}, 0)
 	res := append(resKey, resAgg...)
 	for _, it := range res {
 		switch it.(type) {

@@ -13,8 +13,6 @@
 
 package executor
 
-import "meerkat/internal/storage/vector"
-
 // NewLimitOperator creates a ColumnScanOperator
 func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
 	return &LimitOperator{
@@ -41,7 +39,7 @@ func (op *LimitOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *LimitOperator) Next() []vector.Vector {
+func (op *LimitOperator) Next() []interface{} {
 	n := op.child.Next()
 
 	return n

@@ -13,10 +13,6 @@
 
 package executor
 
-import (
-	"meerkat/internal/storage/vector"
-)
-
 func NewSortOperator(child MultiVectorOperator, colIds []int) *SortOperator {
 	return &SortOperator{child: child, colIds: colIds}
 }
@@ -36,7 +32,7 @@ func (op *SortOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *SortOperator) Next() []vector.Vector {
+func (op *SortOperator) Next() []interface{} {
 	n := op.child.Next()
 
 	return n

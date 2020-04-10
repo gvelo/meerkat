@@ -161,7 +161,7 @@ func createSlice(idx string, ctx Context) interface{} {
 	panic(" No mapping Found.")
 }
 
-func createResultVector(n []vector.Vector, keyCols []int, aggCols []Aggregation, i int) (rKey []interface{}, rAgg []interface{}) {
+func createResultVector(n []interface{}, keyCols []int, aggCols []Aggregation, i int) (rKey []interface{}, rAgg []interface{}) {
 	// Create the result array
 	rKey = make([]interface{}, 0)
 
