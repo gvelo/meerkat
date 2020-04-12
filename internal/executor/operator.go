@@ -16,6 +16,7 @@ package executor
 // TODO: hacer un operador por tipo asi sacamos los switchs.
 
 import (
+	"fmt"
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
 	"sync"
@@ -194,7 +195,7 @@ func (op *MaterializeOperator) Next() []interface{} {
 	res := make([]interface{}, 0)
 	// TODO(sebad) put a TimeOut.
 	var wg sync.WaitGroup
-
+	wg.Add(len(op.cols))
 	n := op.child.Next()
 
 	if n == nil {
@@ -206,33 +207,30 @@ func (op *MaterializeOperator) Next() []interface{} {
 		for i := 0; i < len(op.cols); i++ {
 			switch c := op.cols[i].(type) {
 			case storage.IntColumn:
-				wg.Add(1)
-				go func(res []interface{}, wg sync.WaitGroup) {
-					println("Runn 0")
+				go func() {
 					res = append(res, c.Reader().Read(n))
+					println(fmt.Sprintf("0 %v", len(res)))
 					wg.Done()
-				}(res, wg)
+				}()
 			case storage.StringColumn:
-				wg.Add(1)
-				go func(res []interface{}, wg sync.WaitGroup) {
-					println("Runn 1")
+				go func() {
+					println("Run 1")
+					res = append(res, c.Reader().Read(n))
+					println(fmt.Sprintf("1 %v", len(res)))
+					wg.Done()
+				}()
+			case storage.FloatColumn:
+				go func() {
+					println("Run 2")
 					res = append(res, c.Reader().Read(n))
 					wg.Done()
-				}(res, wg)
-			case storage.FloatColumn:
-				wg.Add(1)
-				go func(res []interface{}, wg sync.WaitGroup) {
-					defer wg.Done()
-					println("Runn 2")
-					res = append(res, c.Reader().Read(n))
-				}(res, wg)
+				}()
 			case storage.TimeColumn:
-				wg.Add(1)
-				println("Runn 3")
-				go func(res []interface{}, wg sync.WaitGroup) {
-					defer wg.Done()
+				go func() {
+					println("Run 3")
 					res = append(res, c.Reader().Read(n))
-				}(res, wg)
+					wg.Done()
+				}()
 			}
 
 		}
