@@ -18,34 +18,36 @@ package executor
 import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
-	"meerkat/internal/storage/vector"
 	"sync"
+
+	//"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 )
 
 // BinaryOperation represents an operation between two expressions
 type BinaryOperation int
 
 const (
-	and BinaryOperation = iota
-	or
-	xor
+	And BinaryOperation = iota
+	Or
+	Xor
 )
 
-// ComparisonOperation represents an comparison between two expressions
+// ComparisonOperation represents an comparison Between two expressions
 type ComparisonOperation int
 
 const (
-	eq ComparisonOperation = iota
-	lt
-	le
-	gt
-	ge
-	ne
-	contains
-	between
-	isNull
-	rex
-	pref
+	Eq ComparisonOperation = iota
+	Lt
+	Le
+	Gt
+	Ge
+	Ne
+	Contains
+	Between
+	IsNull
+	Rex
+	Pref
 )
 
 // Operator represents an Operator of a physical plan execution.
@@ -189,31 +191,58 @@ func (op *MaterializeOperator) Destroy() {
 
 func (op *MaterializeOperator) Next() []interface{} {
 
-	n := op.child.Next()
 	res := make([]interface{}, 0)
+	// TODO(sebad) put a TimeOut.
 	var wg sync.WaitGroup
 
-	for ; n != nil; op.child.Next() {
+	n := op.child.Next()
+
+	if n == nil {
+		return nil
+	}
+
+	for ; n != nil; n = op.child.Next() {
 
 		for i := 0; i < len(op.cols); i++ {
 			switch c := op.cols[i].(type) {
 			case storage.IntColumn:
-				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
 				wg.Add(1)
+				go func(res []interface{}, wg sync.WaitGroup) {
+					println("Runn 0")
+					res = append(res, c.Reader().Read(n))
+					wg.Done()
+				}(res, wg)
 			case storage.StringColumn:
-				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
 				wg.Add(1)
+				go func(res []interface{}, wg sync.WaitGroup) {
+					println("Runn 1")
+					res = append(res, c.Reader().Read(n))
+					wg.Done()
+				}(res, wg)
 			case storage.FloatColumn:
-				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
 				wg.Add(1)
+				go func(res []interface{}, wg sync.WaitGroup) {
+					defer wg.Done()
+					println("Runn 2")
+					res = append(res, c.Reader().Read(n))
+				}(res, wg)
 			case storage.TimeColumn:
-				go func(res []interface{}) { res = append(res, c.Reader().Read(n)) }(res)
 				wg.Add(1)
+				println("Runn 3")
+				go func(res []interface{}, wg sync.WaitGroup) {
+					defer wg.Done()
+					res = append(res, c.Reader().Read(n))
+				}(res, wg)
 			}
 
 		}
+
 		wg.Wait()
 
+	}
+
+	if len(res) == 0 {
+		return nil
 	}
 	return res
 

@@ -51,56 +51,56 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 	switch col := c.(type) {
 	case storage.StringColumn:
 		switch op.op {
-		case eq:
+		case Eq:
 			return col.Index().Search(op.value.([]byte))
-		case rex:
+		case Rex:
 			return col.Index().Regex(op.value.([]byte))
-		case pref:
+		case Pref:
 			return col.Index().Prefix(op.value.([]byte))
 		}
 		panic("Operator not supported")
 
 	case storage.TextColumn:
 		switch op.op {
-		case eq:
+		case Eq:
 			return col.Index().Search(op.value.([]byte))
-		case rex:
+		case Rex:
 			return col.Index().Regex(op.value.([]byte))
-		case pref:
+		case Pref:
 			return col.Index().Prefix(op.value.([]byte))
 		}
 		panic("Operator not supported")
 
 	case storage.IntColumn:
 		switch op.op {
-		case ne:
+		case Ne:
 			return col.Index().Ne(op.value.(int))
-		case eq:
+		case Eq:
 			return col.Index().Eq(op.value.(int))
-		case lt:
+		case Lt:
 			return col.Index().Lt(op.value.(int))
-		case le:
+		case Le:
 			return col.Index().Le(op.value.(int))
-		case ge:
+		case Ge:
 			return col.Index().Ge(op.value.(int))
-		case gt:
+		case Gt:
 			return col.Index().Gt(op.value.(int))
 		}
 		panic("Operator not supported")
 
 	case storage.FloatColumn:
 		switch op.op {
-		case ne:
+		case Ne:
 			return col.Index().Ne(op.value.(float64))
-		case eq:
+		case Eq:
 			return col.Index().Eq(op.value.(float64))
-		case lt:
+		case Lt:
 			return col.Index().Lt(op.value.(float64))
-		case le:
+		case Le:
 			return col.Index().Le(op.value.(float64))
-		case ge:
+		case Ge:
 			return col.Index().Ge(op.value.(float64))
-		case gt:
+		case Gt:
 			return col.Index().Gt(op.value.(float64))
 		}
 		panic("Operator not supported")

@@ -23,35 +23,35 @@ import (
 func selectStringOpFn(op ComparisonOperation) func(x []byte, y string) bool {
 	var v func(x []byte, y string) bool
 	switch op {
-	case eq:
+	case Eq:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) == y
 		}
-	case gt:
+	case Gt:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) > y
 		}
-	case ge:
+	case Ge:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) >= y
 		}
-	case le:
+	case Le:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) <= y
 		}
-	case lt:
+	case Lt:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) < y
 		}
-	case ne:
+	case Ne:
 		v = func(x []byte, y string) bool {
 			return sliceutil.BS2S(x) != y
 		}
-	case contains:
+	case Contains:
 		v = func(x []byte, y string) bool {
 			return strings.Contains(sliceutil.BS2S(x), y)
 		}
-	case isNull:
+	case IsNull:
 		v = nil
 	default:
 		panic("Operator Not found.")
@@ -186,31 +186,31 @@ func (op *StringColumnScanOperator) processNullVector(lastValuePos, lastCheckedI
 func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
 	var v func(x, y int) bool
 	switch op {
-	case eq:
+	case Eq:
 		v = func(x, y int) bool {
 			return x == y
 		}
-	case gt:
+	case Gt:
 		v = func(x, y int) bool {
 			return x > y
 		}
-	case ge:
+	case Ge:
 		v = func(x, y int) bool {
 			return x >= y
 		}
-	case le:
+	case Le:
 		v = func(x, y int) bool {
 			return x <= y
 		}
-	case lt:
+	case Lt:
 		v = func(x, y int) bool {
 			return x < y
 		}
-	case ne:
+	case Ne:
 		v = func(x, y int) bool {
 			return x != y
 		}
-	case isNull:
+	case IsNull:
 		v = nil
 	default:
 		panic("Operator Not found.")
@@ -348,35 +348,35 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
 	var v func(x, y, z int) bool
 	switch op {
-	case eq:
+	case Eq:
 		v = func(x, y, z int) bool {
 			return x == y
 		}
-	case gt:
+	case Gt:
 		v = func(x, y, z int) bool {
 			return x > y
 		}
-	case between:
+	case Between:
 		v = func(x, y, z int) bool {
 			return x > y
 		}
-	case ge:
+	case Ge:
 		v = func(x, y, z int) bool {
 			return x >= y
 		}
-	case le:
+	case Le:
 		v = func(x, y, z int) bool {
 			return x <= y
 		}
-	case lt:
+	case Lt:
 		v = func(x, y, z int) bool {
 			return x < y
 		}
-	case ne:
+	case Ne:
 		v = func(x, y, z int) bool {
 			return x != y
 		}
-	case isNull:
+	case IsNull:
 		v = nil
 	default:
 		panic("Operator Not found.")

@@ -577,6 +577,38 @@ type binaryColumn struct {
 	vectorPool     vector.Pool
 }
 
+func (cr *binaryColumn) Encoding() encoding.EncodingType {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) Validity() *roaring.Bitmap {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) HasNulls() bool {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) Stats() *Stats {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) Dict() ByteSliceDict {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) Index() ByteSliceIndex {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) DictEncReader() IntColumnReader {
+	panic("implement me")
+}
+
+func (cr *binaryColumn) DictEncIterator() IntIterator {
+	panic("implement me")
+}
+
 func (cr *binaryColumn) String() string {
 	return fmt.Sprintf(`
 	encoding       %v

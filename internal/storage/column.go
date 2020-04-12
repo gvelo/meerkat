@@ -47,7 +47,7 @@ type IntColumnReader interface {
 type FloatColumn interface {
 	Column
 	Index() FloatIndex
-	Read(pos []uint32) vector.FloatVector
+	Reader() FloatColumnReader
 	Iterator() FloatIterator
 }
 

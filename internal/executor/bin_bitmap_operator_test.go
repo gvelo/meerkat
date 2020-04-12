@@ -52,8 +52,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 
 	testCases := []binQueryTestCase{
 		{
-			name: "compare xor 1",
-			op:   xor,
+			name: "compare Xor 1",
+			op:   Xor,
 			l: &fakeUint32Op{
 				i: 0,
 				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
@@ -68,8 +68,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 			},
 		},
 		{
-			name: "compare xor 3",
-			op:   xor,
+			name: "compare Xor 3",
+			op:   Xor,
 			l: &fakeUint32Op{
 				i: 0,
 				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
@@ -84,24 +84,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 			},
 		},
 		{
-			name: "compare or 1",
-			op:   or,
-			l: &fakeUint32Op{
-				i: 0,
-				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
-			},
-			r: &fakeUint32Op{
-				i: 0,
-				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
-			},
-			sz: 1,
-			exp: expected{
-				[][]uint32{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}},
-			},
-		},
-		{
-			name: "compare or 3",
-			op:   or,
+			name: "compare Or 3",
+			op:   Or,
 			l: &fakeUint32Op{
 				i: 0,
 				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
@@ -116,8 +100,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 			},
 		},
 		{
-			name: "compare and 1",
-			op:   and,
+			name: "compare And 1",
+			op:   And,
 			l: &fakeUint32Op{
 				i: 0,
 				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
@@ -128,12 +112,61 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 			},
 			sz: 1,
 			exp: expected{
-				[][]uint32{{3}, {5}, {7}},
+				[][]uint32{{3}, {5}, {7}, {8}, {9}, {10}},
+			},
+		},
+
+		{
+			name: "compare OR 1",
+			op:   Or,
+			l: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+			},
+			r: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
+			},
+			sz: 30,
+			exp: expected{
+				[][]uint32{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
 			},
 		},
 		{
-			name: "compare and 3",
-			op:   and,
+			name: "compare AND 1",
+			op:   And,
+			l: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+			},
+			r: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
+			},
+			sz: 20,
+			exp: expected{
+				[][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
+			},
+		},
+		{
+			name: "compare Or 1",
+			op:   Or,
+			l: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}, {8, 9, 10}},
+			},
+			r: &fakeUint32Op{
+				i: 0,
+				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
+			},
+			sz: 1,
+			exp: expected{
+				[][]uint32{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}},
+			},
+		},
+		{
+			name: "compare And 3",
+			op:   And,
 			l: &fakeUint32Op{
 				i: 0,
 				v: [][]uint32{{3, 5, 7}},

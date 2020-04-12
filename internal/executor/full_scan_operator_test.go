@@ -52,7 +52,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
 			},
-			op:    contains,
+			op:    Contains,
 			value: "a",
 		},
 		{
@@ -67,7 +67,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
 			},
-			op:    contains,
+			op:    Contains,
 			value: "a",
 		},
 	}
@@ -133,7 +133,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -148,7 +148,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -162,7 +162,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -177,7 +177,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -191,7 +191,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -206,7 +206,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -220,7 +220,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3, 4, 5, 6}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 
@@ -236,7 +236,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7, 11, 12, 13}, {14, 15, 16, 17}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 		{
@@ -251,7 +251,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			out: expected{
 				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
 			},
-			op:    gt,
+			op:    Gt,
 			value: 1,
 		},
 	}

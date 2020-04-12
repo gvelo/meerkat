@@ -52,11 +52,11 @@ func (op *BinaryBitmapOperator) Next() *roaring.Bitmap {
 	r := op.right.Next()
 
 	switch op.op {
-	case and:
+	case And:
 		return roaring.And(l, r)
-	case or:
+	case Or:
 		return roaring.Or(l, r)
-	case xor:
+	case Xor:
 		return roaring.Xor(l, r)
 	}
 	panic("Operator not supported")
@@ -103,30 +103,42 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 
 	x := 0
 	i := 0
-	for ; i < len(l) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
+
 		if l[i] == r[x] {
 			res = append(res, l[i])
 			x++
-			i++
+		} else {
+
+			if l[i] > r[x] {
+				x++
+			}
+
 		}
-	}
-
-	// if len(res) == op.sz {
-	if len(l) > i {
-		op.remainingL = l[i:]
-	} else {
-		op.remainingL = nil
 
 	}
-	if len(r) > x {
-		op.remainingR = r[x:]
-	} else {
-		op.remainingR = nil
+
+	if len(res) == op.sz {
+
+		if len(l) > i {
+			op.remainingL = l[i:]
+
+		} else {
+			op.remainingL = nil
+		}
+
+		if len(r) > x {
+			op.remainingR = r[x:]
+			return res
+		} else {
+			op.remainingR = nil
+		}
+
+		return res
 	}
 
-	//	return res[:op.sz]
-	//}
-
+	op.remainingL = nil
+	op.remainingR = nil
 	return res
 }
 
@@ -150,7 +162,7 @@ func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 
 	x := 0
 	i := 0
-	for ; i < len(l) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
 		if l[i] < r[x] {
 			res = append(res, l[i])
 			continue
@@ -169,18 +181,27 @@ func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 		}
 	}
 
-	if len(l) > i {
-		op.remainingL = l[i:]
-	} else {
-		op.remainingL = nil
+	if len(res) == op.sz {
 
-	}
-	if len(r) > x {
-		op.remainingR = r[x:]
-	} else {
-		op.remainingR = nil
+		if len(l) > i {
+			op.remainingL = l[i:]
+
+		} else {
+			op.remainingL = nil
+		}
+
+		if len(r) > x {
+			op.remainingR = r[x:]
+			return res
+		} else {
+			op.remainingR = nil
+		}
+
+		return res
 	}
 
+	op.remainingL = nil
+	op.remainingR = nil
 	return res
 }
 
@@ -204,7 +225,7 @@ func (op *BinaryUint32Operator) xor(l, r []uint32) []uint32 {
 
 	x := 0
 	i := 0
-	for ; i < len(l) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
 		if l[i] < r[x] {
 			res = append(res, l[i])
 			continue
@@ -222,23 +243,34 @@ func (op *BinaryUint32Operator) xor(l, r []uint32) []uint32 {
 		}
 	}
 
-	if len(l) > i {
-		op.remainingL = l[i:]
-	} else {
-		op.remainingL = nil
+	if len(res) == op.sz {
 
-	}
-	if len(r) > x {
-		op.remainingR = r[x:]
-	} else {
-		op.remainingR = nil
+		if len(l) > i {
+			op.remainingL = l[i:]
+
+		} else {
+			op.remainingL = nil
+		}
+
+		if len(r) > x {
+			op.remainingR = r[x:]
+			return res
+		} else {
+			op.remainingR = nil
+		}
+
+		return res
 	}
 
+	op.remainingL = nil
+	op.remainingR = nil
 	return res
 }
 
 func (op *BinaryUint32Operator) Next() []uint32 {
+	var res []uint32
 
+NEXT:
 	l := op.left.Next()
 	r := op.right.Next()
 
@@ -258,17 +290,29 @@ func (op *BinaryUint32Operator) Next() []uint32 {
 		r = op.remainingR
 	}
 
-	if len(l) == 0 && len(r) == 0 {
+	if res == nil && len(l) == 0 && len(r) == 0 {
 		return nil
 	}
 
 	switch op.op {
-	case and:
-		return op.and(l, r)
-	case or:
-		return op.or(l, r)
-	case xor:
-		return op.xor(l, r)
+	case And:
+		res = append(res, op.and(l, r)...)
+	case Or:
+		res = append(res, op.or(l, r)...)
+	case Xor:
+		res = append(res, op.xor(l, r)...)
+	default:
+		panic("Operator not supported")
 	}
-	panic("Operator not supported")
+
+	if len(res) < op.sz {
+
+		if l == nil && r == nil {
+			return res
+		}
+		goto NEXT
+	}
+
+	return res
+
 }

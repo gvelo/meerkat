@@ -34,13 +34,13 @@ func TestQueryKusto(t *testing.T) {
 
 
 	// TODO check this ugly parameter
-	op1 := NewTimeColumnScanOperator(ctx, between, 11, 11, "_ts", 1000,false)
-	op2 := NewStringColumnScanOperator(ctx, contains, "Error", "message",1000, false)
+	op1 := NewTimeColumnScanOperator(ctx, Between, 11, 11, "_ts", 1000,false)
+	op2 := NewStringColumnScanOperator(ctx, Contains, "Error", "message",1000, false)
 
-	op3 := NewBinaryBitmapOperator(ctx, and, op1, op2) // ts > 1 AND ts < 2
-	op4 := NewIndexScanOperator(ctx, eq, 12, "C1")     // C1 == 12
+	op3 := NewBinaryBitmapOperator(ctx, And, op1, op2) // ts > 1 AND ts < 2
+	op4 := NewIndexScanOperator(ctx, Eq, 12, "C1")     // C1 == 12
 
-	op5 := NewBinaryBitmapOperator(ctx, and, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
+	op5 := NewBinaryBitmapOperator(ctx, And, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
 
 	op6 := NewReaderOperator(ctx, op5, "F")
 	op7 := NewReaderOperator(ctx, op5, "C1")
@@ -94,13 +94,13 @@ func TestQuery1(t *testing.T) {
 
 	ctx.Value(ColumnIndexToColumnName, []string{"F", "C1", "C2", "C3"})
 	/*
-		op1 := NewIndexScanOperator(ctx, lt, 1, "ts") // ts > 1
-		op2 := NewIndexScanOperator(ctx, gt, 2, "ts") // ts < 2
+		op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1
+		op2 := NewIndexScanOperator(ctx, Gt, 2, "ts") // ts < 2
 
-		op3 := NewBinaryBitmapOperator(ctx, and, op1, op2) // ts > 1 AND ts < 2
-		op4 := NewIndexScanOperator(ctx, eq, 12, "C1")     // C1 == 12
+		op3 := NewBinaryBitmapOperator(ctx, And, op1, op2) // ts > 1 AND ts < 2
+		op4 := NewIndexScanOperator(ctx, Eq, 12, "C1")     // C1 == 12
 
-		op5 := NewBinaryBitmapOperator(ctx, and, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
+		op5 := NewBinaryBitmapOperator(ctx, And, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
 
 		op6 := NewReaderOperator(ctx, op5, "F")
 		op7 := NewReaderOperator(ctx, op5, "C1")
@@ -156,10 +156,10 @@ func TestQuery2(t *testing.T) {
 	ctx.Value(ColumnIndexToColumnName, []string{"_ts"}) // este operador va a ser el mas complejo, materializa bufferea, ect ect tiene que saber que hacer en todos los campos
 	// quizas los histogramas y demas los podemos mapear como liteners o cosas por el estilo.
 	// tenenmos que ver si pasar un contexto, para abajo para compltar cosas, ejemplo Limit. ...
-	op1 := NewIndexScanOperator(ctx, lt, 1, "_ts") // _ts > 1
-	op2 := NewIndexScanOperator(ctx, gt, 2, "_ts") // _ts < 2
+	op1 := NewIndexScanOperator(ctx, Lt, 1, "_ts") // _ts > 1
+	op2 := NewIndexScanOperator(ctx, Gt, 2, "_ts") // _ts < 2
 
-	op3 := NewBinaryBitmapOperator(ctx, and, op1, op2) // _ts > 1 AND _ts < 2
+	op3 := NewBinaryBitmapOperator(ctx, And, op1, op2) // _ts > 1 AND _ts < 2
 
 	col := []string{"_ts", "F", "C1", "C2", "C4"}
 	vo := make([]VectorOperator, 0)
