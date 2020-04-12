@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"log"
 	"math/rand"
@@ -8,6 +9,7 @@ import (
 	"meerkat/internal/executor"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/testutil"
 	"path"
 	"time"
@@ -29,7 +31,18 @@ func execute() {
 
 	for ; n != nil; n = op.Next() {
 		for i := 0; i < len(n); i++ {
-			print(len(n))
+			switch t := n[i].(type) {
+			case vector.IntVector:
+				for _, it := range t.Values() {
+					t2 := time.Unix(0, int64(it))
+					fmt.Println(t2, t2.UnixNano())
+				}
+			case vector.ByteSliceVector:
+				for x := 0; x < t.Len(); x++ {
+					fmt.Println(string(t.Get(x)))
+				}
+			}
+
 		}
 	}
 
