@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"math"
 	"meerkat/internal/storage/vector"
 )
@@ -15,6 +17,7 @@ func NewHashAggregateOperator(ctx Context, child MultiVectorOperator, aggCols []
 		child:   child,
 		aggCols: aggCols,
 		keyCols: keyCols,
+		log:     log.With().Str("src", "HashAggregateOperator").Logger(),
 	}
 }
 
@@ -26,6 +29,7 @@ type HashAggregateOperator struct {
 	aggCols []Aggregation // Aggregation columns
 	keyCols []int         // Group by columns
 	sz      int
+	log     zerolog.Logger
 }
 
 func (r *HashAggregateOperator) Init() {
@@ -86,6 +90,7 @@ func NewSortedAggregateOperator(ctx Context, child MultiVectorOperator, aggCols 
 		child:   child,
 		aggCols: aggCols,
 		keyCols: keyCols,
+		log:     log.With().Str("src", "SortedAggregateOperator").Logger(),
 	}
 }
 
@@ -96,6 +101,7 @@ type SortedAggregateOperator struct {
 	aggCols   []Aggregation // Aggregation columns
 	keyCols   []int         // Group by columns
 	resultVec []vector.Vector
+	log       zerolog.Logger
 }
 
 func (r *SortedAggregateOperator) Init() {

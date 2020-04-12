@@ -15,6 +15,8 @@ package executor
 
 import (
 	"github.com/psilva261/timsort"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage/vector"
 )
 
@@ -40,6 +42,7 @@ type TopOperator struct {
 	n     int
 	asc   bool
 	child VectorOperator
+	log   zerolog.Logger
 }
 
 // NewTopOperator creates a new vector operator.
@@ -49,6 +52,7 @@ func NewTopOperator(child VectorOperator, n int, asc bool) MultiVectorOperator {
 		n,
 		asc,
 		child,
+		log.With().Str("src", "TopOperator").Logger(),
 	}
 }
 

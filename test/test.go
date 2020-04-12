@@ -15,6 +15,7 @@ func main() {
 	//generateData()
 
 	execute()
+
 }
 
 func createIndex() {

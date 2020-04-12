@@ -14,6 +14,8 @@
 package executor
 
 import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/sliceutil"
@@ -67,6 +69,7 @@ func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value stri
 		value: value,
 		fn:    fieldName,
 		sz:    size,
+		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
 	if nullable {
 		v.processFn = v.processNullVector
@@ -89,6 +92,7 @@ type StringColumnScanOperator struct {
 	lastValuePos  int
 	lastVector    *vector.ByteSliceVector
 	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
+	log           zerolog.Logger
 }
 
 func (op *StringColumnScanOperator) Next() []uint32 {
@@ -227,6 +231,7 @@ func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fi
 		value: value,
 		fn:    fieldName,
 		sz:    size,
+		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
 	if nullable {
 		v.processFn = v.processNullVector
@@ -249,6 +254,7 @@ type IntColumnScanOperator struct {
 	lastValuePos  int
 	lastVector    *vector.IntVector
 	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
+	log           zerolog.Logger
 }
 
 func (op *IntColumnScanOperator) Init() {
@@ -394,6 +400,7 @@ func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, v
 		valueTo: valueTo,
 		fn:      fieldName,
 		sz:      size,
+		log:     log.With().Str("src", "TimeColumnScanOperator").Logger(),
 	}
 
 	return v
@@ -413,6 +420,7 @@ type TimeColumnScanOperator struct {
 	lastValuePos  int
 	lastVector    *vector.IntVector
 	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
+	log           zerolog.Logger
 }
 
 func (op *TimeColumnScanOperator) Init() {

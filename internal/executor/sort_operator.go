@@ -13,8 +13,17 @@
 
 package executor
 
+import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
+
 func NewSortOperator(child MultiVectorOperator, colIds []int) *SortOperator {
-	return &SortOperator{child: child, colIds: colIds}
+	return &SortOperator{
+		child:  child,
+		colIds: colIds,
+		log:    log.With().Str("src", "SortOperator").Logger(),
+	}
 }
 
 // SortOperator
@@ -22,6 +31,7 @@ type SortOperator struct {
 	child  MultiVectorOperator // (Positions to review)
 	colIds []int
 	sz     int
+	log    zerolog.Logger
 }
 
 func (op *SortOperator) Init() {

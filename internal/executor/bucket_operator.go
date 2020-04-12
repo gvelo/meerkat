@@ -14,6 +14,8 @@
 package executor
 
 import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage/vector"
 	"time"
 )
@@ -64,6 +66,7 @@ type BucketOperator struct {
 	span  int
 	tspan time.Duration
 	child VectorOperator
+	log   zerolog.Logger
 }
 
 func (op *BucketOperator) Init() {
@@ -77,6 +80,7 @@ func NewBucketOperator(child VectorOperator, span int) VectorOperator {
 		span,
 		0,
 		child,
+		log.With().Str("src", "BucketOperator").Logger(),
 	}
 }
 
@@ -86,6 +90,7 @@ func NewTimeBucketOperator(child VectorOperator, span time.Duration) VectorOpera
 		0,
 		span,
 		child,
+		log.With().Str("src", "BucketOperator").Logger(),
 	}
 }
 

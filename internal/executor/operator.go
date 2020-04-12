@@ -18,11 +18,14 @@ package executor
 import (
 	"fmt"
 	"github.com/RoaringBitmap/roaring"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"meerkat/internal/schema"
 	"meerkat/internal/storage"
-	"sync"
-
-	//"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
+	"meerkat/internal/util/sliceutil"
+	"sync"
+	"time"
 )
 
 // BinaryOperation represents an operation between two expressions
@@ -115,12 +118,20 @@ type MultiVectorOperator interface {
 	Next() []interface{}
 }
 
-// TODO(sebad): check these operators.
+// MultiVectorOperator is an Operator that produces a Vector array as output
+type StringOperator interface {
+	Operator
+
+	// Next returns the next result from this operator or nil
+	// if there is no more data to process.
+	Next() [][]string
+}
 
 func NewBufferOperator(ctx Context, child Uint32Operator, filter []string) Operator {
 	return &BufferOperator{
 		ctx: ctx,
 		//children: children,
+		log: log.With().Str("src", "BufferOperator").Logger(),
 	}
 }
 
@@ -129,6 +140,7 @@ type BufferOperator struct {
 	ctx      Context
 	vKeys    [][]byte
 	children []VectorOperator
+	log      zerolog.Logger
 }
 
 func (r *BufferOperator) Init() {
@@ -161,6 +173,7 @@ func NewMaterializeOperator(ctx Context, child Uint32Operator, filter []string) 
 		ctx:    ctx,
 		child:  child,
 		filter: filter,
+		log:    log.With().Str("src", "MaterializeOperator").Logger(),
 	}
 }
 
@@ -170,19 +183,32 @@ type MaterializeOperator struct {
 	child  Uint32Operator
 	filter []string
 	cols   []interface{}
+	log    zerolog.Logger
 }
 
 func (op *MaterializeOperator) Init() {
 	op.child.Init()
 	op.cols = make([]interface{}, 0)
 	if op.filter != nil {
+
+		fp := make([]schema.Field, 0, len(op.filter))
+
 		for _, it := range op.filter {
+			f, err := op.ctx.IndexInfo().FieldByName(it)
+			if err != nil {
+				op.log.Err(err)
+			} else {
+				fp = append(fp, f)
+			}
 			op.cols = append(op.cols, op.ctx.Segment().Col(it))
 		}
+		op.ctx.SetFieldProcessed(fp)
 	} else {
+		op.ctx.SetFieldProcessed(op.ctx.IndexInfo().Fields)
 		for _, it := range op.ctx.IndexInfo().Fields {
 			op.cols = append(op.cols, op.ctx.Segment().Col(it.Name))
 		}
+
 	}
 }
 
@@ -193,6 +219,11 @@ func (op *MaterializeOperator) Destroy() {
 func (op *MaterializeOperator) Next() []interface{} {
 
 	res := make([]interface{}, 0)
+
+	for x := 0; x < len(op.cols); x++ {
+		res = append(res, nil)
+	}
+
 	// TODO(sebad) put a TimeOut.
 	var wg sync.WaitGroup
 	wg.Add(len(op.cols))
@@ -207,30 +238,25 @@ func (op *MaterializeOperator) Next() []interface{} {
 		for i := 0; i < len(op.cols); i++ {
 			switch c := op.cols[i].(type) {
 			case storage.IntColumn:
-				go func() {
-					res = append(res, c.Reader().Read(n))
-					println(fmt.Sprintf("0 %v", len(res)))
+				go func(x int) {
+					res[x] = c.Reader().Read(n)
 					wg.Done()
-				}()
+				}(i)
 			case storage.StringColumn:
-				go func() {
-					println("Run 1")
-					res = append(res, c.Reader().Read(n))
-					println(fmt.Sprintf("1 %v", len(res)))
+				go func(x int) {
+					res[x] = c.Reader().Read(n)
 					wg.Done()
-				}()
+				}(i)
 			case storage.FloatColumn:
-				go func() {
-					println("Run 2")
-					res = append(res, c.Reader().Read(n))
+				go func(x int) {
+					res[x] = c.Reader().Read(n)
 					wg.Done()
-				}()
+				}(i)
 			case storage.TimeColumn:
-				go func() {
-					println("Run 3")
-					res = append(res, c.Reader().Read(n))
+				go func(x int) {
+					res[x] = c.Reader().Read(n)
 					wg.Done()
-				}()
+				}(i)
 			}
 
 		}
@@ -242,6 +268,98 @@ func (op *MaterializeOperator) Next() []interface{} {
 	if len(res) == 0 {
 		return nil
 	}
+
 	return res
 
+}
+
+// TODO: pass a writer to write the table...
+func NewColumnToRowOperator(ctx Context, child MultiVectorOperator) *ColumnToRowOperator {
+	op := &ColumnToRowOperator{
+		ctx:   ctx,
+		child: child,
+		log:   log.With().Str("src", "ColumnToRowOperator").Logger(),
+	}
+	op.IntFormat = "%d"
+	op.FloatFormat = "%9.2f"
+	op.TimeFormat = "2006-01-02T15:04:05"
+	return op
+}
+
+// ColumnToRowOperator reads all positions in the bitmap
+type ColumnToRowOperator struct {
+	ctx         Context
+	child       MultiVectorOperator
+	FloatFormat string
+	IntFormat   string
+	TimeFormat  string
+	log         zerolog.Logger
+}
+
+func (op *ColumnToRowOperator) Init() {
+	op.child.Init()
+}
+
+func (op *ColumnToRowOperator) Destroy() {
+	op.child.Destroy()
+}
+
+func (op *ColumnToRowOperator) Next() [][]string {
+
+	n := op.child.Next()
+	l := op.len(n[0])
+
+	res := make([][]string, 0, l)
+	for i := 0; i < l; i++ {
+		row := make([]string, 0, len(n))
+		for x := 0; x < len(n); x++ {
+			row = append(row, op.get(i, x, n))
+		}
+		res = append(res, row)
+	}
+
+	return res
+}
+
+func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
+	switch t := v[x].(type) {
+	case vector.IntVector:
+		if op.ctx.GetFieldProcessed()[x].FieldType == schema.FieldType_TIMESTAMP {
+			time := time.Unix(0, int64(t.Values()[i]))
+			return fmt.Sprintf(time.Format(op.TimeFormat))
+		} else {
+			return fmt.Sprintf(op.IntFormat, t.Values()[i])
+		}
+	case vector.FloatVector:
+		return fmt.Sprintf(op.FloatFormat, t.Values()[i])
+	case vector.ByteSliceVector:
+		return fmt.Sprintf("'%v'", sliceutil.BS2S(t.Get(i)))
+	case vector.UintVector:
+		return fmt.Sprintf(op.IntFormat, t.Values()[i])
+	case vector.BoolVector:
+		return fmt.Sprintf("%v", t.Values()[i])
+	default:
+		log.Printf("Type %v not found.", t)
+	}
+	return ""
+}
+
+// TODO: QUE MIERDA?????
+func (op *ColumnToRowOperator) len(v interface{}) int {
+	// No entiendo porque mierda no me toma el vector.Vector que implementan todos!?????
+	switch t := v.(type) {
+	case vector.IntVector:
+		return t.Len()
+	case vector.FloatVector:
+		return t.Len()
+	case vector.ByteSliceVector:
+		return t.Len()
+	case vector.UintVector:
+		return t.Len()
+	case vector.BoolVector:
+		return t.Len()
+	default:
+		log.Printf("Type %v not found.", t)
+	}
+	return 0
 }

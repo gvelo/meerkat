@@ -26,12 +26,14 @@ type Context interface {
 	Get(key string) (interface{}, bool)
 	Segment() storage.ColumnFinder
 	IndexInfo() *schema.IndexInfo
+	GetFieldProcessed() []schema.Field
+	SetFieldProcessed(fields []schema.Field)
 }
-
 type ctx struct {
 	cf storage.ColumnFinder
 	m  map[string]interface{}
 	ii *schema.IndexInfo
+	fp []schema.Field
 }
 
 func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo) Context {
@@ -42,19 +44,27 @@ func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo) Context {
 	}
 }
 
-func (c ctx) Value(key string, value interface{}) {
+func (c *ctx) Value(key string, value interface{}) {
 	c.m[key] = value
 }
 
-func (c ctx) Get(key string) (interface{}, bool) {
+func (c *ctx) Get(key string) (interface{}, bool) {
 	i, ok := c.m[key]
 	return i, ok
 }
 
-func (c ctx) Segment() storage.ColumnFinder {
+func (c *ctx) Segment() storage.ColumnFinder {
 	return c.cf
 }
 
-func (c ctx) IndexInfo() *schema.IndexInfo {
+func (c *ctx) IndexInfo() *schema.IndexInfo {
 	return c.ii
+}
+
+func (c *ctx) SetFieldProcessed(fields []schema.Field) {
+	c.fp = fields
+}
+
+func (c *ctx) GetFieldProcessed() []schema.Field {
+	return c.fp
 }

@@ -9,7 +9,6 @@ import (
 	"meerkat/internal/executor"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage"
-	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/testutil"
 	"path"
 	"time"
@@ -17,7 +16,7 @@ import (
 
 func execute() {
 
-	now := int(time.Now().UnixNano())
+	now := time.Now()
 
 	indexInfo := createIndexInfo()
 	s := createSegment(indexInfo, now)
@@ -29,26 +28,16 @@ func execute() {
 		println(" No result found")
 	}
 
-	for ; n != nil; n = op.Next() {
-		for i := 0; i < len(n); i++ {
-			switch t := n[i].(type) {
-			case vector.IntVector:
-				for _, it := range t.Values() {
-					t2 := time.Unix(0, int64(it))
-					fmt.Println(t2, t2.UnixNano())
-				}
-			case vector.ByteSliceVector:
-				for x := 0; x < t.Len(); x++ {
-					fmt.Println(string(t.Get(x)))
-				}
-			}
-
+	for r := 0; r < len(n); r++ {
+		for i := 0; i < len(n[r]); i++ {
+			fmt.Printf(" %s ", n[r][i])
 		}
+		fmt.Println("")
 	}
 
 }
 
-func createSegment(indexInfo schema.IndexInfo, now int) *storage.Segment {
+func createSegment(indexInfo schema.IndexInfo, now time.Time) *storage.Segment {
 
 	buf := createBuffers(indexInfo, 250, now)
 
@@ -76,19 +65,24 @@ func createSegment(indexInfo schema.IndexInfo, now int) *storage.Segment {
 	return seg
 }
 
-func buildPhysicPlan(s *storage.Segment, ii *schema.IndexInfo, now int) *executor.MaterializeOperator {
+func buildPhysicPlan(s *storage.Segment, ii *schema.IndexInfo, now time.Time) executor.StringOperator {
 	from := now
-	to := int(time.Now().UnixNano())
+	to := time.Now()
+	fmt.Print("FROM ", now.Format("2006-01-02T15:04:05.00000"))
+	fmt.Print(" TO ", to.Format("2006-01-02T15:04:05.00000"), "\n")
+
 	sz := 200
 	ctx := executor.NewContext(s, ii)
-	op1 := executor.NewTimeColumnScanOperator(ctx, executor.Between, from, to, "_ts", sz, false)
+
+	op1 := executor.NewTimeColumnScanOperator(ctx, executor.Between, int(from.UnixNano()), int(to.UnixNano()), "_ts", sz, false)
 	op2 := executor.NewStringColumnScanOperator(ctx, executor.Contains, "Error", "message", sz, false)
 	op3 := executor.NewBinaryUint32Operator(ctx, executor.And, op1, op2, sz)
 	op4 := executor.NewMaterializeOperator(ctx, op3, nil)
-	return op4
+	op5 := executor.NewColumnToRowOperator(ctx, op4)
+	return op5
 }
 
-func createBuffers(indexInfo schema.IndexInfo, testLen int, now int) *buffer.Table {
+func createBuffers(indexInfo schema.IndexInfo, testLen int, now time.Time) *buffer.Table {
 
 	table := buffer.NewTable(indexInfo)
 
@@ -97,8 +91,9 @@ func createBuffers(indexInfo schema.IndexInfo, testLen int, now int) *buffer.Tab
 		for _, f := range indexInfo.Fields {
 			switch f.FieldType {
 			case schema.FieldType_TIMESTAMP:
-				now += rand.Intn(2000)
-				r.AddCol(f.Id, now)
+				t := int(now.UnixNano())
+				t += rand.Intn(2000)
+				r.AddCol(f.Id, t)
 			case schema.FieldType_INT:
 				if f.Nullable {
 					if rand.Intn(3) == 2 {

@@ -15,6 +15,8 @@ package executor
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
@@ -24,6 +26,7 @@ func NewBinaryBitmapOperator(ctx Context, op BinaryOperation, left BitmapOperato
 		op:    op,
 		left:  left,
 		right: right,
+		log:   log.With().Str("src", "BinaryBitmapOperator").Logger(),
 	}
 }
 
@@ -34,6 +37,7 @@ type BinaryBitmapOperator struct {
 	op    BinaryOperation
 	left  BitmapOperator
 	right BitmapOperator
+	log   zerolog.Logger
 }
 
 func (op *BinaryBitmapOperator) Init() {
@@ -70,6 +74,7 @@ type BinaryUint32Operator struct {
 	sz         int
 	remainingL []uint32
 	remainingR []uint32
+	log        zerolog.Logger
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
@@ -80,6 +85,7 @@ func NewBinaryUint32Operator(ctx Context, op BinaryOperation, left Uint32Operato
 		left:  left,
 		right: right,
 		sz:    sz,
+		log:   log.With().Str("src", "BinaryUint32Operator").Logger(),
 	}
 }
 

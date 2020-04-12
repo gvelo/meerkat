@@ -15,6 +15,8 @@ package executor
 
 import (
 	"github.com/RoaringBitmap/roaring"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 )
@@ -24,6 +26,7 @@ func NewReaderOperator(ctx Context, child BitmapOperator, colName string) Vector
 		ctx:     ctx,
 		child:   child,
 		colName: colName,
+		log:     log.With().Str("src", "ReaderOperator").Logger(),
 	}
 }
 
@@ -34,6 +37,7 @@ type ReaderOperator struct {
 	colName string
 	it      roaring.ManyIntIterable
 	sz      int
+	log     zerolog.Logger
 }
 
 func (r *ReaderOperator) Init() {
