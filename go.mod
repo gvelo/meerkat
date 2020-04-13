@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/RoaringBitmap/roaring v0.4.21
+	github.com/antlr/antlr4 v0.0.0-20200326173327-a4c66dc863bb
 	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
 	github.com/benbjohnson/tmpl v1.0.0 // indirect
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f

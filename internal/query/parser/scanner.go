@@ -10,12 +10,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// some functions on this lexer were copied from go/scanner/scanner.go
+// published under the license below.
+//
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package parser
 
 import (
 	"fmt"
-	"go/token"
 	"unicode"
 	"unicode/utf8"
 )
@@ -25,6 +31,10 @@ type ParseError struct {
 	offset  int
 	line    int
 	columnt int
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("ParseError: %v line:%v column:%v", e.msg, e.line, e.columnt)
 }
 
 type Scanner struct {
@@ -41,6 +51,7 @@ func NewScanner(s string) *Scanner {
 
 	return &Scanner{
 		src: []byte(s),
+		ch:  ' ',
 	}
 
 }
@@ -70,8 +81,6 @@ func (s *Scanner) next() {
 			r, w = utf8.DecodeRune(s.src[s.rdOffset:])
 			if r == utf8.RuneError && w == 1 {
 				s.error(s.offset, "illegal UTF-8 encoding")
-			} else if r == bom && s.offset > 0 {
-				s.error(s.offset, "illegal byte order mark")
 			}
 
 		}
@@ -130,7 +139,16 @@ func isDigit(ch rune) bool {
 
 func (s *Scanner) scanIdentifier() string {
 	start := s.offset
-	for isLetter(s.ch) || isDigit(s.ch) {
+	for isLetter(s.ch) || isDigit(s.ch) || s.ch == '~' {
+		s.next()
+	}
+	return string(s.src[start:s.offset])
+}
+
+func (s *Scanner) scanOp() string {
+	// ! already consumed.
+	start := s.offset - 1
+	for isLetter(s.ch) || s.ch == '~' {
 		s.next()
 	}
 	return string(s.src[start:s.offset])
@@ -148,7 +166,6 @@ func digitVal(ch rune) int {
 
 func lower(ch rune) rune     { return ('a' - 'A') | ch } // returns lower-case ch iff ch is ASCII letter
 func isDecimal(ch rune) bool { return '0' <= ch && ch <= '9' }
-func isHex(ch rune) bool     { return '0' <= ch && ch <= '9' || 'a' <= lower(ch) && lower(ch) <= 'f' }
 
 // scanEscape parses an escape sequence where rune is the accepted
 // escaped quote. In case of a syntax error, it stops at the offending
@@ -207,54 +224,57 @@ func (s *Scanner) scanEscape(quote rune) bool {
 	return true
 }
 
-func (s *Scanner) scanString() string {
+func (s *Scanner) scanString(quote rune) string {
 
-	start := s.offset
+	start := s.offset - 1
 
 	for {
 
 		ch := s.ch
 
 		if ch == '\n' || ch < 0 {
-			s.error(offs, "string literal not terminated")
+			s.error(s.offset, "string literal not terminated")
 			break
 		}
 
 		s.next()
 
-		if ch == '"' {
+		if ch == quote {
 			break
 		}
 
 		if ch == '\\' {
-			s.scanEscape('"')
+			s.scanEscape(quote)
 		}
 
 	}
 
-	return string(s.src[start : s.offset-1])
+	return string(s.src[start:s.offset])
+
 }
 
 func (s *Scanner) scanNumber() (string, TokenType) {
 
 	tt := INT
-	lastDec := -1
+	lastDec := s.offset
 	start := s.offset
 
 	for {
 
-		ch := s.ch
-		s.next()
-
-		if isDecimal(ch) {
-			lastDec = s.offset - 1
+		if isDecimal(s.ch) {
+			lastDec = s.offset
+			s.next()
+			continue
 		}
 
-		if ch == '.' {
+		if s.ch == '.' {
 			tt = FLOAT
+			s.next()
+			continue
 		}
 
-		if isLetter(ch) {
+		if isLetter(s.ch) {
+			s.next()
 			continue
 		}
 
@@ -262,39 +282,54 @@ func (s *Scanner) scanNumber() (string, TokenType) {
 
 	}
 
-	if lastDec > 0 {
+	suffix := string(s.src[lastDec+1 : s.offset])
 
-		suffix := string(s.src[lastDec:s.offset])
-
+	if len(suffix) > 0 {
 		if _, ok := timeSuffix[suffix]; ok {
 			tt = TIME
 		} else {
 			s.error(lastDec+1, "invalid suffix")
 		}
-
 	}
 
 	return string(s.src[start:s.offset]), tt
 }
 
-// Scan scans the next token and returns the token position, the token,
-// and its literal string if applicable. The source end is indicated by
-// token.EOF.
-//
-// If the returned token is a literal (token.IDENT, token.INT, token.FLOAT,
-// token.STRING) or token.COMMENT, the literal string has the
-// corresponding value.
-//
-// If the returned token is a keyword, the literal string is the keyword.
-//
-// In all other cases, Scan returns an empty literal string.
+func (s *Scanner) scanComment() string {
+
+	start := s.offset + 1
+
+	//-style comment
+	if s.ch == '/' {
+		// consume until EOL or EOF
+		for s.ch != '\n' && s.ch > 0 {
+			s.next()
+		}
+		return string(s.src[start:s.offset])
+	}
+
+	/*-style comment */
+	for s.ch > 0 {
+		ch := s.ch
+		s.next()
+		if ch == '*' && s.ch == '/' {
+			return string(s.src[start : s.offset-2])
+		}
+	}
+
+	s.error(s.offset, "comment not terminated")
+
+	return ""
+
+}
+
+// Scan scans the next token and returns the token
+// The source end is indicated by token.EOF.
 //
 // This is a non-recoverable lexer and will panic at the first error found,
 // error information will be provided using a ParseError type
 //
 func (s *Scanner) Scan() (tok Token) {
-
-scanAgain:
 
 	s.skipWhitespace()
 
@@ -318,10 +353,13 @@ scanAgain:
 		case -1:
 			tok = s.newToken(EOF, "")
 		case '"':
-			lit := s.scanString()
+			lit := s.scanString('"')
+			tok = s.newToken(STRING, lit)
+		case '\'':
+			lit := s.scanString('\'')
 			tok = s.newToken(STRING, lit)
 		case ':':
-			tok = s.switch2(token.COLON, token.DEFINE)
+			tok = s.newToken(COLON, ":")
 		case '.':
 			// fractions starting with a '.' are handled by outer switch
 			if s.ch == '.' {
@@ -353,64 +391,66 @@ scanAgain:
 			tok = s.newToken(MUL, "*")
 		case '/':
 			if s.ch == '/' || s.ch == '*' {
-				// comment
-				if s.insertSemi && s.findLineEnd() {
-					// reset position to the beginning of the comment
-					s.ch = '/'
-					s.offset = s.file.Offset(pos)
-					s.rdOffset = s.offset + 1
-					s.insertSemi = false // newline consumed
-					return pos, token.SEMICOLON, "\n"
-				}
-				comment := s.scanComment()
-				if s.mode&ScanComments == 0 {
-					// skip comment
-					s.insertSemi = false // newline consumed
-					goto scanAgain
-				}
-				tok = token.COMMENT
-				lit = comment
+				lit := s.scanComment()
+				tok = s.newToken(COMMENT, lit)
 			} else {
-				tok = s.switch2(token.QUO, token.QUO_ASSIGN)
+				tok = s.newToken(QUO, "/")
 			}
 		case '%':
-			tok = s.switch2(token.REM, token.REM_ASSIGN)
-		case '^':
-			tok = s.switch2(token.XOR, token.XOR_ASSIGN)
+			tok = s.newToken(REM, "%")
 		case '<':
-			if s.ch == '-' {
+			if s.ch == '=' {
 				s.next()
-				tok = token.ARROW
+				tok = s.newToken(LEQ, "<=")
 			} else {
-				tok = s.switch4(token.LSS, token.LEQ, '<', token.SHL, token.SHL_ASSIGN)
+				tok = s.newToken(LSS, "<")
 			}
 		case '>':
-			tok = s.switch4(token.GTR, token.GEQ, '>', token.SHR, token.SHR_ASSIGN)
-		case '=':
-			tok = s.switch2(token.ASSIGN, token.EQL)
-		case '!':
-			tok = s.switch2(token.NOT, token.NEQ)
-		case '&':
-			if s.ch == '^' {
+			if s.ch == '=' {
 				s.next()
-				tok = s.switch2(token.AND_NOT, token.AND_NOT_ASSIGN)
+				tok = s.newToken(GEQ, ">=")
 			} else {
-				tok = s.switch3(token.AND, token.AND_ASSIGN, '&', token.LAND)
+				tok = s.newToken(GTR, ">")
+			}
+		case '=':
+			switch s.ch {
+			case '=':
+				tok = s.newToken(EQL, "==")
+				s.next()
+			case '~':
+				tok = s.newToken(EQL_CI, "=~")
+				s.next()
+			default:
+				tok = s.newToken(ASSIGN, "=")
+			}
+		case '!':
+			switch s.ch {
+			case '=':
+				tok = s.newToken(NEQ, "!=")
+				s.next()
+			case '~':
+				tok = s.newToken(NEQ_CI, "!~")
+				s.next()
+			default:
+				if isLetter(s.ch) {
+					lit := s.scanOp()
+					tok = s.resolveLiteral(lit)
+					if tok.Type == IDENT {
+						s.errorf(s.start, "unknown op : %v", lit)
+					}
+				} else {
+					s.errorf(s.start, "invalid token: %v", s.ch)
+				}
 			}
 		case '|':
-			tok = s.switch3(token.OR, token.OR_ASSIGN, '|', token.LOR)
+			tok = s.newToken(PIPE, "|")
 		default:
-			// next reports unexpected BOMs - don't repeat
-			if ch != bom {
-				s.errorf(s.file.Offset(pos), "illegal character %#U", ch)
-			}
-			insertSemi = s.insertSemi // preserve insertSemi info
-			tok = token.ILLEGAL
-			lit = string(ch)
+			s.errorf(s.start, "invalid token %v", s.ch)
 		}
 	}
 
 	return
+
 }
 
 func (s *Scanner) scanDatetime() string {
@@ -433,7 +473,7 @@ func (s *Scanner) scanDatetime() string {
 
 	}
 
-	return string(s.src[start:s.offset])
+	return string(s.src[start : s.offset-1])
 
 }
 
@@ -454,13 +494,13 @@ func (s *Scanner) resolveLiteral(lit string) Token {
 
 	}
 
-	return s.newToken(t)
+	return s.newToken(t, lit)
 
 }
 
 func (s *Scanner) newToken(t TokenType, lit string) Token {
 	return Token{
-		Typte:   t,
+		Type:    t,
 		Literal: lit,
 		Offset:  s.start,
 		Column:  s.start - s.lineOffset,
@@ -475,9 +515,4 @@ func (s *Scanner) peek() byte {
 		return s.src[s.rdOffset]
 	}
 	return 0
-}
-
-func (s *Scanner) literal() string {
-	// since utf8 is not allowed in literals we can use offset instead of rdOffset.
-	return string(s.src[s.start:s.offset])
 }

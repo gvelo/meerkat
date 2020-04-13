@@ -141,6 +141,8 @@ var tokens = map[string]TokenType{
 	"has_any":        HAS_ANY,
 	"between":        BETWEEN,
 	"!between":       NOT_BETWEEN,
+	"time":           TIME,
+	"datetime":       DATETIME,
 }
 
 var timeSuffix = map[string]bool{
