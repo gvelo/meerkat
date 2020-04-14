@@ -170,6 +170,18 @@ var timeSuffix = map[string]bool{
 	"years":        true,
 }
 
+// A set of constants for precedence-based expression parsing.
+// Non-operators have lowest precedence, followed by operators
+// starting with precedence 1 up to unary operators. The highest
+// precedence serves as "catch-all" precedence for selector,
+// indexing, and other operator and delimiter tokens.
+//
+const (
+	LowestPrec  = 0 // non-operators
+	UnaryPrec   = 6
+	HighestPrec = 7
+)
+
 func getTokenType(lit string) TokenType {
 
 	t, ok := tokens[lit]
@@ -192,4 +204,38 @@ type Token struct {
 
 func (t Token) String() string {
 	return fmt.Sprintf("token %s (%v) offset:%v line:%v column:%v", t.Type.String(), t.Literal, t.Offset, t.Line, t.Column)
+}
+
+// Precedence returns the operator precedence of the binary
+// operator op. If op is not a binary operator, the result
+// is LowestPrecedence.
+//
+func (t Token) Precedence() int {
+	switch t.Type {
+	case OR:
+		return 1
+	case AND:
+		return 2
+	case EQL, NEQ, LSS, LEQ, GTR, GEQ:
+		return 3
+	case ADD, SUB:
+		return 4
+	case MUL, QUO, REM:
+		return 5
+	}
+	return LowestPrec
+}
+
+// IsLiteral returns true for tokens corresponding to identifiers
+// and basic type literals; it returns false otherwise.
+//
+func (t Token) IsLiteral() bool {
+	return literal_beg < t.Type && t.Type < literal_end
+}
+
+// IsOperator returns true for tokens corresponding to operators and
+// delimiters; it returns false otherwise.
+//
+func (t Token) IsOperator() bool {
+	return operator_beg < t.Type && t.Type < operator_end
 }
