@@ -91,8 +91,7 @@ func TestQuery1(t *testing.T) {
 	ii := createIndexInfo("Logs", fields...)
 
 	ctx := NewContext(s, ii)
-
-	ctx.Value(ColumnIndexToColumnName, []string{"F", "C1", "C2", "C3"})
+	print(ctx)
 	/*
 		op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1
 		op2 := NewIndexScanOperator(ctx, Gt, 2, "ts") // ts < 2

@@ -2,9 +2,11 @@ package executor
 
 import (
 	"math"
+	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"strings"
+	"time"
 )
 
 type AggregationOperator struct {
@@ -157,8 +159,10 @@ func createSlice(idx string, ctx Context) interface{} {
 		return make([][]byte, 0)
 	case storage.TextColumn:
 		return make([][]byte, 0)
+	default:
+		panic(" No mapping Found.")
 	}
-	panic(" No mapping Found.")
+
 }
 
 func createResultVector(n []interface{}, keyCols []int, aggCols []Aggregation, i int) (rKey []interface{}, rAgg []interface{}) {
@@ -191,31 +195,39 @@ type Aggregation struct {
 	AggCol  int
 }
 
-func createNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) map[int]string {
+func updateNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) {
 	// new index column map
-	nkv := make(map[int]string)
-	// old index column map
-	if kv, ok := ctx.Get(ColumnIndexToColumnName); ok == true {
+	nkv := make([]schema.Field, 0)
 
-		okv := kv.(map[int]string)
-
-		// for each key (group by) col we a create a result vector
-		last := 0
-		for i := 0; i < len(keyCols); i++ {
-			nkv[i] = okv[keyCols[i]]
-			last = i + 1
-		}
-
-		// for each aggregated column we create a result vector
-		for x := 0; x < len(aggCols); x++ {
-			agg := aggCols[x]
-			nkv[last+x] = okv[agg.AggCol] + "_" + agg.AggType.String()
-		}
-
-	} else {
-		panic("Error parsing column keys")
+	for i := 0; i < (len(keyCols) + len(aggCols)); i++ {
+		nkv = append(nkv, schema.Field{})
 	}
 
-	return nkv
+	last := 0
+	for i := 0; i < len(keyCols); i++ {
+		nkv[i] = ctx.GetFieldProcessed().Fields[keyCols[i]]
+		last = i + 1
+	}
+
+	// for each aggregated column we create a result vector
+	for x := 0; x < len(aggCols); x++ {
+		agg := aggCols[x]
+		f := ctx.GetFieldProcessed().Fields[agg.AggCol]
+		name := f.Name + "_" + agg.AggType.String()
+		nf := schema.Field{
+			Id:        name,
+			Name:      name,
+			Desc:      name,
+			IndexId:   f.IndexId,
+			FieldType: f.FieldType,
+			Nullable:  false,
+			Created:   time.Time{},
+			Updated:   time.Time{},
+		}
+
+		nkv[last+x] = nf
+	}
+
+	ctx.SetFieldProcessed(nkv)
 
 }

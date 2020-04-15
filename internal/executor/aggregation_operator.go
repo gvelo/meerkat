@@ -34,9 +34,7 @@ type HashAggregateOperator struct {
 
 func (r *HashAggregateOperator) Init() {
 	r.child.Init()
-	nkv := createNewKeyMap(r.ctx, r.keyCols, r.aggCols)
-	// Update the key values
-	r.ctx.Value(ColumnIndexToColumnName, nkv)
+	updateNewKeyMap(r.ctx, r.keyCols, r.aggCols)
 }
 
 func (r *HashAggregateOperator) Destroy() {
@@ -106,9 +104,8 @@ type SortedAggregateOperator struct {
 
 func (r *SortedAggregateOperator) Init() {
 	r.child.Init()
-	nkv := createNewKeyMap(r.ctx, r.keyCols, r.aggCols)
+	updateNewKeyMap(r.ctx, r.keyCols, r.aggCols)
 	// Update the key values
-	r.ctx.Value(ColumnIndexToColumnName, nkv)
 }
 
 func (r *SortedAggregateOperator) Destroy() {
@@ -196,20 +193,16 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 	resKey := make([]interface{}, 0)
 	resAgg := make([]interface{}, 0)
 
-	if kv, ok := ctx.Get(ColumnIndexToColumnName); ok == true {
-		okv := kv.(map[int]string)
-		// create key slices
-		for i, _ := range rKey[0] {
-			resKey = append(resKey, createSlice(okv[i], ctx))
-		}
+	okv := ctx.GetFieldProcessed().Fields
+	// create key slices
+	for i, _ := range rKey[0] {
+		resKey = append(resKey, createSlice(okv[i].Name, ctx))
+	}
 
-		// create aggregation slices
-		for i, _ := range rAgg[0] {
-			resAgg = append(resAgg, createSlice(okv[i+len(resKey)], ctx))
+	// create aggregation slices
+	for i, _ := range rAgg[0] {
+		resAgg = append(resAgg, createSlice(okv[i+len(resKey)].Name, ctx))
 
-		}
-	} else {
-		panic("Error")
 	}
 
 	for j := 0; j < len(resKey); j++ { // columns

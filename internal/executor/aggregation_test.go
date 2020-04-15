@@ -314,6 +314,8 @@ func TestHAggScenario1(t *testing.T) {
 	sMap["c2"] = &fakeIntColumn{}
 	sMap["c3"] = &fakeStringColumn{}
 
+	fs := &fakeColFinder{sMap: sMap}
+
 	fields := []field{
 		{
 			name:     "c1",
@@ -326,15 +328,13 @@ func TestHAggScenario1(t *testing.T) {
 			nullable: false,
 		},
 		{
-			name:     "c2",
+			name:     "c3",
 			t:        schema.FieldType_STRING,
 			nullable: false,
 		},
 	}
 
 	ii := createIndexInfo("Logs", fields...)
-
-	fs := &fakeColFinder{sMap: sMap}
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -348,11 +348,12 @@ func TestHAggScenario1(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs, ii)
-	m := make(map[int]string)
-	m[0] = "c1"
-	m[1] = "c2"
-	m[2] = "c3"
-	ctx.Value(ColumnIndexToColumnName, m)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewHashAggregateOperator(ctx, f, ag, g)
 
@@ -481,7 +482,7 @@ func TestHAggScenario2(t *testing.T) {
 			nullable: false,
 		},
 		{
-			name:     "c2",
+			name:     "c3",
 			t:        schema.FieldType_STRING,
 			nullable: false,
 		},
@@ -491,11 +492,12 @@ func TestHAggScenario2(t *testing.T) {
 
 	// Create ctx
 	ctx := NewContext(fs, ii)
-	m := make(map[int]string)
-	m[0] = "c1"
-	m[1] = "c2"
-	m[2] = "c3"
-	ctx.Value(ColumnIndexToColumnName, m)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewHashAggregateOperator(ctx, f, ag, g)
 	start := time.Now()
@@ -566,7 +568,7 @@ func TestSortScenario(t *testing.T) {
 			nullable: false,
 		},
 		{
-			name:     "c2",
+			name:     "c3",
 			t:        schema.FieldType_STRING,
 			nullable: false,
 		},
@@ -575,11 +577,12 @@ func TestSortScenario(t *testing.T) {
 	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
 	ctx := NewContext(fs, ii)
-	m := make(map[int]string)
-	m[0] = "c1"
-	m[1] = "c2"
-	m[2] = "c3"
-	ctx.Value(ColumnIndexToColumnName, m)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewSortedAggregateOperator(ctx, f, ag, g)
 	start := time.Now()
@@ -659,11 +662,12 @@ func TestSortScenario2(t *testing.T) {
 	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
 	ctx := NewContext(fs, ii)
-	m := make(map[int]string)
-	m[0] = "c1"
-	m[1] = "c2"
-	m[2] = "c3"
-	ctx.Value(ColumnIndexToColumnName, m)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewSortedAggregateOperator(ctx, f, ag, g)
 	start := time.Now()

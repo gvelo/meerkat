@@ -15,12 +15,14 @@ package executor
 
 import (
 	"github.com/stretchr/testify/assert"
+	"meerkat/internal/schema"
+	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"testing"
 	"time"
 )
 
-func setUpIntBucket() VectorOperator {
+func setUpIntBucket() MultiVectorOperator {
 	l := make([][]int, 0)
 	l = append(l, appendNTimes(10, 10))
 	l = append(l, appendNTimes(11, 10))
@@ -37,7 +39,7 @@ func setUpIntBucket() VectorOperator {
 	return NewTestOperator(l)
 }
 
-func setUpTimeBucket(t0, n int, d time.Duration) VectorOperator {
+func setUpTimeBucket(t0, n int, d time.Duration) MultiVectorOperator {
 	l := make([][]int, 0)
 	l = append(l, appendNTimes(t0+int(10*d), n))
 	l = append(l, appendNTimes(t0+int(11*d), n))
@@ -53,7 +55,7 @@ func setUpTimeBucket(t0, n int, d time.Duration) VectorOperator {
 	return NewTestOperator(l)
 }
 
-func setUpTimeBucketParsing(d [][]string) VectorOperator {
+func setUpTimeBucketParsing(d [][]string) MultiVectorOperator {
 	l := make([][]int, 0)
 
 	for _, items := range d {
@@ -84,14 +86,34 @@ func TestTimeBucketInSecs(t *testing.T) {
 		t.Fail()
 	}
 
+	// Set up cf
+	sMap := make(map[string]storage.Column)
+	sMap["c1"] = &fakeFloatColumn{}
+	sMap["c2"] = &fakeIntColumn{}
+	sMap["c3"] = &fakeStringColumn{}
+
+	fs := &fakeColFinder{sMap: sMap}
+
+	fields := []field{
+		{
+			name:     "_ts",
+			t:        schema.FieldType_TIMESTAMP,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+	// Create ctx
+	ctx := NewContext(fs, ii)
+
 	list := setUpTimeBucket(int(t0.UnixNano()), 10, time.Second)
-	d, _ := time.ParseDuration("5s")
-	op := NewTimeBucketOperator(list, d)
+	op := NewTimeBucketOperator(ctx, list, "5s")
 
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(*vector.IntVector).Values()
+		s := r[0].(vector.IntVector)
+		k := s.Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}
@@ -114,13 +136,32 @@ func TestTimeBucketInHour(t *testing.T) {
 	dates := [][]string{{"01-01-2020 20:34:00 -03:00", "01-01-2020 20:34:00 -03:00", "01-01-2020 20:34:00 -03:00",
 		"01-01-2020 20:34:00 -03:00", "01-01-2020 20:34:00 -03:00", "01-01-2020 20:34:00 -03:00"}}
 	list := setUpTimeBucketParsing(dates)
-	d, _ := time.ParseDuration("1h")
-	op := NewTimeBucketOperator(list, d)
+
+	// Set up cf
+	sMap := make(map[string]storage.Column)
+	sMap["_ts"] = &fakeIntColumn{}
+
+	fs := &fakeColFinder{sMap: sMap}
+
+	fields := []field{
+		{
+			name:     "_ts",
+			t:        schema.FieldType_TIMESTAMP,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+	// Create ctx
+	ctx := NewContext(fs, ii)
+
+	op := NewTimeBucketOperator(ctx, list, "1h")
 
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(*vector.IntVector).Values()
+		s := r[0].(vector.IntVector)
+		k := s.Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}
@@ -138,12 +179,31 @@ func TestIntBucket(t *testing.T) {
 	list := setUpIntBucket()
 	a := assert.New(t)
 
-	op := NewBucketOperator(list, 5)
+	// Set up cf
+	sMap := make(map[string]storage.Column)
+	sMap["_ts"] = &fakeIntColumn{}
+
+	fs := &fakeColFinder{sMap: sMap}
+
+	fields := []field{
+		{
+			name:     "_ts",
+			t:        schema.FieldType_TIMESTAMP,
+			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+	// Create ctx
+	ctx := NewContext(fs, ii)
+
+	op := NewBucketOperator(ctx, list, 5)
 
 	m := make(map[int]int)
 
 	for r := op.Next(); r != nil; r = op.Next() {
-		k := r.(*vector.IntVector).Values()
+		s := r[0].(vector.IntVector)
+		k := s.Values()
 		for i := 0; i < len(k); i++ {
 			m[k[i]]++
 		}

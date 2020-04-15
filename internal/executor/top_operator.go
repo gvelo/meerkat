@@ -14,10 +14,8 @@
 package executor
 
 import (
-	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"meerkat/internal/storage/vector"
 )
 
 // TopOperator operator takes a list of keys
@@ -41,13 +39,13 @@ import (
 type TopOperator struct {
 	n     int
 	asc   bool
-	child VectorOperator
+	child MultiVectorOperator
 	log   zerolog.Logger
 }
 
 // NewTopOperator creates a new vector operator.
 // TODO:(sebad) this operator shouldn't sort the items.
-func NewTopOperator(child VectorOperator, n int, asc bool) MultiVectorOperator {
+func NewTopOperator(child MultiVectorOperator, n int, asc bool) MultiVectorOperator {
 	return &TopOperator{
 		n,
 		asc,
@@ -66,43 +64,44 @@ func (op *TopOperator) Destroy() {
 }
 
 func (op *TopOperator) Next() []interface{} {
+	/*
+		m := make(map[int]int, op.n)
 
-	m := make(map[int]int, op.n)
+		for vec := op.child.Next(); vec != nil; vec = op.child.Next() {
 
-	for vec := op.child.Next(); vec != nil; vec = op.child.Next() {
+			keys := vec.(*vector.IntVector).Values()
 
-		keys := vec.(*vector.IntVector).Values()
-
-		for i := 0; i < len(keys); i++ {
-			m[keys[i]]++
+			for i := 0; i < len(keys); i++ {
+				m[keys[i]]++
+			}
 		}
-	}
 
-	kl := make([]int, 0, len(m))
-	for k, _ := range m {
-		kl = append(kl, k)
-	}
-
-	var f timsort.IntLessThan
-	if op.asc {
-		f = func(a, b int) bool {
-			return a < b
+		kl := make([]int, 0, len(m))
+		for k, _ := range m {
+			kl = append(kl, k)
 		}
-	} else {
-		f = func(a, b int) bool {
-			return a > b
+
+		var f timsort.IntLessThan
+		if op.asc {
+			f = func(a, b int) bool {
+				return a < b
+			}
+		} else {
+			f = func(a, b int) bool {
+				return a > b
+			}
 		}
-	}
 
-	timsort.Ints(kl, f)
+		timsort.Ints(kl, f)
 
-	k := make([]int, 0, 10)
-	v := make([]int, 0, 10)
-	for i := 0; i < op.n; i++ {
-		k = append(k, kl[i])
-		v = append(v, m[kl[i]])
-	}
+		k := make([]int, 0, 10)
+		v := make([]int, 0, 10)
+		for i := 0; i < op.n; i++ {
+			k = append(k, kl[i])
+			v = append(v, m[kl[i]])
+		}
 
-	return nil // []storage.Vector{storage.NewIntVector(k), storage.NewIntVector(v)}
-
+		return nil // []storage.Vector{storage.NewIntVector(k), storage.NewIntVector(v)}
+	*/
+	return nil
 }

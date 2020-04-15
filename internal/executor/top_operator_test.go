@@ -20,17 +20,17 @@ import (
 )
 
 type TestOperator struct {
-	val [][]int
-	i   int
+	values [][]int
+	i      int
 }
 
 func (op *TestOperator) Destroy() {
 	panic("implement me")
 }
 
-func NewTestOperator(vals [][]int) VectorOperator {
+func NewTestOperator(values [][]int) MultiVectorOperator {
 	return &TestOperator{
-		val: vals,
+		values: values,
 	}
 }
 
@@ -38,17 +38,18 @@ func (op *TestOperator) Init() {
 	op.i = 0
 }
 
-func (op *TestOperator) Next() vector.Vector {
-	if op.i < len(op.val) {
-		sc := vector.NewIntVector(op.val[op.i], []uint64{})
-		sc.SetLen(len(op.val[op.i]))
+func (op *TestOperator) Next() []interface{} {
+	res := make([]interface{}, 0)
+	if op.i < len(op.values) {
+		sc := vector.NewIntVector(op.values[op.i], []uint64{})
+		sc.SetLen(len(op.values[op.i]))
 		op.i++
-		return &sc
+		return append(res, sc)
 	}
 	return nil
 }
 
-func setUpTop() VectorOperator {
+func setUpTop() MultiVectorOperator {
 	l := make([][]int, 0)
 	l = append(l, appendNTimes(10, 10))
 	l = append(l, appendNTimes(11, 11))
@@ -65,7 +66,7 @@ func setUpTop() VectorOperator {
 	return NewTestOperator(l)
 }
 
-func setUpTopN(n int) VectorOperator {
+func setUpTopN(n int) MultiVectorOperator {
 	l := make([][]int, 0)
 	l = append(l, appendNTimes(n+10, n/10))
 	l = append(l, appendNTimes(n+11, n/10))

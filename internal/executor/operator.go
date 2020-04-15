@@ -144,18 +144,9 @@ type BufferOperator struct {
 }
 
 func (r *BufferOperator) Init() {
-	r.vKeys = make([][]byte, 0)
-	for i, c := range r.children {
-		r.vKeys[i] = c.(ColumnOperator).GetName()
-		c.Init()
-	}
-	r.ctx.Value(ColumnIndexToColumnName, r.vKeys)
 }
 
 func (r *BufferOperator) Destroy() {
-	for _, c := range r.children {
-		c.Destroy()
-	}
 }
 
 func (r *BufferOperator) Next() []vector.Vector {
@@ -307,7 +298,8 @@ func (op *ColumnToRowOperator) Destroy() {
 func (op *ColumnToRowOperator) Next() [][]string {
 
 	n := op.child.Next()
-	l := op.len(n[0])
+
+	l := Len(n[0])
 
 	res := make([][]string, 0, l)
 	for i := 0; i < l; i++ {
@@ -324,7 +316,7 @@ func (op *ColumnToRowOperator) Next() [][]string {
 func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	switch t := v[x].(type) {
 	case vector.IntVector:
-		if op.ctx.GetFieldProcessed()[x].FieldType == schema.FieldType_TIMESTAMP {
+		if op.ctx.GetFieldProcessed().Fields[x].FieldType == schema.FieldType_TIMESTAMP {
 			time := time.Unix(0, int64(t.Values()[i]))
 			return fmt.Sprintf(time.Format(op.TimeFormat))
 		} else {
@@ -344,10 +336,9 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	return ""
 }
 
-// TODO: QUE MIERDA?????
-func (op *ColumnToRowOperator) len(v interface{}) int {
-	// No entiendo porque mierda no me toma el vector.Vector que implementan todos!?????
-	switch t := v.(type) {
+// TODO(sebad): ver que onda con esto cuando definamos lo que enviamos.
+func Len(i interface{}) int {
+	switch t := i.(type) {
 	case vector.IntVector:
 		return t.Len()
 	case vector.FloatVector:

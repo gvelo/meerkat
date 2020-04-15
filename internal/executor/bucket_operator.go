@@ -63,20 +63,21 @@ import (
 //  107      105
 //
 type BucketOperator struct {
+	ctx   Context
 	span  int
 	tspan time.Duration
-	child VectorOperator
+	child MultiVectorOperator
 	log   zerolog.Logger
 }
 
 func (op *BucketOperator) Init() {
 	op.child.Init()
-
 }
 
 // NewBucketOperator creates a new BucketOperator.
-func NewBucketOperator(child VectorOperator, span int) VectorOperator {
+func NewBucketOperator(ctx Context, child MultiVectorOperator, span int) MultiVectorOperator {
 	return &BucketOperator{
+		ctx,
 		span,
 		0,
 		child,
@@ -85,10 +86,15 @@ func NewBucketOperator(child VectorOperator, span int) VectorOperator {
 }
 
 // NewTimeBucketOperator creates a new  TimeBucketOperator .
-func NewTimeBucketOperator(child VectorOperator, span time.Duration) VectorOperator {
+func NewTimeBucketOperator(ctx Context, child MultiVectorOperator, span string) MultiVectorOperator {
+	d, err := time.ParseDuration(span)
+	if err != nil {
+		log.Error().Err(err)
+	}
 	return &BucketOperator{
+		ctx,
 		0,
-		span,
+		d,
 		child,
 		log.With().Str("src", "BucketOperator").Logger(),
 	}
@@ -98,12 +104,26 @@ func (op *BucketOperator) Destroy() {
 	op.child.Destroy()
 }
 
-func (op *BucketOperator) Next() vector.Vector {
+// TODO: SACAR...
+func getValues(i interface{}) []int {
+	switch t := i.(type) {
+	case vector.IntVector:
+		return t.Values()
+	}
+	return nil
+}
+func (op *BucketOperator) Next() []interface{} {
 
-	vec := op.child.Next()
-	if vec != nil {
+	n := op.child.Next()
 
-		ts := vec.(*vector.IntVector).Values()
+	_, i, err := op.ctx.GetFieldProcessed().FindField("_ts")
+	if err != nil {
+		log.Error().Err(err)
+	}
+
+	if n != nil {
+
+		ts := getValues(n[i])
 
 		if len(ts) == 0 {
 			return nil
@@ -121,10 +141,11 @@ func (op *BucketOperator) Next() vector.Vector {
 
 		v := vector.NewIntVector(ts, []uint64{})
 		v.SetLen(len(ts))
-		return &v
-	} else {
-		return nil
+
+		n[i] = v
+		return n
 	}
+
 	return nil
 }
 

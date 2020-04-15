@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"log"
+	"github.com/rs/zerolog/log"
 	"math/rand"
 	"meerkat/internal/buffer"
 	"meerkat/internal/executor"
@@ -13,6 +13,16 @@ import (
 	"path"
 	"time"
 )
+
+func main() {
+
+	//createIndex()
+
+	//generateData()
+
+	execute()
+
+}
 
 func execute() {
 
@@ -45,13 +55,13 @@ func createSegment(indexInfo schema.IndexInfo, now time.Time) *storage.Segment {
 
 	uid, err := uuid.NewUUID()
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err)
 	}
 	sw := storage.NewSegmentWriter(filePath, uid, buf)
 
 	err = sw.Write()
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err)
 	}
 
 	filePath = path.Join(filePath, uid.String())
@@ -59,7 +69,7 @@ func createSegment(indexInfo schema.IndexInfo, now time.Time) *storage.Segment {
 	seg, err := storage.ReadSegment(filePath)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Error().Err(err)
 	}
 
 	return seg
@@ -78,8 +88,24 @@ func buildPhysicPlan(s *storage.Segment, ii *schema.IndexInfo, now time.Time) ex
 	op2 := executor.NewStringColumnScanOperator(ctx, executor.Contains, "Error", "message", sz, false)
 	op3 := executor.NewBinaryUint32Operator(ctx, executor.And, op1, op2, sz)
 	op4 := executor.NewMaterializeOperator(ctx, op3, nil)
-	op5 := executor.NewColumnToRowOperator(ctx, op4)
-	return op5
+
+	op5 := executor.NewTimeBucketOperator(ctx, op4, "1m")
+
+	/* ag := []executor.Aggregation{
+		{
+			AggType: executor.Count,
+			AggCol:  0,
+		},
+	}
+
+	 keys := []int{0}
+
+	 op6 := executor.NewHashAggregateOperator(ctx, op5, ag, keys)
+	*/
+
+	op6 := executor.NewColumnToRowOperator(ctx, op5)
+
+	return op6
 }
 
 func createBuffers(indexInfo schema.IndexInfo, testLen int, now time.Time) *buffer.Table {
