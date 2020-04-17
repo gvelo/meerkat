@@ -27,14 +27,14 @@ import (
 )
 
 type ParseError struct {
-	msg     string
-	offset  int
-	line    int
-	columnt int
+	msg    string
+	offset int
+	line   int
+	column int
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("ParseError: %v line:%v column:%v", e.msg, e.line, e.columnt)
+	return fmt.Sprintf("ParseError: %v line:%v column:%v", e.msg, e.line, e.column)
 }
 
 type Scanner struct {
@@ -109,10 +109,10 @@ func (s *Scanner) newLine() {
 func (s *Scanner) error(offs int, msg string) {
 
 	err := &ParseError{
-		msg:     msg,
-		offset:  offs,
-		line:    s.line,
-		columnt: offs - s.lineOffset,
+		msg:    msg,
+		offset: offs,
+		line:   s.line,
+		column: offs - s.lineOffset,
 	}
 
 	panic(err)

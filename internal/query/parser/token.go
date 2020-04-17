@@ -149,6 +149,8 @@ var timeSuffix = map[string]bool{
 	"ns":           true,
 	"nanosecond":   true,
 	"nanoseconds":  true,
+	"microsecond":  true,
+	"microseconds": true,
 	"ms":           true,
 	"millisecond":  true,
 	"milliseconds": true,
@@ -164,10 +166,6 @@ var timeSuffix = map[string]bool{
 	"d":            true,
 	"day":          true,
 	"days":         true,
-	"month":        true,
-	"months":       true,
-	"year":         true,
-	"years":        true,
 }
 
 // A set of constants for precedence-based expression parsing.
