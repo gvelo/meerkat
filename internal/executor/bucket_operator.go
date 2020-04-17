@@ -104,14 +104,6 @@ func (op *BucketOperator) Destroy() {
 	op.child.Destroy()
 }
 
-// TODO: SACAR...
-func getValues(i interface{}) []int {
-	switch t := i.(type) {
-	case vector.IntVector:
-		return t.Values()
-	}
-	return nil
-}
 func (op *BucketOperator) Next() []interface{} {
 
 	n := op.child.Next()
@@ -123,7 +115,9 @@ func (op *BucketOperator) Next() []interface{} {
 
 	if n != nil {
 
-		ts := getValues(n[i])
+		vv := n[i].(vector.IntVector)
+		vp := &vv
+		ts := vp.Values()
 
 		if len(ts) == 0 {
 			return nil
