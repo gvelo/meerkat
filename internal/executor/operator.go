@@ -299,7 +299,15 @@ func (op *ColumnToRowOperator) Next() [][]string {
 
 	n := op.child.Next()
 
-	l := Len(n[0])
+	if len(n) == 0 {
+		return nil
+	}
+
+	_, i, _ := op.ctx.GetFieldProcessed().FindField("_ts")
+
+	vv := n[i].(vector.IntVector)
+	vp := &vv
+	l := vp.Len()
 
 	res := make([][]string, 0, l)
 	for i := 0; i < l; i++ {
@@ -334,23 +342,4 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 		log.Printf("Type %v not found.", t)
 	}
 	return ""
-}
-
-// TODO(sebad): ver que onda con esto cuando definamos lo que enviamos.
-func Len(i interface{}) int {
-	switch t := i.(type) {
-	case vector.IntVector:
-		return t.Len()
-	case vector.FloatVector:
-		return t.Len()
-	case vector.ByteSliceVector:
-		return t.Len()
-	case vector.UintVector:
-		return t.Len()
-	case vector.BoolVector:
-		return t.Len()
-	default:
-		log.Printf("Type %v not found.", t)
-	}
-	return 0
 }

@@ -117,7 +117,12 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 		} else {
 
 			if l[i] > r[x] {
-				x++
+				for l[i] > r[x] {
+					x++
+				}
+				if l[i] == r[x] {
+					res = append(res, l[i])
+				}
 			}
 
 		}
@@ -308,7 +313,7 @@ NEXT:
 	case Xor:
 		res = append(res, op.xor(l, r)...)
 	default:
-		panic("Operator not supported")
+		log.Error().Msgf("Operator not supported")
 	}
 
 	if len(res) < op.sz {

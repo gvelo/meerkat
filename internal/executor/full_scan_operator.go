@@ -364,7 +364,7 @@ func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
 		}
 	case Between:
 		v = func(x, y, z int) bool {
-			return x > y
+			return x > y && x < z
 		}
 	case Ge:
 		v = func(x, y, z int) bool {

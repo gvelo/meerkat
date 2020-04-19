@@ -244,11 +244,11 @@ func (t *Table) Index() schema.IndexInfo {
 	return t.index
 }
 
-func NewTable(idx schema.IndexInfo) *Table {
+func NewTable(idx *schema.IndexInfo) *Table {
 
 	t := &Table{
 		cols:  make(map[string]Buffer, len(idx.Fields)),
-		index: idx,
+		index: *idx,
 	}
 
 	for _, f := range idx.Fields {

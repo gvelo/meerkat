@@ -10,11 +10,9 @@ import (
 
 func main() {
 
-	//createIndex()
+	createIndex()
 
-	//generateData()
-
-	execute()
+	generateData()
 
 }
 
