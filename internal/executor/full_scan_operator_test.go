@@ -229,7 +229,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			name:      "Check batch 10 Not Null",
 			batch:     10,
 			in: input{
-				validity: [][]uint64{{255}, {255}}, // 0000 1111 1111 , 0000 1111 1111
+				validity: nil,
 				length:   []int{10, 10},
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 23, 32}, {-1, 5, 5, 33, 51, 54, 34, 32, 2, 3}},
 			},
@@ -259,10 +259,6 @@ func TestQueryIntScanOperators(t *testing.T) {
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
-			if err := tc.init(); err != nil {
-				t.Fatal(err)
-			}
 
 			ctx := NewContext(createColFinder(tc.in), nil)
 

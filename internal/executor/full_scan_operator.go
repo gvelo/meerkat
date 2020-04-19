@@ -249,7 +249,6 @@ type IntColumnScanOperator struct {
 	sz            int
 	iterator      storage.IntIterator
 	lastRid       uint32
-	resultLeft    []uint32
 	lastCheckedId int
 	lastValuePos  int
 	lastVector    *vector.IntVector
@@ -270,7 +269,7 @@ func (op *IntColumnScanOperator) processVector(lastValuePos, lastCheckedId int, 
 	i := lastValuePos
 	x := lastCheckedId
 
-	for ; x < op.lastVector.Len(); x++ {
+	for ; x < op.lastVector.Len() && len(r) < op.sz; x++ {
 		if op.opFn(op.lastVector.Values()[x], op.value) {
 			r = append(r, op.lastRid)
 			i++
@@ -278,7 +277,7 @@ func (op *IntColumnScanOperator) processVector(lastValuePos, lastCheckedId int, 
 		op.lastRid++
 	}
 
-	if len(r) >= op.sz {
+	if len(r) == op.sz {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -292,7 +291,7 @@ func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId i
 	i := lastValuePos
 	x := lastCheckedId
 
-	for ; x < op.lastVector.Len(); x++ {
+	for ; x < op.lastVector.Len() && len(r) < op.sz; x++ {
 		if op.lastVector.IsValid(x) {
 			if op.opFn(op.lastVector.Values()[x], op.value) {
 				r = append(r, op.lastRid)
@@ -302,7 +301,7 @@ func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId i
 		op.lastRid++
 	}
 
-	if len(r) >= op.sz {
+	if len(r) == op.sz {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -317,11 +316,9 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 
 	if op.lastVector != nil {
 
-		r = append(r, op.resultLeft...)
-		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
+		if len(r) == op.sz {
+			return r
 		}
 
 	}
@@ -331,11 +328,10 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 		v := op.iterator.Next()
 		op.lastVector = &v
 
-		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
+		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
 
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		if len(r) == op.sz {
+			return r
 		}
 
 	}

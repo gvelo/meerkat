@@ -122,6 +122,7 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 				}
 				if l[i] == r[x] {
 					res = append(res, l[i])
+					x++
 				}
 			}
 
@@ -196,7 +197,6 @@ func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 
 		if len(l) > i {
 			op.remainingL = l[i:]
-
 		} else {
 			op.remainingL = nil
 		}
