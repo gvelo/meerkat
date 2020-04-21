@@ -44,7 +44,6 @@ const (
 	MUL               // *
 	QUO               // /
 	REM               // %
-	ASSIGN            // =
 	EQL               // ==
 	EQL_CI            // =~
 	NEQ               // !=
@@ -89,6 +88,8 @@ const (
 	NOT_BETWEEN       // !between
 	RANGE             // ..
 	operator_end
+
+	ASSIGN // =
 
 	LPAREN // (
 	LBRACK // [
@@ -221,6 +222,11 @@ func (t Token) Precedence() int {
 	case MUL, QUO, REM:
 		return 5
 	}
+
+	if t.IsOperator() {
+		return 1
+	}
+
 	return LowestPrec
 }
 

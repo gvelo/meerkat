@@ -71,7 +71,7 @@ func (p *Parser) expect(tokenTypes ...TokenType) {
 		}
 	}
 
-	p.errorf("expected %v found %v", tokenTypes, p.token.Type)
+	p.errorf("expected %v found %v", tokenTypes, p.token)
 
 }
 
@@ -85,6 +85,7 @@ func (p *Parser) error(msg string) {
 	}
 
 	panic(err)
+
 }
 
 func (p *Parser) errorf(msg string, a ...interface{}) {
@@ -171,7 +172,7 @@ func (p *Parser) parseTimeLit() int {
 
 	// find the postfix start
 
-	i := len(p.token.Literal)
+	i := len(p.token.Literal) - 1
 
 	for i > 0 {
 
@@ -251,16 +252,16 @@ func (p *Parser) parseTabularExpr() *TabularExpr {
 
 	tExpr := &TabularExpr{
 		Source:    p.parseLit(IDENT),
-		TabularOp: p.parseTabularOperators(),
+		TabularOp: p.parseTabularOperatorList(),
 	}
 
 	return tExpr
 
 }
 
-func (p *Parser) parseTabularOperators() []interface{} {
+func (p *Parser) parseTabularOperatorList() []Node {
 
-	var tOps []interface{}
+	var tOps []Node
 
 	for p.token.Type == PIPE {
 		p.next()
@@ -268,39 +269,54 @@ func (p *Parser) parseTabularOperators() []interface{} {
 		tOps = append(tOps, op)
 	}
 
-	p.expect(EOF)
+	p.expect(PIPE, EOF)
 
 	return tOps
 
 }
 
-func (p *Parser) parseTabularOperator() interface{} {
+func (p *Parser) parseTabularOperator() Node {
 
 	p.expect(IDENT)
+	t := p.token
+	p.next()
 
-	switch p.token.Literal {
+	switch t.Literal {
 	case "where":
+		return p.parseWhereOp()
 	case "take":
-		p.next()
-		return p.parseLimit()
+		return p.parseLimitOp()
 	case "limit":
-		p.next()
-		return p.parseLimit()
+		return p.parseLimitOp()
 	case "count":
-		p.next()
-		return p.parseCount()
+		return p.parseCountOp()
 	case "summarize":
+		return p.parseSummarizeOp()
 	case "sort":
+		return p.parseSortOp()
+	case "order":
+		return p.parseSortOp()
 	case "extend":
+		return p.parseExtendOp()
+	case "project":
+		return p.parseProjectOp()
 	default:
-		p.errorf("unknown tabular operator %q", p.token.Literal)
+		p.errorf("unknown tabular operator %q", t.Literal)
 	}
 
 	return nil
 
 }
 
-func (p *Parser) parseLimit() *LimitOp {
+func (p *Parser) parseWhereOp() *WhereOp {
+
+	return &WhereOp{
+		Predicate: p.parseExpr(),
+	}
+
+}
+
+func (p *Parser) parseLimitOp() *LimitOp {
 
 	lit := p.parseLit(INT)
 
@@ -310,6 +326,316 @@ func (p *Parser) parseLimit() *LimitOp {
 
 }
 
-func (p *Parser) parseCount() *CountOp {
+func (p *Parser) parseCountOp() *CountOp {
 	return &CountOp{}
+}
+
+// exp = unaryExp || binaryExp
+func (p *Parser) parseExpr() Node {
+	return p.parseBinaryExpr(LowestPrec + 1)
+}
+
+// call = literal(IDENT) "(" { [ expr [","] } ]  ")"
+func (p *Parser) parseCallExpr(funcName *LitExpr) *CallExpr {
+
+	callExpr := &CallExpr{
+		FuncName: funcName,
+	}
+
+	p.expect(LPAREN)
+	p.next()
+
+	// parse argument list
+	for p.token.Type != RPAREN {
+		expr := p.parseExpr()
+		callExpr.ArgList = append(callExpr.ArgList, expr)
+		if p.token.Type == COMMA {
+			p.next()
+			continue
+		}
+	}
+
+	p.expect(RPAREN)
+	p.next()
+
+	return callExpr
+
+}
+
+// primaryExpr = literal(IDEN/INT/FLOAT/DATE/DATETIME) | callExpr
+func (p *Parser) parsePrimaryExpr() Node {
+
+	switch p.token.Type {
+
+	case LPAREN:
+		p.next()
+		expr := p.parseExpr()
+		p.expect(RPAREN)
+		p.next()
+		return expr
+
+	case IDENT:
+
+		lit := p.parseLit()
+
+		if p.token.Type == LPAREN {
+			return p.parseCallExpr(lit)
+		}
+
+		return lit
+
+	}
+
+	if p.token.IsLiteral() {
+		return p.parseLit()
+	}
+
+	p.errorf("expected expr found %v", p.token.Type)
+
+	return nil
+}
+
+// unaryExpr = primaryExpr | unary_op primaryExpr
+func (p *Parser) parseUnaryExpr() Node {
+
+	if p.token.Type == ADD || p.token.Type == SUB {
+		t := p.token
+		p.next()
+		return &UnaryExpr{
+			Op:   t,
+			Expr: p.parseUnaryExpr(),
+		}
+	}
+
+	return p.parsePrimaryExpr()
+
+}
+
+func (p *Parser) parseBinaryExpr(prec int) Node {
+
+	l := p.parseUnaryExpr()
+
+	for {
+
+		if p.token.Precedence() < prec {
+			return l
+		}
+
+		if !p.token.IsOperator() {
+			p.errorf("expect operator got %v", p.token)
+		}
+
+		op := p.token
+		p.next()
+
+		r := p.parseBinaryExpr(op.Precedence() + 1)
+
+		l = &BinaryExpr{
+			LeftExpr:  l,
+			Op:        op,
+			RightExpr: r,
+		}
+
+	}
+
+}
+
+func (p *Parser) parseExtendOp() Node {
+
+	return &ExtendOp{
+		Columns: p.parseColumnExprList(),
+	}
+
+}
+
+func (p *Parser) parseColumnExprList() []*ColumnExpr {
+
+	var l []*ColumnExpr
+
+	for {
+		expr := p.parseColumnExpr()
+		l = append(l, expr)
+		if p.token.Type != COMMA {
+			break
+		}
+		p.next()
+	}
+
+	return l
+
+}
+
+func (p *Parser) parseColumnExpr() *ColumnExpr {
+
+	nameOrExp := p.parseExpr()
+
+	if p.token.Type == ASSIGN {
+
+		name, ok := nameOrExp.(*LitExpr)
+
+		if !ok {
+			p.error("invalid column name")
+			return nil
+		}
+
+		if name.Token.Type != IDENT {
+			p.errorf("expect IDENT found %v", name.Token)
+			return nil
+		}
+
+		p.next()
+
+		return &ColumnExpr{
+			ColName: name,
+			Expr:    p.parseExpr(),
+		}
+
+	}
+
+	// TODO(gvelo) we need to provide a synthetic column
+	//  name here ( or maybe create one in the resolver
+	//  given that in the parser we don't have enough
+	//  information to avoid name coalitions  )
+
+	return &ColumnExpr{
+		ColName: nil,
+		Expr:    nameOrExp,
+	}
+
+}
+
+func (p *Parser) parseSortOp() *SortOp {
+
+	if p.token.Type != IDENT {
+		p.errorf("expect IDENT got %v", p.token)
+	}
+
+	if p.token.Literal != "by" {
+		p.errorf("expect \"by\" keyword got %v", p.token)
+	}
+
+	p.next()
+
+	sortOp := &SortOp{}
+
+	for {
+
+		expr := p.parseSortExpr()
+
+		sortOp.SortExpr = append(sortOp.SortExpr, expr)
+
+		if p.token.Type != COMMA {
+			break
+		}
+
+		p.next()
+
+	}
+
+	return sortOp
+
+}
+
+func (p *Parser) parseSortExpr() *SortExpr {
+
+	sortExpr := &SortExpr{
+		Expr:      p.parseExpr(),
+		Asc:       false, // default to desc
+		NullFirst: false, // default to nulls Last
+	}
+
+	if p.token.Type == IDENT && p.token.Literal == "asc" {
+		sortExpr.Asc = true
+		p.next()
+
+	} else if p.token.Type == IDENT && p.token.Literal == "desc" {
+		sortExpr.Asc = false
+		p.next()
+	}
+
+	if p.token.Type == IDENT && p.token.Literal == "nulls" {
+
+		p.next()
+
+		if p.token.Type == IDENT && p.token.Literal == "first" {
+			sortExpr.NullFirst = true
+			p.next()
+
+		} else if p.token.Type == IDENT && p.token.Literal == "last" {
+			sortExpr.NullFirst = false
+			p.next()
+		} else {
+			p.errorf("expected [\"first\"|\"last\"] got %q", p.token.Literal)
+		}
+
+	}
+
+	return sortExpr
+
+}
+
+func (p *Parser) parseSummarizeOp() *SummarizeOp {
+
+	op := &SummarizeOp{
+		Agg: p.parseAggExprList(),
+	}
+
+	if p.token.Type == IDENT && p.token.Literal == "by" {
+		p.next()
+		op.By = p.parseColumnExprList()
+	}
+
+	return op
+
+}
+
+func (p *Parser) parseAggExprList() []*AggExpr {
+
+	var l []*AggExpr
+
+	for {
+		expr := p.parseAggExpr()
+		l = append(l, expr)
+		if p.token.Type != COMMA {
+			break
+		}
+		p.next()
+	}
+
+	return l
+
+}
+
+func (p *Parser) parseAggExpr() *AggExpr {
+
+	lit := p.parseLit(IDENT)
+
+	if p.token.Type == ASSIGN {
+
+		p.next()
+
+		funcName := p.parseLit(IDENT)
+
+		callExpr := p.parseCallExpr(funcName)
+
+		return &AggExpr{
+			ColName: lit,
+			Expr:    callExpr,
+		}
+
+	}
+
+	return &AggExpr{
+		ColName: nil,
+		Expr:    p.parseCallExpr(lit),
+	}
+
+}
+
+func (p *Parser) parseProjectOp() *ProjectOp {
+
+	return &ProjectOp{
+		Columns: p.parseColumnExprList(),
+	}
+
 }
