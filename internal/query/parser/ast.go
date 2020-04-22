@@ -51,40 +51,54 @@ func (op *WhereOp) Accept(v Visitor) Node {
 type CountOp struct {
 }
 
-func (op *CountOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *CountOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	return v.VisitPost(op)
 }
 
 type ExtendOp struct {
 	Columns []*ColumnExpr
 }
 
-func (op *ExtendOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *ExtendOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	for i, colExpr := range op.Columns {
+		op.Columns[i] = colExpr.Accept(v).(*ColumnExpr)
+	}
+	return v.VisitPost(op)
 }
 
 type ProjectOp struct {
 	Columns []*ColumnExpr
 }
 
-func (op *ProjectOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *ProjectOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	for i, colExpr := range op.Columns {
+		op.Columns[i] = colExpr.Accept(v).(*ColumnExpr)
+	}
+	return v.VisitPost(op)
 }
 
 type LimitOp struct {
 	NumberOfRows *LitExpr
 }
 
-func (op *LimitOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *LimitOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	return v.VisitPost(op)
 }
 
 type SortOp struct {
 	SortExpr []*SortExpr
 }
 
-func (op *SortOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *SortOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	for i, expr := range op.SortExpr {
+		op.SortExpr[i] = expr.Accept(v).(*SortExpr)
+	}
+	return v.VisitPost(op)
 }
 
 type SummarizeOp struct {
@@ -92,13 +106,32 @@ type SummarizeOp struct {
 	By  []*ColumnExpr
 }
 
-func (op *SummarizeOp) Accept(Visitor) Node {
-	panic("implement me")
+func (op *SummarizeOp) Accept(v Visitor) Node {
+
+	v.VisitPre(op)
+
+	for i, expr := range op.Agg {
+		op.Agg[i] = expr.Accept(v).(*AggExpr)
+
+	}
+
+	for i, expr := range op.By {
+		op.By[i] = expr.Accept(v).(*ColumnExpr)
+	}
+
+	return v.VisitPost(op)
+
 }
 
 type TopOp struct {
 	NumberOfRows *LitExpr
 	By           *SortExpr
+}
+
+func (op *TopOp) Accept(v Visitor) Node {
+	v.VisitPre(op)
+	op.By = op.By.Accept(v).(*SortExpr)
+	return v.VisitPost(op)
 }
 
 // Expressions
@@ -118,23 +151,28 @@ func (e *TabularExpr) Accept(v Visitor) Node {
 }
 
 type BinaryExpr struct {
-	LeftExpr  interface{}
+	LeftExpr  Node
 	Op        Token
-	RightExpr interface{}
+	RightExpr Node
 }
 
-func (e *BinaryExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *BinaryExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	e.LeftExpr = e.LeftExpr.Accept(v)
+	e.RightExpr = e.RightExpr.Accept(v)
+	return v.VisitPost(e)
 }
 
 // -1
 type UnaryExpr struct {
 	Op   Token
-	Expr interface{}
+	Expr Node
 }
 
-func (e *UnaryExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *UnaryExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	e.Expr = e.Expr.Accept(v)
+	return v.VisitPost(e)
 }
 
 type LitExpr struct {
@@ -142,8 +180,9 @@ type LitExpr struct {
 	Value interface{}
 }
 
-func (e *LitExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *LitExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	return v.VisitPost(e)
 }
 
 type CallExpr struct {
@@ -151,8 +190,12 @@ type CallExpr struct {
 	ArgList  []Node // Expr
 }
 
-func (e *CallExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *CallExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	for i, expr := range e.ArgList {
+		e.ArgList[i] = expr.Accept(v)
+	}
+	return v.VisitPost(e)
 }
 
 type ColumnExpr struct {
@@ -160,8 +203,10 @@ type ColumnExpr struct {
 	Expr    Node
 }
 
-func (e *ColumnExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *ColumnExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	e.Expr = e.Expr.Accept(v)
+	return v.VisitPost(e)
 }
 
 type AggExpr struct {
@@ -169,8 +214,10 @@ type AggExpr struct {
 	Expr    *CallExpr
 }
 
-func (e *AggExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *AggExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	e.Expr = e.Expr.Accept(v).(*CallExpr)
+	return v.VisitPost(e)
 }
 
 type SortExpr struct {
@@ -179,6 +226,8 @@ type SortExpr struct {
 	NullFirst bool
 }
 
-func (e *SortExpr) Accept(Visitor) Node {
-	panic("implement me")
+func (e *SortExpr) Accept(v Visitor) Node {
+	v.VisitPre(e)
+	e.Expr = e.Expr.Accept(v)
+	return v.VisitPost(e)
 }

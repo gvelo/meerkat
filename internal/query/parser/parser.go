@@ -49,17 +49,45 @@ type Parser struct {
 	token   Token
 }
 
-func NewParser() *Parser {
-	return &Parser{}
+func NewParser(s string) (p *Parser, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			e, ok := r.(*ParseError)
+			if ok {
+				err = e
+				return
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	p = &Parser{
+		scanner: NewScanner(s),
+	}
+
+	p.next()
+
+	return
 }
 
-func (p *Parser) Parse(s string) (*TabularStmt, error) {
+func (p *Parser) Parse() (stmt *TabularStmt, err error) {
 
-	// TODO(gvelo): handle error properly
+	defer func() {
+		if r := recover(); r != nil {
+			e, ok := r.(*ParseError)
+			if ok {
+				err = e
+				return
+			} else {
+				panic(r)
+			}
+		}
+	}()
 
-	p.scanner = NewScanner(s)
-	p.next()
-	stmt := p.parseTabularStmt()
+	stmt = p.parseTabularStmt()
+
 	return stmt, nil
 }
 
@@ -77,7 +105,7 @@ func (p *Parser) expect(tokenTypes ...TokenType) {
 
 func (p *Parser) error(msg string) {
 
-	err := ParseError{
+	err := &ParseError{
 		msg:    msg,
 		offset: p.token.Offset,
 		line:   p.token.Line,
@@ -219,7 +247,22 @@ func (p *Parser) parseDateTimeLit() int {
 	//  We need to provide a date parser ( and a datetime type )
 	//  compatible with Kusto datetime type.
 
-	t, err := time.Parse(time.RFC3339Nano, p.token.Literal)
+	// TODO(gvelo): refactor this brittle parsing.
+
+	// TODO(gvelo) this is a truncated ISO
+	t, err := time.Parse("2006-01-02", p.token.Literal)
+
+	if err == nil {
+		return int(t.UnixNano())
+	}
+
+	t, err = time.Parse(time.RFC3339, p.token.Literal)
+
+	if err == nil {
+		return int(t.UnixNano())
+	}
+
+	t, err = time.Parse(time.RFC3339Nano, p.token.Literal)
 
 	if err == nil {
 		return int(t.UnixNano())
@@ -239,7 +282,6 @@ func (p *Parser) parseDateTimeLit() int {
 
 	p.errorf("cannot parse datetime %s", p.token.Literal)
 
-	// unreachable
 	return -1
 
 }

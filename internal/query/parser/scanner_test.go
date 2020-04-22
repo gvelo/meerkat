@@ -80,7 +80,7 @@ var tests = []Test{
 	},
 	{
 		name:    "string not terminated",
-		input:   "foo(\"not terminated)",
+		input:   `foo("not terminated)`,
 		isError: true,
 	},
 }
