@@ -14,12 +14,18 @@
 package parser
 
 type Visitor interface {
-	VisitPre(n Node)
+	VisitPre(n Node) Node
 	VisitPost(n Node) Node
 }
 
+func Walk(n Node, v Visitor) Node {
+	n = v.VisitPre(n)
+	n.Accept(v)
+	return v.VisitPost(n)
+}
+
 type Node interface {
-	Accept(v Visitor) Node
+	Accept(v Visitor)
 }
 
 // Query Statements
@@ -30,10 +36,8 @@ type TabularStmt struct {
 	TabularExpr *TabularExpr
 }
 
-func (s *TabularStmt) Accept(v Visitor) Node {
-	v.VisitPre(s)
-	s.TabularExpr = s.TabularExpr.Accept(v).(*TabularExpr)
-	return v.VisitPost(s)
+func (s *TabularStmt) Accept(v Visitor) {
+	s.TabularExpr = Walk(s.TabularExpr, v).(*TabularExpr)
 }
 
 // Tabular Operators
@@ -42,63 +46,51 @@ type WhereOp struct {
 	Predicate Node //  CallExpr || BinaryExpr
 }
 
-func (op *WhereOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
-	op.Predicate = op.Predicate.Accept(v)
-	return v.VisitPost(op)
+func (op *WhereOp) Accept(v Visitor) {
+	op.Predicate = Walk(op.Predicate, v)
 }
 
 type CountOp struct {
 }
 
-func (op *CountOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
-	return v.VisitPost(op)
+func (op *CountOp) Accept(Visitor) {
 }
 
 type ExtendOp struct {
 	Columns []*ColumnExpr
 }
 
-func (op *ExtendOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
+func (op *ExtendOp) Accept(v Visitor) {
 	for i, colExpr := range op.Columns {
-		op.Columns[i] = colExpr.Accept(v).(*ColumnExpr)
+		op.Columns[i] = Walk(colExpr, v).(*ColumnExpr)
 	}
-	return v.VisitPost(op)
 }
 
 type ProjectOp struct {
 	Columns []*ColumnExpr
 }
 
-func (op *ProjectOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
+func (op *ProjectOp) Accept(v Visitor) {
 	for i, colExpr := range op.Columns {
-		op.Columns[i] = colExpr.Accept(v).(*ColumnExpr)
+		op.Columns[i] = Walk(colExpr, v).(*ColumnExpr)
 	}
-	return v.VisitPost(op)
 }
 
 type LimitOp struct {
 	NumberOfRows *LitExpr
 }
 
-func (op *LimitOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
-	return v.VisitPost(op)
+func (op *LimitOp) Accept(Visitor) {
 }
 
 type SortOp struct {
 	SortExpr []*SortExpr
 }
 
-func (op *SortOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
+func (op *SortOp) Accept(v Visitor) {
 	for i, expr := range op.SortExpr {
-		op.SortExpr[i] = expr.Accept(v).(*SortExpr)
+		op.SortExpr[i] = Walk(expr, v).(*SortExpr)
 	}
-	return v.VisitPost(op)
 }
 
 type SummarizeOp struct {
@@ -106,20 +98,16 @@ type SummarizeOp struct {
 	By  []*ColumnExpr
 }
 
-func (op *SummarizeOp) Accept(v Visitor) Node {
-
-	v.VisitPre(op)
+func (op *SummarizeOp) Accept(v Visitor) {
 
 	for i, expr := range op.Agg {
-		op.Agg[i] = expr.Accept(v).(*AggExpr)
+		op.Agg[i] = Walk(expr, v).(*AggExpr)
 
 	}
 
 	for i, expr := range op.By {
-		op.By[i] = expr.Accept(v).(*ColumnExpr)
+		op.By[i] = Walk(expr, v).(*ColumnExpr)
 	}
-
-	return v.VisitPost(op)
 
 }
 
@@ -128,10 +116,8 @@ type TopOp struct {
 	By           *SortExpr
 }
 
-func (op *TopOp) Accept(v Visitor) Node {
-	v.VisitPre(op)
-	op.By = op.By.Accept(v).(*SortExpr)
-	return v.VisitPost(op)
+func (op *TopOp) Accept(v Visitor) {
+	op.By = Walk(op.By, v).(*SortExpr)
 }
 
 // Expressions
@@ -142,12 +128,10 @@ type TabularExpr struct {
 	TabularOp []Node // tabular operators
 }
 
-func (e *TabularExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
+func (e *TabularExpr) Accept(v Visitor) {
 	for i, op := range e.TabularOp {
-		e.TabularOp[i] = op.Accept(v)
+		e.TabularOp[i] = Walk(op, v)
 	}
-	return v.VisitPost(e)
 }
 
 type BinaryExpr struct {
@@ -156,11 +140,9 @@ type BinaryExpr struct {
 	RightExpr Node
 }
 
-func (e *BinaryExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	e.LeftExpr = e.LeftExpr.Accept(v)
-	e.RightExpr = e.RightExpr.Accept(v)
-	return v.VisitPost(e)
+func (e *BinaryExpr) Accept(v Visitor) {
+	e.LeftExpr = Walk(e.LeftExpr, v)
+	e.RightExpr = Walk(e.RightExpr, v)
 }
 
 // -1
@@ -169,10 +151,8 @@ type UnaryExpr struct {
 	Expr Node
 }
 
-func (e *UnaryExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	e.Expr = e.Expr.Accept(v)
-	return v.VisitPost(e)
+func (e *UnaryExpr) Accept(v Visitor) {
+	e.Expr = Walk(e.Expr, v)
 }
 
 type LitExpr struct {
@@ -180,9 +160,7 @@ type LitExpr struct {
 	Value interface{}
 }
 
-func (e *LitExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	return v.VisitPost(e)
+func (e *LitExpr) Accept(Visitor) {
 }
 
 type CallExpr struct {
@@ -190,12 +168,10 @@ type CallExpr struct {
 	ArgList  []Node // Expr
 }
 
-func (e *CallExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	for i, expr := range e.ArgList {
-		e.ArgList[i] = expr.Accept(v)
+func (e *CallExpr) Accept(v Visitor) {
+	for i, arg := range e.ArgList {
+		e.ArgList[i] = Walk(arg, v)
 	}
-	return v.VisitPost(e)
 }
 
 type ColumnExpr struct {
@@ -203,10 +179,8 @@ type ColumnExpr struct {
 	Expr    Node
 }
 
-func (e *ColumnExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	e.Expr = e.Expr.Accept(v)
-	return v.VisitPost(e)
+func (e *ColumnExpr) Accept(v Visitor) {
+	e.Expr = Walk(e.Expr, v)
 }
 
 type AggExpr struct {
@@ -214,10 +188,8 @@ type AggExpr struct {
 	Expr    *CallExpr
 }
 
-func (e *AggExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	e.Expr = e.Expr.Accept(v).(*CallExpr)
-	return v.VisitPost(e)
+func (e *AggExpr) Accept(v Visitor) {
+	e.Expr = Walk(e.Expr, v).(*CallExpr)
 }
 
 type SortExpr struct {
@@ -226,8 +198,6 @@ type SortExpr struct {
 	NullFirst bool
 }
 
-func (e *SortExpr) Accept(v Visitor) Node {
-	v.VisitPre(e)
-	e.Expr = e.Expr.Accept(v)
-	return v.VisitPost(e)
+func (e *SortExpr) Accept(v Visitor) {
+	e.Expr = Walk(e.Expr, v)
 }

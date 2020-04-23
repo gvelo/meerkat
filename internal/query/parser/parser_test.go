@@ -39,7 +39,8 @@ func (v *PrintVisitor) pop() string {
 	return s
 }
 
-func (v *PrintVisitor) VisitPre(n Node) {
+func (v *PrintVisitor) VisitPre(n Node) Node {
+	return n
 }
 
 func (v *PrintVisitor) VisitPost(n Node) Node {
@@ -289,7 +290,7 @@ func TestParser(t *testing.T) {
 
 			v := &PrintVisitor{}
 
-			node.Accept(v)
+			Walk(node, v)
 
 			actual := v.pop()
 
