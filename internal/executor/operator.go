@@ -343,3 +343,23 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	}
 	return ""
 }
+
+//TODO: check it
+func getLen(n interface{}) int {
+	switch v := n.(type) {
+	case vector.IntVector:
+		return v.Len()
+	case vector.BoolVector:
+		return v.Len()
+	case vector.FloatVector:
+		return v.Len()
+	case vector.ByteSliceVector:
+		return v.Len()
+	case vector.UintVector:
+		return v.Len()
+	default:
+		log.Error().Msgf("Type not found %v", v)
+	}
+
+	return 0
+}

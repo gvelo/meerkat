@@ -88,9 +88,7 @@ func TestTimeBucketInSecs(t *testing.T) {
 
 	// Set up cf
 	sMap := make(map[string]storage.Column)
-	sMap["c1"] = &fakeFloatColumn{}
-	sMap["c2"] = &fakeIntColumn{}
-	sMap["c3"] = &fakeStringColumn{}
+	sMap["_ts"] = &fakeIntColumn{}
 
 	fs := &fakeColFinder{sMap: sMap}
 
@@ -103,8 +101,15 @@ func TestTimeBucketInSecs(t *testing.T) {
 	}
 
 	ii := createIndexInfo("Logs", fields...)
+
 	// Create ctx
-	ctx := NewContext(fs, ii)
+	ctx := NewContext(fs, ii, 100)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	list := setUpTimeBucket(int(t0.UnixNano()), 10, time.Second)
 	op := NewTimeBucketOperator(ctx, list, "5s")
@@ -153,7 +158,13 @@ func TestTimeBucketInHour(t *testing.T) {
 
 	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs, ii)
+	ctx := NewContext(fs, ii, 100)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewTimeBucketOperator(ctx, list, "1h")
 
@@ -195,7 +206,13 @@ func TestIntBucket(t *testing.T) {
 
 	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs, ii)
+	ctx := NewContext(fs, ii, 100)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
 
 	op := NewBucketOperator(ctx, list, 5)
 

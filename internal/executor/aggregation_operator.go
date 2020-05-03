@@ -56,7 +56,7 @@ func (r *HashAggregateOperator) Next() []interface{} {
 	// Iterate over all vectors...
 	for ; n != nil; n = r.child.Next() {
 
-		l1 := n[0].(vector.Vector).Len()
+		l1 := getLen(n[0])
 		// iterate over all "rows"
 		for i := 0; i < l1; i++ {
 
@@ -124,7 +124,7 @@ func (r *SortedAggregateOperator) Next() []interface{} {
 	// Iterate over all vectors...
 	for ; n != nil; n = r.child.Next() {
 
-		l1 := n[0].(vector.Vector).Len()
+		l1 := getLen(n[0])
 		var keyAnt []byte
 		// iterate over all "rows"
 		for i := 0; i < l1; i++ {
@@ -158,28 +158,33 @@ func updateCounters(n []interface{}, rAgg []interface{}, aggCols []Aggregation, 
 		counter := rAgg[x].(Counter)
 		// aca tenemos que separar los operadores.
 		switch col := n[it.AggCol].(type) {
-		case *vector.IntVector:
+		case vector.IntVector:
 			counter.Update(float64(col.Values()[i]))
-		case *vector.FloatVector:
+		case vector.FloatVector:
 			counter.Update(col.Values()[i])
-		case *vector.ByteSliceVector:
+		case vector.ByteSliceVector:
 			counter.Update(1)
+		default:
+			log.Error().Msg("Error updating counters ")
 		}
 
 	}
 }
 
+// TODO(Sebad), normalize keys to help sort , include nils
 func createKey(n []interface{}, keyCols []int, index int) []byte {
 	buf := new(bytes.Buffer)
 	var err error
 	for _, it := range keyCols {
 		switch t := n[it].(type) {
-		case *vector.ByteSliceVector:
+		case vector.ByteSliceVector:
 			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
-		case *vector.IntVector:
+		case vector.IntVector:
 			err = binary.Write(buf, binary.LittleEndian, int64(t.Values()[index]))
-		case *vector.FloatVector:
+		case vector.FloatVector:
 			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Values()[index]))
+		default:
+			log.Error().Msg("Error creating keys")
 		}
 		if err != nil {
 			panic(fmt.Sprint("binary.Write failed:", err))
@@ -219,6 +224,8 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 			for i := 0; i < len(rKey); i++ { // rows
 				resKey[j] = append(resKey[j].([][]byte), rKey[i][j].([]byte))
 			}
+		default:
+			log.Error().Msg("Error processing keys")
 		}
 	}
 
@@ -232,8 +239,8 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 			for i := 0; i < len(rAgg); i++ { // rows
 				resAgg[j] = append(resAgg[j].([]float64), rAgg[i][j].(Counter).ValueOf(aggCols[j].AggType))
 			}
-		case [][]byte:
-			panic("?????")
+		default:
+			log.Error().Msg("Error agg columns")
 		}
 	}
 

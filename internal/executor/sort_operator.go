@@ -18,24 +18,58 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func NewSortOperator(child MultiVectorOperator, colIds []int) *SortOperator {
+func NewSortOperator(ctx Context, child MultiVectorOperator, keyNames []string) *SortOperator {
 	return &SortOperator{
-		child:  child,
-		colIds: colIds,
-		log:    log.With().Str("src", "SortOperator").Logger(),
+		ctx:      ctx,
+		child:    child,
+		keyNames: keyNames,
+		log:      log.With().Str("src", "SortOperator").Logger(),
 	}
 }
 
 // SortOperator
 type SortOperator struct {
-	child  MultiVectorOperator // (Positions to review)
-	colIds []int
-	sz     int
-	log    zerolog.Logger
+	ctx       Context
+	child     MultiVectorOperator // (Positions to review)
+	keyNames  []string
+	sz        int
+	sorted    [][]byte
+	processed int
+	log       zerolog.Logger
 }
 
 func (op *SortOperator) Init() {
 	op.child.Init()
+
+	colIds := make([]int, 0, len(op.keyNames))
+	for _, it := range op.keyNames {
+		_, id, err := op.ctx.GetFieldProcessed().FindField(it)
+		if err != nil {
+			log.Error().Err(err)
+		}
+
+		colIds = append(colIds, id)
+	}
+
+	n := op.child.Next()
+	i := 0
+	var k []byte
+
+	// que hago agrando los vectores?
+
+	keys := make([][]byte, 0)
+	for ; n != nil; n = op.child.Next() {
+		l1 := getLen(n[0])
+		// iterate over all "rows"
+		for ; i < l1; i++ {
+			k = createKey(n, colIds, i)
+			keys = append(keys, k)
+		}
+	}
+
+	// Do the sort.
+
+	op.sorted = keys
 }
 
 func (op *SortOperator) Destroy() {
@@ -43,7 +77,11 @@ func (op *SortOperator) Destroy() {
 }
 
 func (op *SortOperator) Next() []interface{} {
-	n := op.child.Next()
 
-	return n
+	// tngo que cerear un objeto key , idx ?
+	if op.processed == len(op.sorted) {
+		return nil
+	}
+
+	return nil
 }

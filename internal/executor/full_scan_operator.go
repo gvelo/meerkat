@@ -62,13 +62,12 @@ func selectStringOpFn(op ComparisonOperation) func(x []byte, y string) bool {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value string, fieldName string, size int, nullable bool) Uint32Operator {
+func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value string, fieldName string, nullable bool) Uint32Operator {
 	v := &StringColumnScanOperator{
 		ctx:   ctx,
 		opFn:  selectStringOpFn(op),
 		value: value,
 		fn:    fieldName,
-		sz:    size,
 		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
 	if nullable {
@@ -96,15 +95,15 @@ type StringColumnScanOperator struct {
 }
 
 func (op *StringColumnScanOperator) Next() []uint32 {
-	r := make([]uint32, 0, op.sz)
+	r := make([]uint32, 0, op.ctx.Sz())
 
 	if op.lastVector != nil {
 
 		r = append(r, op.resultLeft...)
 		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		if len(r) >= op.ctx.Sz() {
+			op.resultLeft = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}
@@ -116,9 +115,9 @@ func (op *StringColumnScanOperator) Next() []uint32 {
 
 		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
 
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		if len(r) >= op.ctx.Sz() {
+			op.resultLeft = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}
@@ -154,7 +153,7 @@ func (op *StringColumnScanOperator) processVector(lastValuePos, lastCheckedId in
 		op.lastRid++
 	}
 
-	if len(r) >= op.sz {
+	if len(r) >= op.ctx.Sz() {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -178,7 +177,7 @@ func (op *StringColumnScanOperator) processNullVector(lastValuePos, lastCheckedI
 		op.lastRid++
 	}
 
-	if len(r) >= op.sz {
+	if len(r) >= op.ctx.Sz() {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -223,14 +222,13 @@ func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, size int, nullable bool) Uint32Operator {
+func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, nullable bool) Uint32Operator {
 
 	v := &IntColumnScanOperator{
 		ctx:   ctx,
 		opFn:  selectIntOpFn(op),
 		value: value,
 		fn:    fieldName,
-		sz:    size,
 		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
 	if nullable {
@@ -246,7 +244,6 @@ type IntColumnScanOperator struct {
 	opFn          func(x, y int) bool
 	fn            string
 	value         int
-	sz            int
 	iterator      storage.IntIterator
 	lastRid       uint32
 	lastCheckedId int
@@ -269,7 +266,7 @@ func (op *IntColumnScanOperator) processVector(lastValuePos, lastCheckedId int, 
 	i := lastValuePos
 	x := lastCheckedId
 
-	for ; x < op.lastVector.Len() && len(r) < op.sz; x++ {
+	for ; x < op.lastVector.Len() && len(r) < op.ctx.Sz(); x++ {
 		if op.opFn(op.lastVector.Values()[x], op.value) {
 			r = append(r, op.lastRid)
 			i++
@@ -277,7 +274,7 @@ func (op *IntColumnScanOperator) processVector(lastValuePos, lastCheckedId int, 
 		op.lastRid++
 	}
 
-	if len(r) == op.sz {
+	if len(r) == op.ctx.Sz() {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -291,7 +288,7 @@ func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId i
 	i := lastValuePos
 	x := lastCheckedId
 
-	for ; x < op.lastVector.Len() && len(r) < op.sz; x++ {
+	for ; x < op.lastVector.Len() && len(r) < op.ctx.Sz(); x++ {
 		if op.lastVector.IsValid(x) {
 			if op.opFn(op.lastVector.Values()[x], op.value) {
 				r = append(r, op.lastRid)
@@ -301,7 +298,7 @@ func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId i
 		op.lastRid++
 	}
 
-	if len(r) == op.sz {
+	if len(r) == op.ctx.Sz() {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -312,12 +309,12 @@ func (op *IntColumnScanOperator) processNullVector(lastValuePos, lastCheckedId i
 
 func (op *IntColumnScanOperator) Next() []uint32 {
 
-	r := make([]uint32, 0, op.sz)
+	r := make([]uint32, 0, op.ctx.Sz())
 
 	if op.lastVector != nil {
 
 		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
-		if len(r) == op.sz {
+		if len(r) == op.ctx.Sz() {
 			return r
 		}
 
@@ -330,7 +327,7 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 
 		r = op.processFn(op.lastValuePos, op.lastCheckedId, r)
 
-		if len(r) == op.sz {
+		if len(r) == op.ctx.Sz() {
 			return r
 		}
 
@@ -387,7 +384,7 @@ func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
 }
 
 // NewTimeColumnScanOperator creates a TimeColumnScanOperator
-func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, valueTo int, fieldName string, size int, nullable bool) Uint32Operator {
+func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, valueTo int, fieldName string, nullable bool) Uint32Operator {
 
 	v := &TimeColumnScanOperator{
 		ctx:     ctx,
@@ -395,7 +392,6 @@ func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, v
 		value:   valueFrom,
 		valueTo: valueTo,
 		fn:      fieldName,
-		sz:      size,
 		log:     log.With().Str("src", "TimeColumnScanOperator").Logger(),
 	}
 
@@ -440,7 +436,7 @@ func (op *TimeColumnScanOperator) processVector(lastValuePos, lastCheckedId int,
 		op.lastRid++
 	}
 
-	if len(r) >= op.sz {
+	if len(r) >= op.ctx.Sz() {
 		op.lastCheckedId = x
 		op.lastValuePos = i
 		return r
@@ -451,15 +447,15 @@ func (op *TimeColumnScanOperator) processVector(lastValuePos, lastCheckedId int,
 
 func (op *TimeColumnScanOperator) Next() []uint32 {
 
-	r := make([]uint32, 0, op.sz)
+	r := make([]uint32, 0, op.ctx.Sz())
 
 	if op.lastVector != nil {
 
 		r = append(r, op.resultLeft...)
 		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		if len(r) >= op.ctx.Sz() {
+			op.resultLeft = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}
@@ -471,9 +467,9 @@ func (op *TimeColumnScanOperator) Next() []uint32 {
 
 		r = op.processVector(op.lastValuePos, op.lastCheckedId, r)
 
-		if len(r) >= op.sz {
-			op.resultLeft = r[op.sz:]
-			return r[:op.sz]
+		if len(r) >= op.ctx.Sz() {
+			op.resultLeft = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}

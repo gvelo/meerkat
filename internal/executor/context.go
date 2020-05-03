@@ -43,6 +43,7 @@ type Context interface {
 	IndexInfo() *schema.IndexInfo
 	GetFieldProcessed() *ProcessedField
 	SetFieldProcessed(fields []schema.Field)
+	Sz() int
 }
 
 type ctx struct {
@@ -50,18 +51,24 @@ type ctx struct {
 	m  map[string]interface{}
 	ii *schema.IndexInfo
 	fp *ProcessedField
+	sz int
 }
 
-func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo) Context {
+func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo, sz int) Context {
 	return &ctx{
 		cf: s,
 		m:  make(map[string]interface{}),
 		ii: ii,
+		sz: sz,
 	}
 }
 
 func (c *ctx) Value(key string, value interface{}) {
 	c.m[key] = value
+}
+
+func (c *ctx) Sz() int {
+	return c.sz
 }
 
 func (c *ctx) Get(key string) (interface{}, bool) {

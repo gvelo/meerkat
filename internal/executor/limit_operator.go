@@ -13,12 +13,19 @@
 
 package executor
 
+import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"meerkat/internal/storage/vector"
+)
+
 // NewLimitOperator creates a ColumnScanOperator
 func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
 	return &LimitOperator{
 		ctx:   ctx,
 		child: child,
 		limit: limit,
+		log:   log.With().Str("src", "LimitOperator").Logger(),
 	}
 }
 
@@ -29,10 +36,16 @@ type LimitOperator struct {
 	ctx   Context
 	child MultiVectorOperator
 	limit int
+	total int
+	sz    int
+	done  bool
+	log   zerolog.Logger
 }
 
 func (op *LimitOperator) Init() {
 	op.child.Init()
+	op.total = 0
+	op.done = false
 }
 
 func (op *LimitOperator) Destroy() {
@@ -40,7 +53,53 @@ func (op *LimitOperator) Destroy() {
 }
 
 func (op *LimitOperator) Next() []interface{} {
+
+	if op.done {
+		return nil
+	}
+
 	n := op.child.Next()
 
+	if n != nil {
+
+		l := getLen(n[0])
+		if op.total+l > op.limit {
+			op.done = true
+			return op.cutVectors(n, op.limit-op.total)
+		}
+		op.total += l
+
+	}
+
+	return n
+}
+
+func (op *LimitOperator) cutVectors(n []interface{}, limit int) []interface{} {
+	for i, _ := range n {
+		switch n[i].(type) {
+		case vector.IntVector:
+			vv := n[i].(vector.IntVector)
+			vv.SetLen(limit)
+			n[i] = vv
+		case vector.BoolVector:
+			vv := n[i].(vector.BoolVector)
+			vv.SetLen(limit)
+			n[i] = vv
+		case vector.FloatVector:
+			vv := n[i].(vector.FloatVector)
+			vv.SetLen(limit)
+			n[i] = vv
+		case vector.ByteSliceVector:
+			vv := n[i].(vector.ByteSliceVector)
+			vv.SetLen(limit)
+			n[i] = vv
+		case vector.UintVector:
+			vv := n[i].(vector.UintVector)
+			vv.SetLen(limit)
+			n[i] = vv
+		default:
+			log.Error().Msgf("Type not found %v", n[i])
+		}
+	}
 	return n
 }

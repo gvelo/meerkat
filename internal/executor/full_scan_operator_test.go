@@ -80,7 +80,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ctx := NewContext(createColFinder(tc.in), nil)
+			ctx := NewContext(createColFinder(tc.in), nil, tc.batch)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(string), tc)
 			op1.Init()
@@ -112,9 +112,9 @@ func createColFinder(in interface{}) storage.ColumnFinder {
 func newColumnScanOperator(ctx Context, op ComparisonOperation, value interface{}, tc queryTestCase) Uint32Operator {
 	switch v := value.(type) {
 	case int:
-		return NewIntColumnScanOperator(ctx, op, v, tc.fieldName, tc.batch, len(tc.in.validity) > 0)
+		return NewIntColumnScanOperator(ctx, op, v, tc.fieldName, len(tc.in.validity) > 0)
 	case string:
-		return NewStringColumnScanOperator(ctx, op, v, tc.fieldName, tc.batch, len(tc.in.validity) > 0)
+		return NewStringColumnScanOperator(ctx, op, v, tc.fieldName, len(tc.in.validity) > 0)
 	}
 	return nil
 }
@@ -260,7 +260,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ctx := NewContext(createColFinder(tc.in), nil)
+			ctx := NewContext(createColFinder(tc.in), nil, tc.batch)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(int), tc)
 			op1.Init()

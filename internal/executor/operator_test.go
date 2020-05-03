@@ -90,7 +90,7 @@ func TestQuery1(t *testing.T) {
 
 	ii := createIndexInfo("Logs", fields...)
 
-	ctx := NewContext(s, ii)
+	ctx := NewContext(s, ii, 100)
 	print(ctx)
 	/*
 		op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1

@@ -78,13 +78,12 @@ type BinaryUint32Operator struct {
 }
 
 // NewBinaryBitmapOperator creates a new bitmap binary operator.
-func NewBinaryUint32Operator(ctx Context, op BinaryOperation, left Uint32Operator, right Uint32Operator, sz int) *BinaryUint32Operator {
+func NewBinaryUint32Operator(ctx Context, op BinaryOperation, left Uint32Operator, right Uint32Operator) *BinaryUint32Operator {
 	return &BinaryUint32Operator{
 		ctx:   ctx,
 		op:    op,
 		left:  left,
 		right: right,
-		sz:    sz,
 		log:   log.With().Str("src", "BinaryUint32Operator").Logger(),
 	}
 }
@@ -101,7 +100,7 @@ func (op *BinaryUint32Operator) Destroy() {
 
 func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 
-	res := make([]uint32, 0, op.sz)
+	res := make([]uint32, 0, op.ctx.Sz())
 
 	if len(l) == 0 || len(r) == 0 {
 		return nil
@@ -109,7 +108,7 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 
 	x := 0
 	i := 0
-	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.ctx.Sz(); i++ {
 
 		if l[i] == r[x] {
 			res = append(res, l[i])
@@ -130,7 +129,7 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 
 	}
 
-	if len(res) == op.sz {
+	if len(res) == op.ctx.Sz() {
 
 		if len(l) > i {
 			op.remainingL = l[i:]
@@ -156,25 +155,25 @@ func (op *BinaryUint32Operator) and(l, r []uint32) []uint32 {
 
 func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 
-	res := make([]uint32, 0, op.sz)
+	res := make([]uint32, 0, op.ctx.Sz())
 
 	if len(l) == 0 || len(r) == 0 {
 
-		if len(l) > op.sz {
-			op.remainingL = l[op.sz:]
-			return l[:op.sz]
+		if len(l) > op.ctx.Sz() {
+			op.remainingL = l[op.ctx.Sz():]
+			return l[:op.ctx.Sz()]
 		}
 
-		if len(r) > op.sz {
-			op.remainingR = r[op.sz:]
-			return r[:op.sz]
+		if len(r) > op.ctx.Sz() {
+			op.remainingR = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}
 
 	x := 0
 	i := 0
-	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.ctx.Sz(); i++ {
 		if l[i] < r[x] {
 			res = append(res, l[i])
 			continue
@@ -193,7 +192,7 @@ func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 		}
 	}
 
-	if len(res) == op.sz {
+	if len(res) == op.ctx.Sz() {
 
 		if len(l) > i {
 			op.remainingL = l[i:]
@@ -218,25 +217,25 @@ func (op *BinaryUint32Operator) or(l, r []uint32) []uint32 {
 
 func (op *BinaryUint32Operator) xor(l, r []uint32) []uint32 {
 
-	res := make([]uint32, 0, op.sz)
+	res := make([]uint32, 0, op.ctx.Sz())
 
 	if len(l) == 0 || len(r) == 0 {
 
-		if len(l) > op.sz {
-			op.remainingL = l[op.sz:]
-			return l[:op.sz]
+		if len(l) > op.ctx.Sz() {
+			op.remainingL = l[op.ctx.Sz():]
+			return l[:op.ctx.Sz()]
 		}
 
-		if len(r) > op.sz {
-			op.remainingR = r[op.sz:]
-			return r[:op.sz]
+		if len(r) > op.ctx.Sz() {
+			op.remainingR = r[op.ctx.Sz():]
+			return r[:op.ctx.Sz()]
 		}
 
 	}
 
 	x := 0
 	i := 0
-	for ; i < len(l) && x < len(r) && len(res) < op.sz; i++ {
+	for ; i < len(l) && x < len(r) && len(res) < op.ctx.Sz(); i++ {
 		if l[i] < r[x] {
 			res = append(res, l[i])
 			continue
@@ -254,7 +253,7 @@ func (op *BinaryUint32Operator) xor(l, r []uint32) []uint32 {
 		}
 	}
 
-	if len(res) == op.sz {
+	if len(res) == op.ctx.Sz() {
 
 		if len(l) > i {
 			op.remainingL = l[i:]
@@ -316,7 +315,7 @@ NEXT:
 		log.Error().Msgf("Operator not supported")
 	}
 
-	if len(res) < op.sz {
+	if len(res) < op.ctx.Sz() {
 
 		if l == nil && r == nil {
 			return res

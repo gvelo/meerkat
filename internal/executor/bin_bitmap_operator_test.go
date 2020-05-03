@@ -185,7 +185,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			op1 := NewBinaryUint32Operator(nil, tc.op, tc.l, tc.r, tc.sz)
+			ctx := NewContext(nil, nil, tc.sz)
+			op1 := NewBinaryUint32Operator(ctx, tc.op, tc.l, tc.r)
 			op1.Init()
 			var i = 0
 			n := op1.Next()

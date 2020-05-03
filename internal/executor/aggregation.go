@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"github.com/rs/zerolog/log"
 	"math"
 	"meerkat/internal/schema"
 	"meerkat/internal/storage"
@@ -172,13 +173,16 @@ func createResultVector(n []interface{}, keyCols []int, aggCols []Aggregation, i
 	// append the keys
 	for _, it := range keyCols {
 		switch col := n[it].(type) {
-		case *vector.IntVector:
+		case vector.IntVector:
 			rKey = append(rKey, col.Values()[i])
-		case *vector.FloatVector:
+		case vector.FloatVector:
 			rKey = append(rKey, col.Values()[i])
-		case *vector.ByteSliceVector:
+		case vector.ByteSliceVector:
 			rKey = append(rKey, col.Get(i))
+		default:
+			log.Error().Msg("Error creating result vector")
 		}
+
 	}
 
 	rAgg = make([]interface{}, 0)

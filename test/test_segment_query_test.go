@@ -22,7 +22,7 @@ import (
 // TODO(sebad): put more operators.
 func TestNewBinaryUint32Operator(t *testing.T) {
 	r := testCases("2006-01-02T15:04:09.00000", "2006-01-02T15:04:12.00000", "Error")
-	assert.Len(t, r, 2)
+	assert.Len(t, r, 1)
 
 	r = testCases("2006-01-02T15:04:05.00000", "2006-01-02T15:04:12.00000", "Error")
 	assert.Len(t, r, 5)
@@ -93,11 +93,11 @@ func createSegment(indexInfo *schema.IndexInfo) *storage.Segment {
 func buildPhysicPlan(s *storage.Segment, ii *schema.IndexInfo, from, to int, strToFind string) executor.StringOperator {
 
 	sz := 200
-	ctx := executor.NewContext(s, ii)
+	ctx := executor.NewContext(s, ii, sz)
 
-	op1 := executor.NewTimeColumnScanOperator(ctx, executor.Between, from, to, "_ts", sz, false)
-	op2 := executor.NewStringColumnScanOperator(ctx, executor.Contains, strToFind, "message", sz, false)
-	op3 := executor.NewBinaryUint32Operator(ctx, executor.And, op1, op2, sz)
+	op1 := executor.NewTimeColumnScanOperator(ctx, executor.Between, from, to, "_ts", false)
+	op2 := executor.NewStringColumnScanOperator(ctx, executor.Contains, strToFind, "message", false)
+	op3 := executor.NewBinaryUint32Operator(ctx, executor.And, op1, op2)
 	op4 := executor.NewMaterializeOperator(ctx, op3, nil)
 	op5 := executor.NewTimeBucketOperator(ctx, op4, "1m")
 

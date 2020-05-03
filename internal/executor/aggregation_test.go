@@ -13,7 +13,7 @@ import (
 
 // FAKES //TODO(sebad): make code more compact and legible, remove duplicates, use switchs.
 type fakeMultiVectorOperator struct {
-	vec []interface{}
+	vec [][]interface{}
 	idx int
 }
 
@@ -26,11 +26,12 @@ func (f *fakeMultiVectorOperator) Destroy() {
 }
 
 func (f *fakeMultiVectorOperator) Next() []interface{} {
-	if f.idx == 1 {
+	if f.idx == len(f.vec) {
 		return nil
 	}
+	v := f.vec[f.idx]
 	f.idx++
-	return f.vec
+	return v
 }
 
 func NewFakeColFinder(m map[string]storage.Column) storage.ColumnFinder {
@@ -289,91 +290,6 @@ func (f *fakeStringColumn) DictEncIterator() storage.IntIterator {
 	panic("implement me")
 }
 
-func TestHAggScenario1(t *testing.T) {
-
-	a := assert.New(t)
-
-	// Set up child
-	vec := make([]interface{}, 0)
-	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
-	v.SetLen(5)
-	vec = append(vec, &v)
-	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
-	v1.SetLen(5)
-	vec = append(vec, &v1)
-	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []int{3, 6, 9, 12, 15}, []uint64{})
-	v2.SetLen(5)
-	vec = append(vec, &v2)
-	f := &fakeMultiVectorOperator{
-		vec: vec,
-	}
-
-	// Set up cf
-	sMap := make(map[string]storage.Column)
-	sMap["c1"] = &fakeFloatColumn{}
-	sMap["c2"] = &fakeIntColumn{}
-	sMap["c3"] = &fakeStringColumn{}
-
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "c1",
-			t:        schema.FieldType_FLOAT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "c3",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-
-	ag := []Aggregation{{
-		AggType: Sum,
-		AggCol:  0,
-	}, {
-		AggType: Max,
-		AggCol:  0,
-	}}
-
-	g := []int{2}
-
-	// Create ctx
-	ctx := NewContext(fs, ii)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
-
-	op := NewHashAggregateOperator(ctx, f, ag, g)
-
-	start := time.Now()
-
-	op.Init()
-
-	r := op.Next()
-
-	elapsed := time.Since(start)
-	t.Logf(" took %s", elapsed)
-
-	a.NotNil(r, "This should not be nil")
-
-	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.Equal(6.9, r[1].(*vector.FloatVector).Values()[0])
-	a.Equal(1.6, r[2].(*vector.FloatVector).Values()[0])
-
-}
-
 func multiplyIntVector(v []int, n []uint64, times int) (rv []int, rn []uint64) {
 	rv = make([]int, 0)
 
@@ -408,11 +324,14 @@ func multiplyFloatVector(v []float64, n []uint64, times int) (rv []float64, rn [
 	return
 }
 
-func multiplyBsVector(v []byte, n []uint64, o []int, times int) (rv []byte, rn []uint64, ro []int) {
+func multiplyBsVector(v []byte, o []int, n []uint64, times int) (rv []byte, ro []int, rn []uint64) {
+
 	rv = make([]byte, 0)
+
 	for i := 0; i < times; i++ {
 		rv = append(rv, v...)
 	}
+
 	ro = make([]int, 0)
 	ant := 0
 
@@ -423,7 +342,7 @@ func multiplyBsVector(v []byte, n []uint64, o []int, times int) (rv []byte, rn [
 		ant = ro[len(ro)-1]
 	}
 
-	if len(rn) > 0 {
+	if len(n) > 0 {
 		rn = make([]uint64, len(n)*times)
 
 		for i := 0; i < times; i++ {
@@ -433,21 +352,8 @@ func multiplyBsVector(v []byte, n []uint64, o []int, times int) (rv []byte, rn [
 	return
 }
 
-func TestHAggScenario2(t *testing.T) {
+func setUp(vec [][]interface{}, ag []Aggregation, g []int, isHash bool) interface{} {
 
-	a := assert.New(t)
-	times := 1000000
-	// Set up child
-	vec := make([]interface{}, 0)
-	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
-	v := vector.NewFloatVector(rv, rn)
-	vec = append(vec, &v)
-	rv1, rn1 := multiplyIntVector([]int{2, 2, 4, 5, 6}, []uint64{}, times)
-	v1 := vector.NewIntVector(rv1, rn1)
-	vec = append(vec, &v1)
-	rv2, rn2, ro2 := multiplyBsVector([]byte("1123123123123"), []uint64{}, []int{1, 4, 7, 10, 13}, times)
-	v2 := vector.NewByteSliceVector(rv2, ro2, rn2)
-	vec = append(vec, &v2)
 	f := &fakeMultiVectorOperator{
 		vec: vec,
 	}
@@ -459,16 +365,6 @@ func TestHAggScenario2(t *testing.T) {
 	sMap["c3"] = &fakeStringColumn{}
 
 	fs := &fakeColFinder{sMap: sMap}
-
-	ag := []Aggregation{{
-		AggType: Sum,
-		AggCol:  0,
-	}, {
-		AggType: Max,
-		AggCol:  0,
-	}}
-
-	g := []int{2}
 
 	fields := []field{
 		{
@@ -489,9 +385,8 @@ func TestHAggScenario2(t *testing.T) {
 	}
 
 	ii := createIndexInfo("Logs", fields...)
-
 	// Create ctx
-	ctx := NewContext(fs, ii)
+	ctx := NewContext(fs, ii, 100)
 
 	fp := make([]schema.Field, 0)
 	for i := 0; i < len(ii.Fields); i++ {
@@ -499,7 +394,46 @@ func TestHAggScenario2(t *testing.T) {
 	}
 	ctx.SetFieldProcessed(fp)
 
-	op := NewHashAggregateOperator(ctx, f, ag, g)
+	if isHash {
+		return NewHashAggregateOperator(ctx, f, ag, g)
+	} else {
+		return NewSortedAggregateOperator(ctx, f, ag, g)
+	}
+}
+
+func TestHAggScenario1(t *testing.T) {
+
+	a := assert.New(t)
+
+	// Set up child
+	vec := make([][]interface{}, 0)
+
+	lv := make([]interface{}, 0)
+	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	v.SetLen(5)
+	lv = append(lv, v)
+
+	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	v1.SetLen(5)
+	lv = append(lv, v1)
+
+	v2 := vector.NewByteSliceVector([]byte("123123123123123"), []int{3, 6, 9, 12, 15}, []uint64{})
+	v2.SetLen(5)
+	lv = append(lv, v2)
+	vec = append(vec, lv)
+
+	ag := []Aggregation{{
+		AggType: Sum,
+		AggCol:  0,
+	}, {
+		AggType: Max,
+		AggCol:  0,
+	}}
+
+	g := []int{2}
+
+	op := setUp(vec, ag, g, true).(*HashAggregateOperator)
+
 	start := time.Now()
 
 	op.Init()
@@ -511,40 +445,38 @@ func TestHAggScenario2(t *testing.T) {
 
 	a.NotNil(r, "This should not be nil")
 
-	a.Equal("1", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.InDelta(1200000, r[1].(*vector.FloatVector).Values()[0], 0.1)
-	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.1)
-
-	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(1)))
-	a.InDelta(5700000, r[1].(*vector.FloatVector).Values()[1], 0.1)
-	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[1], 0.1)
+	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
+	a.Equal(6.9, r[1].(*vector.FloatVector).Values()[0])
+	a.Equal(1.6, r[2].(*vector.FloatVector).Values()[0])
 
 }
 
-func TestSortScenario(t *testing.T) {
+func TestHAggScenario2(t *testing.T) {
 
 	a := assert.New(t)
+	times := 1000000
 	// Set up child
-	vec := make([]interface{}, 0)
-	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
-	vec = append(vec, &v)
+	vec := make([][]interface{}, 0)
+	lv := make([]interface{}, 0)
 
-	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
-	vec = append(vec, &v1)
+	rv, rn := multiplyFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{}, times)
+	v := vector.NewFloatVector(rv, rn)
+	v.SetLen(5 * times)
 
-	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
-	vec = append(vec, &v2)
-	f := &fakeMultiVectorOperator{
-		vec: vec,
-	}
+	lv = append(lv, v)
 
-	// Set up cf
-	sMap := make(map[string]storage.Column)
-	sMap["c1"] = &fakeFloatColumn{}
-	sMap["c2"] = &fakeIntColumn{}
-	sMap["c3"] = &fakeStringColumn{}
+	rv1, rn1 := multiplyIntVector([]int{2, 2, 4, 5, 6}, []uint64{}, times)
+	v1 := vector.NewIntVector(rv1, rn1)
+	v1.SetLen(5 * times)
 
-	fs := &fakeColFinder{sMap: sMap}
+	lv = append(lv, v1)
+
+	rv2, rn2, ro := multiplyBsVector([]byte("123123123123123"), []int{3, 6, 9, 12, 15}, []uint64{}, times)
+	v2 := vector.NewByteSliceVector(rv2, rn2, ro)
+	v2.SetLen(5 * times)
+
+	lv = append(lv, v2)
+	vec = append(vec, lv)
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -556,35 +488,60 @@ func TestSortScenario(t *testing.T) {
 
 	g := []int{2}
 
-	fields := []field{
-		{
-			name:     "c1",
-			t:        schema.FieldType_FLOAT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "c3",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-	}
+	op := setUp(vec, ag, g, true).(*HashAggregateOperator)
 
-	ii := createIndexInfo("Logs", fields...)
-	// Create ctx
-	ctx := NewContext(fs, ii)
+	start := time.Now()
 
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
+	op.Init()
 
-	op := NewSortedAggregateOperator(ctx, f, ag, g)
+	r := op.Next()
+
+	elapsed := time.Since(start)
+	t.Logf(" took %s", elapsed)
+
+	a.NotNil(r, "This should not be nil")
+
+	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
+	a.InDelta(6900000, r[1].(*vector.FloatVector).Values()[0], 0.1)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[0], 0.1)
+
+}
+
+func TestSortScenario(t *testing.T) {
+
+	a := assert.New(t)
+
+	// Set up child
+	vec := make([][]interface{}, 0)
+
+	lv := make([]interface{}, 0)
+	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
+	v.SetLen(5)
+	lv = append(lv, v)
+
+	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
+	v1.SetLen(5)
+	lv = append(lv, v1)
+
+	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
+	v2.SetLen(5)
+	lv = append(lv, v2)
+
+	vec = append(vec, lv)
+
+	// Set up cf
+
+	ag := []Aggregation{{
+		AggType: Sum,
+		AggCol:  0,
+	}, {
+		AggType: Max,
+		AggCol:  0,
+	}}
+
+	g := []int{2}
+
+	op := setUp(vec, ag, g, false).(*SortedAggregateOperator)
 	start := time.Now()
 
 	op.Init()
@@ -609,27 +566,24 @@ func TestSortScenario(t *testing.T) {
 func TestSortScenario2(t *testing.T) {
 
 	a := assert.New(t)
+
 	// Set up child
-	vec := make([]interface{}, 0)
+	vec := make([][]interface{}, 0)
+	lv := make([]interface{}, 0)
+
 	v := vector.NewFloatVector([]float64{1.2, 1.2, 1.4, 1.5, 1.6}, []uint64{})
-	vec = append(vec, &v)
+	v.SetLen(5)
+	lv = append(lv, v)
 
 	v1 := vector.NewIntVector([]int{2, 2, 4, 5, 6}, []uint64{})
-	vec = append(vec, &v1)
+	v1.SetLen(5)
+	lv = append(lv, v1)
 
 	v2 := vector.NewByteSliceVector([]byte("1123123123123"), []int{1, 4, 7, 10, 13}, []uint64{})
-	vec = append(vec, &v2)
-	f := &fakeMultiVectorOperator{
-		vec: vec,
-	}
+	v2.SetLen(5)
 
-	// Set up cf
-	sMap := make(map[string]storage.Column)
-	sMap["c1"] = &fakeFloatColumn{}
-	sMap["c2"] = &fakeIntColumn{}
-	sMap["c3"] = &fakeStringColumn{}
-
-	fs := &fakeColFinder{sMap: sMap}
+	lv = append(lv, v2)
+	vec = append(vec, lv)
 
 	ag := []Aggregation{{
 		AggType: Sum,
@@ -641,35 +595,7 @@ func TestSortScenario2(t *testing.T) {
 
 	g := []int{1, 2}
 
-	fields := []field{
-		{
-			name:     "c1",
-			t:        schema.FieldType_FLOAT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-	// Create ctx
-	ctx := NewContext(fs, ii)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
-
-	op := NewSortedAggregateOperator(ctx, f, ag, g)
+	op := setUp(vec, ag, g, false).(*SortedAggregateOperator)
 	start := time.Now()
 
 	op.Init()
