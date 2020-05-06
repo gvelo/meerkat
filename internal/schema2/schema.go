@@ -15,6 +15,10 @@ package schema2
 
 import (
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"meerkat/internal/cluster"
+	"sync"
 	"time"
 )
 
@@ -227,15 +231,41 @@ type Op struct {
 	OpData     interface{}
 }
 
-type Schema struct {
+type SchemaUpdateEvent struct {
+	Op     OpType
+	Entity interface{}
 }
 
-func (s *Schema) Databases() databases {
+type Schema struct {
+	root          *Root
+	log           zerolog.Logger
+	catalogCh     chan []cluster.Entry
+	mu            sync.Mutex
+	done          chan struct{}
+	eventHandlers map[string]chan IndexUpdateEvent
+}
 
+func NewSchema(catalog cluster.Catalog) (*Schema, error) {
+
+	schema := &Schema{
+		root:          newRoot(),
+		log:           log.With().Str("component", "schema").Logger(),
+		catalogCh:     make(chan []cluster.Entry, 1024),
+		mu:            sync.Mutex{},
+		done:          make(chan struct{}),
+		eventHandlers: make(map[string]chan SchemaUpdateEvent),
+	}
+
+	// TODO xxx
+}
+
+func (s *Schema) Databases() *Databases {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.root.db
 }
 
 func (s *Schema) Update(operations []Op) {
-
 }
 
 //////////////////
@@ -245,6 +275,15 @@ type Root struct {
 	tablesById  map[uuid.UUID]*TableDesc
 	columnsById map[uuid.UUID]*ColumnDesc
 	pAllocById  map[uuid.UUID]*PartitionAlloc
+}
+
+func newRoot() *Root {
+	root := &Root{
+		db:          newDatabases(),
+		tablesById:  make(map[uuid.UUID]*TableDesc),
+		columnsById: make(map[uuid.UUID]*ColumnDesc),
+		pAllocById:  nil,
+	}
 }
 
 func (r *Root) copy() *Root {
