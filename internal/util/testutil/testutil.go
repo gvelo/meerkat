@@ -30,3 +30,10 @@ func RandomString(maxLenght int) string {
 	}
 	return b.String()
 }
+
+func RandomBytes(l int) []byte {
+	i := rand.Intn(l)
+	b := make([]byte, i)
+	rand.Read(b)
+	return b
+}

@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"meerkat/internal/util/testutil"
 	"os"
 	"path"
 	"testing"
@@ -90,7 +91,7 @@ func (tb *TestBytes) TestWrite(t *testing.T, w *BinaryWriter) {
 	tb.values = make([][]byte, testSize)
 
 	for i := 0; i < testSize; i++ {
-		tb.values[i] = randomBytes()
+		tb.values[i] = testutil.RandomBytes(512)
 		w.WriteBytes(tb.values[i])
 	}
 
@@ -136,11 +137,4 @@ func (tv *TestUVarInt) TestRead(t *testing.T, reader *BinaryReader) {
 		}
 	}
 
-}
-
-func randomBytes() []byte {
-	i := rand.Intn(512)
-	b := make([]byte, i)
-	rand.Read(b)
-	return b
 }
