@@ -21,6 +21,7 @@ import (
 	"meerkat/internal/buffer"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 func NewSegmentWriterPool(chanSize int, poolSize int, dbPath string) *SegmentWriterPool {
@@ -104,10 +105,11 @@ func (w *segmentWriterWorker) Start() {
 func (w *segmentWriterWorker) writeTable(t *buffer.Table) {
 
 	sid := uuid.New()
+	fileName := filepath.Join(w.path, sid.String())
 
 	w.log.Debug().Str("sid", sid.String()).Msg("writing segment")
 
-	err := WriteSegment(w.path, sid, t)
+	err := WriteSegment(fileName, sid, t)
 
 	if err != nil {
 		// TODO: (sebad) what to do in this case?

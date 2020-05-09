@@ -16,7 +16,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/serf v0.8.3
-	github.com/json-iterator/go v1.1.7 // indirect
+	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1

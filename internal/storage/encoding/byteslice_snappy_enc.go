@@ -22,14 +22,14 @@ import (
 
 type ByteSliceSnappyEncoder struct {
 	bw        BlockWriter
-	buf       *io.EncoderBuffer
+	buf       *io.Buffer
 	offsetBuf []int
 }
 
 func NewByteSliceSnappyEncodeer(bw BlockWriter) *ByteSliceSnappyEncoder {
 	return &ByteSliceSnappyEncoder{
 		bw:        bw,
-		buf:       io.NewEncoderBuffer(64 * 1024),
+		buf:       io.NewBuffer(64 * 1024),
 		offsetBuf: make([]int, 1024*4),
 	}
 }
@@ -52,8 +52,13 @@ func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 	// ( header size + offset slice size ) * MaxVarintLen64 + enc data size
 	size := binary.MaxVarintLen64*(v.Len()+2) + snappy.MaxEncodedLen(len(v.Data()))
 
-	// reset and ensure size
-	e.buf.Reset(size)
+
+	if size > e.buf.Cap() {
+		// TODO(gvelo) check this grow policy.
+		e.buf = io.NewBuffer(size + size/2)
+	}
+
+	e.buf.Reset()
 
 	if v.Len() > len(e.offsetBuf) {
 		e.offsetBuf = make([]int, v.Len()*2)
@@ -61,23 +66,28 @@ func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 
 	DeltaEncode(v.Offsets(), e.offsetBuf)
 
+	// TODO(gvelo): framming is responsibility of the blockwriter so
+	//  move this code outside this struct.
+
 	// left enough room at the beginning of the block to write the
 	// header ( block length encoded as uvarint )
-	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:v.Len()])
+	e.buf.Pos(binary.MaxVarintLen64)
+
+	e.buf.WriteVarUintSlice(e.offsetBuf[:v.Len()])
 
 	// as we have enough room in the dst buffer the encoder will not
 	// allocate a new slice. See MaxEncodedLen(srcLen int) int
 	r := snappy.Encode(e.buf.Free(), v.Data())
 
-	e.buf.SetLen(e.buf.Len() + len(r))
+	blockEnd := e.buf.GetPos() + len(r)
 
-	blockSize := e.buf.Len() - binary.MaxVarintLen64
+	blockSize := blockEnd - binary.MaxVarintLen64
 
-	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
+	headerOffset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
 
-	e.buf.WriteUvarintAt(offset, blockSize)
+	e.buf.PutIntAsUVarInt(headerOffset,blockSize)
 
-	block := e.buf.Bytes()[offset:]
+	block := e.buf.Buf()[headerOffset:blockEnd]
 
 	e.bw.WriteBlock(block, v.Rid()[0])
 

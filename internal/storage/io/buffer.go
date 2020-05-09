@@ -18,16 +18,30 @@ import (
 	"math"
 )
 
+func NewBuffer(cap int) *Buffer {
+	return &Buffer{
+		buf: make([]byte, cap),
+		pos: 0,
+	}
+}
+
 type Buffer struct {
 	buf []byte
 	pos int
 }
 
+func (b *Buffer) Cap() int {
+	return len(b.buf)
+}
 func (b *Buffer) Pos(p int) {
 	b.pos = p
 }
 
-func (b *Buffer) Buf(buf []byte) {
+func (b *Buffer) GetPos() int {
+	return b.pos
+}
+
+func (b *Buffer) SetBuf(buf []byte) {
 	b.buf = buf
 	b.pos = 0
 }
@@ -36,8 +50,24 @@ func (b *Buffer) Reset() {
 	b.pos = 0
 }
 
+func (b *Buffer) Buf() []byte {
+	return b.buf
+}
+
+func (b *Buffer) Data() []byte {
+	return b.buf[:b.pos]
+}
+
+func (b *Buffer) WriteByteSlice(v []byte) {
+	n := b.PutByteSlice(b.pos, v)
+	b.pos += n
+}
+
 func (b *Buffer) WriteBytes(v []byte) {
-	n := b.PutBytes(b.pos, v)
+	n := copy(b.buf[b.pos:], v)
+	if n < len(v) {
+		panic("buffer full`")
+	}
 	b.pos += n
 }
 
@@ -66,7 +96,18 @@ func (b *Buffer) WriteFloat64(v float64) {
 	b.pos += n
 }
 
-func (b *Buffer) Free() int {
+func (b *Buffer) WriteVarUintSlice(v []int) {
+	b.WriteIntAsUVarInt(len(v))
+	for _, i := range v {
+		b.WriteIntAsUVarInt(i)
+	}
+}
+
+func (b *Buffer) Free() []byte {
+	return b.buf[b.pos:]
+}
+
+func (b *Buffer) Available() int {
 	return len(b.buf) - b.pos
 }
 
@@ -74,7 +115,7 @@ func (b *Buffer) PutByte(pos int, v byte) {
 	b.buf[pos] = v
 }
 
-func (b *Buffer) PutBytes(pos int, v []byte) int {
+func (b *Buffer) PutByteSlice(pos int, v []byte) int {
 	n := b.PutIntAsUVarInt(pos, len(v))
 	c := copy(b.buf[pos+n:], v)
 	if c != len(v) {

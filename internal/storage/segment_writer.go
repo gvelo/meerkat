@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"meerkat/internal/buffer"
 	"meerkat/internal/storage/io"
-	"path/filepath"
 	"sort"
 )
 
@@ -61,8 +60,7 @@ func (sw *SegmentWriter) Write() (err error) {
 		}
 	}()
 
-	f := filepath.Join(sw.path, sw.id.String())
-	sw.bw, err = io.NewBinaryWriter(f)
+	sw.bw, err = io.NewBinaryWriter(sw.path)
 
 	if err != nil {
 		return

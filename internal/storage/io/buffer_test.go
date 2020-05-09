@@ -65,7 +65,7 @@ func TestBuffer(t *testing.T) {
 		case uint:
 			buf.WriteUVarInt64(uint64(v))
 		case []byte:
-			buf.WriteBytes(v)
+			buf.WriteByteSlice(v)
 		default:
 			panic("unknown type")
 		}
