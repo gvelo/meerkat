@@ -47,6 +47,11 @@ func (v *{{.Name}}Vector) Values() []{{.Type}} {
 	return v.buf[:v.l]
 }
 
+func (v *{{.Name}}Vector) Append(i []{{.Type}} )  {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
 func (v *{{.Name}}Vector) Buf() []{{.Type}} {
 	return v.buf
 }

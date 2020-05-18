@@ -25,7 +25,7 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 	assert.Len(t, r, 1)
 
 	r = testCases("2006-01-02T15:04:05.00000", "2006-01-02T15:04:12.00000", "Error")
-	assert.Len(t, r, 5)
+	assert.Len(t, r, 4)
 
 }
 
@@ -47,18 +47,7 @@ func testCases(from, to, strToFind string) [][]string {
 		println(" No result found")
 	}
 
-	res := make([][]string, 0)
-	for r := 0; r < len(n); r++ {
-		row := make([]string, 0)
-		for i := 0; i < len(n[r]); i++ {
-			fmt.Printf(" %s ", n[r][i])
-			row = append(row, n[r][i])
-		}
-		res = append(res, row)
-		fmt.Println("")
-	}
-
-	return res
+	return n
 
 }
 

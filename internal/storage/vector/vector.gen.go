@@ -29,6 +29,14 @@ func (v *IntVector) Len() int {
 	return v.l
 }
 
+func (v *IntVector) Get(idx int) int {
+	return v.buf[idx]
+}
+
+func (v *IntVector) HasNulls() bool {
+	return v.valid == nil
+}
+
 func (v *IntVector) Cap() int {
 	return len(v.buf)
 }
@@ -47,6 +55,11 @@ func (v *IntVector) SetLen(l int) {
 
 func (v *IntVector) Values() []int {
 	return v.buf[:v.l]
+}
+
+func (v *IntVector) Append(i []int) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
 }
 
 func (v *IntVector) Buf() []int {
@@ -102,6 +115,11 @@ func (v *UintVector) Values() []uint {
 	return v.buf[:v.l]
 }
 
+func (v *UintVector) Append(i []uint) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
 func (v *UintVector) Buf() []uint {
 	return v.buf
 }
@@ -155,6 +173,11 @@ func (v *FloatVector) Values() []float64 {
 	return v.buf[:v.l]
 }
 
+func (v *FloatVector) Append(i []float64) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
 func (v *FloatVector) Buf() []float64 {
 	return v.buf
 }
@@ -206,6 +229,11 @@ func (v *BoolVector) SetLen(l int) {
 
 func (v *BoolVector) Values() []bool {
 	return v.buf[:v.l]
+}
+
+func (v *BoolVector) Append(i []bool) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
 }
 
 func (v *BoolVector) Buf() []bool {

@@ -127,6 +127,19 @@ func NewByteSliceVector(data []byte, offsets []int, valid []uint64) ByteSliceVec
 	}
 }
 
+func NewByteSliceVectorFromByteArray(v [][]byte) ByteSliceVector {
+	buff := make([]byte, 0)
+	offsets := make([]int, 0)
+
+	offset := 0
+	for _, it := range v {
+		offset = offset + len(it)
+		offsets = append(offsets, offset)
+		buff = append(buff, it...)
+	}
+	return NewByteSliceVector(buff, offsets, []uint64{})
+}
+
 func DefaultVectorPool() Pool {
 	return &defaultPool{}
 }

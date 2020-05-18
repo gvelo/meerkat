@@ -314,7 +314,9 @@ func (op *ColumnToRowOperator) Next() [][]string {
 		row := make([]string, 0, len(n))
 		for x := 0; x < len(n); x++ {
 			row = append(row, op.get(i, x, n))
+			fmt.Printf(" %s ", op.get(i, x, n))
 		}
+		fmt.Println("")
 		res = append(res, row)
 	}
 
@@ -339,7 +341,7 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	case vector.BoolVector:
 		return fmt.Sprintf("%v", t.Values()[i])
 	default:
-		log.Printf("Type %v not found.", t)
+		op.log.Error().Err(fmt.Errorf("type %v not found", t))
 	}
 	return ""
 }
@@ -358,7 +360,7 @@ func getLen(n interface{}) int {
 	case vector.UintVector:
 		return v.Len()
 	default:
-		log.Error().Msgf("Type not found %v", v)
+		panic(fmt.Errorf("type %v not found", v))
 	}
 
 	return 0

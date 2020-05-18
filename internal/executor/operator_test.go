@@ -16,7 +16,9 @@ package executor
 import (
 	"meerkat/internal/schema"
 	"meerkat/internal/storage"
+	"meerkat/internal/storage/vector"
 	"testing"
+	"time"
 )
 
 // Select * From Index Where c1 = 12 and ts Between  F1 AND F2 limit 100
@@ -181,4 +183,31 @@ func TestQuery2(t *testing.T) {
 	*/
 	// op5 := Decompress
 
+}
+
+func createTimeArray(start string, n int, duration string) ([]int, error) {
+	d, err1 := time.ParseDuration(duration)
+	if err1 != nil {
+		return nil, err1
+	}
+	time, err2 := time.Parse("02-01-2006 15:04:05 -07:00", start)
+	if err2 != nil {
+		return nil, err2
+	}
+	t := time.Add(d)
+	timeArr := make([]int, n)
+	for i := 0; i < n; i++ {
+		timeArr[i] = int(t.UnixNano())
+		t = t.Add(d)
+	}
+
+	return timeArr, nil
+}
+
+func createNotNullStringVector(v []string) vector.ByteSliceVector {
+	buff := make([][]byte, 0)
+	for _, it := range v {
+		buff = append(buff, []byte(it))
+	}
+	return vector.NewByteSliceVectorFromByteArray(buff)
 }

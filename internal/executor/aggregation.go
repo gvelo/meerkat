@@ -137,11 +137,11 @@ func (c *counter) ValueOf(aggType AggType) float64 {
 	}
 }
 
-func createSlice(idx string, ctx Context) interface{} {
-	c := ctx.Segment().Col(idx)
+func createSlice(name string, ctx Context) interface{} {
+	c := ctx.Segment().Col(name)
 
 	// Not found this should be an aggregated column.
-	str := string(idx)
+	str := name
 	if c == nil {
 		if i := strings.IndexByte(str, '_'); i >= 0 {
 			str = str[:i]
