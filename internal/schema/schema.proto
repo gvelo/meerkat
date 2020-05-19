@@ -13,7 +13,7 @@
 
 syntax = "proto3";
 package meerkat.schema;
-option go_package = "schema";
+option go_package = "meerkat/internal/schema";
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
@@ -43,19 +43,21 @@ message Field{
     string name          = 2 ;
     string desc          = 3 ;
     string index_id      = 4 [(gogoproto.jsontag) = "-"];
-    FieldType field_type = 5 ;
+    ColumnType field_type = 5 ;
     bool Nullable        = 6 ;
     google.protobuf.Timestamp created = 7 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
     google.protobuf.Timestamp updated = 8 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
 }
 
-enum FieldType{
-    STRING    = 0;
-    TEXT      = 1;
-    BOOLEAN   = 2;
-    TIMESTAMP = 3;
-    INT       = 4;
-    UINT      = 5;
-    FLOAT     = 6;
-    UUID      = 7;
+
+
+enum ColumnType{
+  TIMESTAMP = 0;
+  DATETIME  = 1;
+  BOOLEAN   = 2;
+  LONG      = 3;
+  REAL      = 4;
+  BOOL      = 5;
+  STRING    = 6;
 }
+

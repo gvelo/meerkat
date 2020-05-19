@@ -24,6 +24,7 @@ import (
 type ConnRegistry interface {
 	Range(f func(member string, conn *grpc.ClientConn) bool)
 	RangeWithFilter(members []string, fn func(member string, conn *grpc.ClientConn, ok bool) bool)
+	Members() []string
 	Shutdown()
 }
 
@@ -183,4 +184,12 @@ func (cr *connRegistry) RangeWithFilter(members []string, fn func(member string,
 
 	}
 
+}
+
+func (cr *connRegistry) Members() []string {
+	var members []string
+	cr.connections.Range(func(key, value interface{}) bool {
+		members = append(members, key.(string))
+	})
+	return members
 }

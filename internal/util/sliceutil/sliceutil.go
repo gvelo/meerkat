@@ -72,3 +72,7 @@ func B2U32(b []byte) []uint32 {
 func B2S(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 }
+
+func S2B(s string) []byte {
+	return *(*[]byte)(unsafe.Pointer(&s))
+}

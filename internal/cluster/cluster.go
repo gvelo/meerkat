@@ -65,6 +65,9 @@ type Cluster interface {
 
 	// RemoveEventChan removes a previously added channel.
 	RemoveEventChan(ch chan serf.Event)
+
+	// Return the local node name
+	NodeName() string
 }
 
 // clusterConfig store local node info and last known nodes.
@@ -246,6 +249,10 @@ func (c *cluster) initConfig() error {
 
 	return err
 
+}
+
+func (c *cluster) NodeName() string {
+	return c.conf.Name
 }
 
 func (c *cluster) initSerf() error {

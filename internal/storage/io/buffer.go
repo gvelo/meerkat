@@ -63,6 +63,16 @@ func (b *Buffer) WriteByteSlice(v []byte) {
 	b.pos += n
 }
 
+func (b *Buffer) WriteString(s string) {
+	n := b.PutString(b.pos, s)
+	b.pos += n
+}
+
+func (b *Buffer) WriteByte(v byte) {
+	b.buf[b.pos] = v
+	b.pos++
+}
+
 func (b *Buffer) WriteBytes(v []byte) {
 	n := copy(b.buf[b.pos:], v)
 	if n < len(v) {
@@ -96,6 +106,11 @@ func (b *Buffer) WriteFloat64(v float64) {
 	b.pos += n
 }
 
+func (b *Buffer) WriteFixedUInt64(v uint64) {
+	n := b.PutFixedUInt64(b.pos, v)
+	b.pos += n
+}
+
 func (b *Buffer) WriteVarUintSlice(v []int) {
 	b.WriteIntAsUVarInt(len(v))
 	for _, i := range v {
@@ -124,6 +139,15 @@ func (b *Buffer) PutByteSlice(pos int, v []byte) int {
 	return n + c
 }
 
+func (b *Buffer) PutString(pos int, s string) int {
+	n := b.PutIntAsUVarInt(pos, len(s))
+	c := copy(b.buf[pos+n:], s)
+	if c != len(s) {
+		panic("buffer full")
+	}
+	return n + c
+}
+
 func (b *Buffer) PutVarInt(pos int, v int) int {
 	return binary.PutVarint(b.buf[pos:], int64(v))
 }
@@ -142,6 +166,11 @@ func (b *Buffer) PutUVarInt64(pos int, v uint64) int {
 
 func (b *Buffer) PutFloat64(pos int, v float64) int {
 	binary.LittleEndian.PutUint64(b.buf[pos:], math.Float64bits(v))
+	return 8
+}
+
+func (b *Buffer) PutFixedUInt64(pos int, v uint64) int {
+	binary.LittleEndian.PutUint64(b.buf[pos:], v)
 	return 8
 }
 
@@ -211,4 +240,35 @@ func (b *Buffer) UVarIntAsInt(pos int) (int, int) {
 		panic("invalid Uvarint")
 	}
 	return int(r), n
+}
+
+func (b *Buffer) Grow(cap int) {
+	n := make([]byte, cap)
+	copy(n, b.buf)
+	b.buf = n
+}
+
+// SizeVarint returns the varint encoding size of an integer.
+func SizeUVarint(x uint64) int {
+	switch {
+	case x < 1<<7:
+		return 1
+	case x < 1<<14:
+		return 2
+	case x < 1<<21:
+		return 3
+	case x < 1<<28:
+		return 4
+	case x < 1<<35:
+		return 5
+	case x < 1<<42:
+		return 6
+	case x < 1<<49:
+		return 7
+	case x < 1<<56:
+		return 8
+	case x < 1<<63:
+		return 9
+	}
+	return 10
 }
