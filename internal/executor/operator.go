@@ -326,6 +326,9 @@ func (op *ColumnToRowOperator) Next() [][]string {
 func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	switch t := v[x].(type) {
 	case vector.IntVector:
+		if t.HasNulls() && !t.IsValid(i) {
+			return "null"
+		}
 		if op.ctx.GetFieldProcessed().Fields[x].FieldType == schema.FieldType_TIMESTAMP {
 			time := time.Unix(0, int64(t.Values()[i]))
 			return fmt.Sprintf(time.Format(op.TimeFormat))
@@ -333,12 +336,24 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 			return fmt.Sprintf(op.IntFormat, t.Values()[i])
 		}
 	case vector.FloatVector:
+		if t.HasNulls() && !t.IsValid(i) {
+			return "null"
+		}
 		return fmt.Sprintf(op.FloatFormat, t.Values()[i])
 	case vector.ByteSliceVector:
+		if t.HasNulls() && !t.IsValid(i) {
+			return "null"
+		}
 		return fmt.Sprintf("'%v'", sliceutil.BS2S(t.Get(i)))
 	case vector.UintVector:
+		if t.HasNulls() && !t.IsValid(i) {
+			return "null"
+		}
 		return fmt.Sprintf(op.IntFormat, t.Values()[i])
 	case vector.BoolVector:
+		if t.HasNulls() && !t.IsValid(i) {
+			return "null"
+		}
 		return fmt.Sprintf("%v", t.Values()[i])
 	default:
 		op.log.Error().Err(fmt.Errorf("type %v not found", t))

@@ -23,6 +23,10 @@ type {{.Name}}Vector struct {
 	l     int
 }
 
+func (v *{{.Name}}Vector)  HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *{{.Name}}Vector) Len() int {
 	return v.l
 }
@@ -47,8 +51,20 @@ func (v *{{.Name}}Vector) Values() []{{.Type}} {
 	return v.buf[:v.l]
 }
 
+func (v *{{.Name}}Vector) Get( i int ) {{.Type}} {
+    if (i > v.l) {
+        panic("Buffer overflow")
+    }
+	return v.buf[i]
+}
+
 func (v *{{.Name}}Vector) Append(i []{{.Type}} )  {
 	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *{{.Name}}Vector ) Append{{.Name}}( i {{.Type}}) {
+	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
 }
 

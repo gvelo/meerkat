@@ -28,15 +28,27 @@ type Vector interface {
 type Pool interface {
 	GetIntVector() IntVector
 	GetByteSliceVector() ByteSliceVector
+	GetFloatVector() FloatVector
+	GetBoolVector() BoolVector
+
+	GetNotNullableIntVector() IntVector
+	GetNotNullableByteSliceVector() ByteSliceVector
+	GetNotNullableFloatVector() FloatVector
+	GetNotNullableBoolVector() BoolVector
 	PutIntVector(vector IntVector)
 }
 
 type ByteSliceVector struct {
-	valid   []uint64
-	buf     []byte
-	offsets []int
-	l       int
-	c       int
+	valid    []uint64
+	buf      []byte
+	offsets  []int
+	l        int
+	c        int
+	hasNulls bool
+}
+
+func (v *ByteSliceVector) HasNulls() bool {
+	return len(v.valid) != 0
 }
 
 func (v *ByteSliceVector) Len() int {
@@ -83,7 +95,9 @@ func (v *ByteSliceVector) AppendSlice(slice []byte) {
 
 	v.buf = append(v.buf, slice...)
 	v.offsets = append(v.offsets, len(v.buf))
-	v.SetValid(v.l)
+	if v.hasNulls {
+		v.SetValid(v.l)
+	}
 	v.l++
 
 }
@@ -127,7 +141,7 @@ func NewByteSliceVector(data []byte, offsets []int, valid []uint64) ByteSliceVec
 	}
 }
 
-func NewByteSliceVectorFromByteArray(v [][]byte) ByteSliceVector {
+func NewByteSliceVectorFromByteArray(v [][]byte, valid []uint64) ByteSliceVector {
 	buff := make([]byte, 0)
 	offsets := make([]int, 0)
 
@@ -137,7 +151,7 @@ func NewByteSliceVectorFromByteArray(v [][]byte) ByteSliceVector {
 		offsets = append(offsets, offset)
 		buff = append(buff, it...)
 	}
-	return NewByteSliceVector(buff, offsets, []uint64{})
+	return NewByteSliceVector(buff, offsets, valid)
 }
 
 func DefaultVectorPool() Pool {
@@ -157,6 +171,26 @@ func (*defaultPool) GetIntVector() IntVector {
 	}
 }
 
+func (*defaultPool) GetFloatVector() FloatVector {
+
+	// TODO: parametrize vector capacity.
+
+	return FloatVector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]float64, 8192*2),
+	}
+}
+
+func (*defaultPool) GetBoolVector() BoolVector {
+
+	// TODO: parametrize vector capacity.
+
+	return BoolVector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]bool, 8192*2),
+	}
+}
+
 func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 	// TODO: parametrize vector capacity.
@@ -168,6 +202,59 @@ func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 }
 
+func (*defaultPool) GetNotNullableIntVector() IntVector {
+
+	// TODO: parametrize vector capacity.
+
+	return IntVector{
+		valid: nil,
+		buf:   make([]int, 8192*2),
+	}
+}
+
+func (*defaultPool) GetNotNullableFloatVector() FloatVector {
+
+	// TODO: parametrize vector capacity.
+
+	return FloatVector{
+		valid: nil,
+		buf:   make([]float64, 8192*2),
+	}
+}
+
+func (*defaultPool) GetNotNullableBoolVector() BoolVector {
+
+	// TODO: parametrize vector capacity.
+
+	return BoolVector{
+		valid: nil,
+		buf:   make([]bool, 8192*2),
+	}
+}
+
+func (*defaultPool) GetNotNullableByteSliceVector() ByteSliceVector {
+
+	// TODO: parametrize vector capacity.
+
+	return ByteSliceVector{
+		valid: nil,
+		c:     8192 * 2,
+	}
+
+}
+
 func (*defaultPool) PutIntVector(vector IntVector) {
+	panic("implement me")
+}
+
+func (*defaultPool) PutBoolVector(vector BoolVector) {
+	panic("implement me")
+}
+
+func (*defaultPool) PutFloatVector(vector FloatVector) {
+	panic("implement me")
+}
+
+func (*defaultPool) PutByteSliceVector(vector ByteSliceVector) {
 	panic("implement me")
 }

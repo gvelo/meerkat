@@ -204,10 +204,10 @@ func createTimeArray(start string, n int, duration string) ([]int, error) {
 	return timeArr, nil
 }
 
-func createNotNullStringVector(v []string) vector.ByteSliceVector {
+func createNotNullStringVector(v []string, valid []uint64) vector.ByteSliceVector {
 	buff := make([][]byte, 0)
 	for _, it := range v {
 		buff = append(buff, []byte(it))
 	}
-	return vector.NewByteSliceVectorFromByteArray(buff)
+	return vector.NewByteSliceVectorFromByteArray(buff, valid)
 }

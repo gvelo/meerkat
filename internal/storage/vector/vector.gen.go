@@ -25,16 +25,12 @@ type IntVector struct {
 	l     int
 }
 
+func (v *IntVector) HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *IntVector) Len() int {
 	return v.l
-}
-
-func (v *IntVector) Get(idx int) int {
-	return v.buf[idx]
-}
-
-func (v *IntVector) HasNulls() bool {
-	return v.valid == nil
 }
 
 func (v *IntVector) Cap() int {
@@ -57,8 +53,20 @@ func (v *IntVector) Values() []int {
 	return v.buf[:v.l]
 }
 
+func (v *IntVector) Get(i int) int {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
 func (v *IntVector) Append(i []int) {
 	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *IntVector) AppendInt(i int) {
+	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
 }
 
@@ -91,6 +99,10 @@ type UintVector struct {
 	l     int
 }
 
+func (v *UintVector) HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *UintVector) Len() int {
 	return v.l
 }
@@ -115,8 +127,20 @@ func (v *UintVector) Values() []uint {
 	return v.buf[:v.l]
 }
 
+func (v *UintVector) Get(i int) uint {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
 func (v *UintVector) Append(i []uint) {
 	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *UintVector) AppendUint(i uint) {
+	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
 }
 
@@ -149,6 +173,10 @@ type FloatVector struct {
 	l     int
 }
 
+func (v *FloatVector) HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *FloatVector) Len() int {
 	return v.l
 }
@@ -173,8 +201,20 @@ func (v *FloatVector) Values() []float64 {
 	return v.buf[:v.l]
 }
 
+func (v *FloatVector) Get(i int) float64 {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
 func (v *FloatVector) Append(i []float64) {
 	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *FloatVector) AppendFloat(i float64) {
+	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
 }
 
@@ -207,6 +247,10 @@ type BoolVector struct {
 	l     int
 }
 
+func (v *BoolVector) HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *BoolVector) Len() int {
 	return v.l
 }
@@ -231,8 +275,20 @@ func (v *BoolVector) Values() []bool {
 	return v.buf[:v.l]
 }
 
+func (v *BoolVector) Get(i int) bool {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
 func (v *BoolVector) Append(i []bool) {
 	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *BoolVector) AppendBool(i bool) {
+	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
 }
 

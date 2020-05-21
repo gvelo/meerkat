@@ -96,19 +96,19 @@ func TestSortOperator(t *testing.T) {
 
 	lv := make([]interface{}, 0)
 	timeArr, _ := createTimeArray("17-05-2020 19:18:00 -03:00", 5, "1m")
-	v := vector.NewIntVector(timeArr, []uint64{})
+	v := vector.NewIntVector(timeArr, nil)
 	v.SetLen(5)
 	lv = append(lv, v)
 
-	v1 := createNotNullStringVector([]string{"Hola1", "Hola2", "Hola3", "Hola4", "Hola5"})
+	v1 := createNotNullStringVector([]string{"Hola1", "Hola2", "Hola3", "Hola4", "Hola5"}, nil)
 	v1.SetLen(5)
 	lv = append(lv, v1)
 
-	v2 := vector.NewIntVector([]int{1, 2, 1, 2, 8}, []uint64{})
+	v2 := vector.NewIntVector([]int{1, 2, 1, 2, 8}, nil)
 	v2.SetLen(5)
 	lv = append(lv, v2)
 
-	v3 := vector.NewIntVector([]int{10, 1, 5, 1, 8}, []uint64{})
+	v3 := vector.NewIntVector([]int{10, 1, 5, 1, 8}, nil)
 	v3.SetLen(5)
 	lv = append(lv, v3)
 
@@ -146,6 +146,94 @@ func TestSortOperator(t *testing.T) {
 			name:     "n2",
 			t:        schema.FieldType_INT,
 			nullable: false,
+		},
+	}
+
+	ii := createIndexInfo("Logs", fields...)
+
+	// Create ctx
+	ctx := NewContext(fs, ii, 100)
+
+	fp := make([]schema.Field, 0)
+	for i := 0; i < len(ii.Fields); i++ {
+		fp = append(fp, ii.Fields[i])
+	}
+	ctx.SetFieldProcessed(fp)
+	opts := []SortOpt{
+		{
+			"n1",
+			true,
+		}, {
+			"n2",
+			false,
+		},
+	}
+	op := NewSortOperator(ctx, f, opts)
+	op2 := NewColumnToRowOperator(ctx, op)
+
+	op2.Init()
+	for op2.Next() != nil {
+	}
+
+}
+
+func TestSortOperator2(t *testing.T) {
+
+	// Set up child
+	vec := make([][]interface{}, 0)
+
+	lv := make([]interface{}, 0)
+	timeArr, _ := createTimeArray("17-05-2020 19:18:00 -03:00", 5, "1m")
+	v := vector.NewIntVector(timeArr, nil)
+	v.SetLen(5)
+	lv = append(lv, v)
+
+	v1 := createNotNullStringVector([]string{"Hola1", "Hola2", "Hola3", "Hola4", "Hola5"}, nil)
+	v1.SetLen(5)
+	lv = append(lv, v1)
+
+	v2 := vector.NewIntVector([]int{1, 2, 1, 2, 8}, []uint64{6})
+	v2.SetLen(5)
+	lv = append(lv, v2)
+
+	v3 := vector.NewIntVector([]int{10, 1, 5, 1, 8}, []uint64{6})
+	v3.SetLen(5)
+	lv = append(lv, v3)
+
+	vec = append(vec, lv)
+
+	f := &fakeMultiVectorOperator{
+		vec: vec,
+	}
+	// Set up cf
+	sMap := make(map[string]storage.Column)
+	sMap["_ts"] = &fakeIntColumn{}
+	sMap["hola"] = &fakeStringColumn{}
+	sMap["n1"] = &fakeIntColumn{}
+	sMap["n2"] = &fakeIntColumn{}
+
+	fs := &fakeColFinder{sMap: sMap}
+
+	fields := []field{
+		{
+			name:     "_ts",
+			t:        schema.FieldType_TIMESTAMP,
+			nullable: false,
+		},
+		{
+			name:     "hola",
+			t:        schema.FieldType_STRING,
+			nullable: false,
+		},
+		{
+			name:     "n1",
+			t:        schema.FieldType_INT,
+			nullable: true,
+		},
+		{
+			name:     "n2",
+			t:        schema.FieldType_INT,
+			nullable: true,
 		},
 	}
 

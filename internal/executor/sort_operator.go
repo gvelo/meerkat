@@ -18,6 +18,7 @@ import (
 	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"math"
 	"meerkat/internal/storage/vector"
 )
 
@@ -122,14 +123,6 @@ func (op *SortOperator) Init() {
 		}
 	}
 
-	v := op.slicesAppended[1].(vector.ByteSliceVector)
-	v1 := op.slicesAppended[colIds[0]].(vector.IntVector)
-	v2 := op.slicesAppended[colIds[1]].(vector.IntVector)
-
-	for _, it := range op.order {
-		fmt.Printf("Vectors %s, %d , %d \n", v.Get(it), v1.Get(it), v2.Get(it))
-	}
-
 }
 
 func sortPartitions(v interface{}, order []int, asc bool, p []int) {
@@ -177,7 +170,7 @@ func partIntVec(colVec vector.IntVector, order []int, b []bool) {
 	b[0] = true
 	if colVec.HasNulls() {
 		for outputIdx, checkIdx := range order {
-			null := colVec.IsValid(checkIdx)
+			null := !colVec.IsValid(checkIdx)
 			if null {
 				if !lastValNull {
 					// The current value is null while the previous was not.
@@ -246,12 +239,19 @@ func partIntVec(colVec vector.IntVector, order []int, b []bool) {
 func getVectorSorter(v interface{}, order []int, asc bool) *IntVectorSorter {
 	switch t := v.(type) {
 	case vector.IntVector:
-		// check share..
-		return &IntVectorSorter{
-			order,
-			&t,
-			asc,
+		r := &IntVectorSorter{
+			order: order,
+			v:     &t,
+			asc:   asc,
 		}
+
+		if t.HasNulls() {
+			r.less = r.lessNull
+		} else {
+			r.less = r.lessNotNull
+		}
+
+		return r
 	default:
 		log.Error().Msg("No found.")
 	}
@@ -262,16 +262,42 @@ type IntVectorSorter struct {
 	order []int
 	v     *vector.IntVector
 	asc   bool
+	less  func(i, j int) bool
 }
 
 func (v *IntVectorSorter) Len() int { return len(v.order) }
 
-func (v *IntVectorSorter) Less(i, j int) bool {
+func (v *IntVectorSorter) lessNull(i, j int) bool {
+	vi := v.v.Values()[v.order[i]]
+	vj := v.v.Values()[v.order[j]]
+
+	// by default the nulls should be in the last positions.
+	if !v.v.IsValid(v.order[i]) {
+		vi = math.MaxInt64
+	}
+
+	if !v.v.IsValid(v.order[j]) {
+		vj = math.MaxInt64
+	}
+
+	if v.asc {
+		return vi < vj
+	} else {
+		return vi > vj
+	}
+
+}
+
+func (v *IntVectorSorter) lessNotNull(i, j int) bool {
 	if v.asc {
 		return v.v.Values()[v.order[i]] < v.v.Values()[v.order[j]]
 	} else {
 		return v.v.Values()[v.order[i]] > v.v.Values()[v.order[j]]
 	}
+}
+
+func (v *IntVectorSorter) Less(i, j int) bool {
+	return v.less(i, j)
 }
 
 func (v *IntVectorSorter) Swap(i, j int) {
@@ -333,53 +359,103 @@ func (op *SortOperator) Next() []interface{} {
 }
 
 func (op *SortOperator) createFloatVector(v vector.FloatVector) vector.FloatVector {
-	r := make([]float64, op.ctx.Sz())
+	var rv vector.FloatVector
 	total := 0
-	for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-		r[total] = v.Values()[op.order[i]]
-		total++
+	if v.HasNulls() {
+		rv = vector.DefaultVectorPool().GetFloatVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendFloat(v.Values()[op.order[i]])
+			if v.IsValid(op.order[i]) {
+				rv.SetValid(i)
+			} else {
+				rv.SetInvalid(i)
+			}
+			total++
+		}
+	} else {
+		rv = vector.DefaultVectorPool().GetNotNullableFloatVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendFloat(v.Values()[op.order[i]])
+			total++
+		}
 	}
-	// TODO(sebad) handle nulls
-	rv := vector.NewFloatVector(r, []uint64{})
+
 	rv.SetLen(total)
 	return rv
 }
 
 func (op *SortOperator) createBoolVector(v vector.BoolVector) vector.BoolVector {
-	r := make([]bool, op.ctx.Sz())
+	var rv vector.BoolVector
 	total := 0
-	for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-		r[total] = v.Values()[op.order[i]]
-		total++
+	if v.HasNulls() {
+		rv = vector.DefaultVectorPool().GetBoolVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendBool(v.Values()[op.order[i]])
+			if v.IsValid(op.order[i]) {
+				rv.SetValid(i)
+			} else {
+				rv.SetInvalid(i)
+			}
+			total++
+		}
+	} else {
+		rv = vector.DefaultVectorPool().GetNotNullableBoolVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendBool(v.Values()[op.order[i]])
+			total++
+		}
 	}
-	// TODO(sebad) handle nulls
-	rv := vector.NewBoolVector(r, []uint64{})
+
 	rv.SetLen(total)
 	return rv
 }
 
 func (op *SortOperator) createByteSliceVector(v vector.ByteSliceVector) vector.ByteSliceVector {
-	r := make([][]byte, op.ctx.Sz())
+
+	var rv vector.ByteSliceVector
 	total := 0
-	for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-		r[total] = v.Get(op.order[i])
-		total++
+	if v.HasNulls() {
+		rv = vector.DefaultVectorPool().GetByteSliceVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendSlice(v.Get(op.order[i]))
+			if v.IsValid(op.order[i]) {
+				rv.SetValid(i)
+			} else {
+				rv.SetInvalid(i)
+			}
+			total++
+		}
+	} else {
+		rv = vector.DefaultVectorPool().GetNotNullableByteSliceVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendSlice(v.Get(op.order[i]))
+			total++
+		}
 	}
-	// TODO(sebad) handle nulls
-	rv := vector.NewByteSliceVectorFromByteArray(r)
 	rv.SetLen(total)
 	return rv
 }
 
 func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
-	r := make([]int, op.ctx.Sz())
+	var rv vector.IntVector
 	total := 0
-	for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-		r[total] = v.Values()[op.order[i]]
-		total++
+	if v.HasNulls() {
+		rv = vector.DefaultVectorPool().GetIntVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendInt(v.Values()[op.order[i]])
+			if v.IsValid(op.order[i]) {
+				rv.SetValid(i)
+			} else {
+				rv.SetInvalid(i)
+			}
+			total++
+		}
+	} else {
+		rv = vector.DefaultVectorPool().GetNotNullableIntVector()
+		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
+			rv.AppendInt(v.Values()[op.order[i]])
+			total++
+		}
 	}
-	// TODO(sebad) handle nulls
-	rv := vector.NewIntVector(r, []uint64{})
-	rv.SetLen(total)
 	return rv
 }
