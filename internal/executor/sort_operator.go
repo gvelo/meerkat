@@ -11,9 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate env GO111MODULE=on go run github.com/benbjohnson/tmpl -data=@../storage/scalar_types.tmpldata sort_operator.gen.go.tmpl
+
 package executor
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/psilva261/timsort"
 	"github.com/rs/zerolog"
@@ -158,13 +161,15 @@ func createPartitions(b []bool, sel []int) []int {
 func buildDiffArray(so interface{}, o []int, b []bool) {
 	switch t := so.(type) {
 	case vector.IntVector:
-		partIntVec(t, o, b)
+		partIntVector(t, o, b)
+	case vector.ByteSliceVector:
+		partByteSliceVector(t, o, b)
 	default:
 		log.Error().Msg("No found.")
 	}
 }
 
-func partIntVec(colVec vector.IntVector, order []int, b []bool) {
+func partIntVector(colVec vector.IntVector, order []int, b []bool) {
 	var lastVal int
 	var lastValNull bool
 	b[0] = true
@@ -225,6 +230,64 @@ func partIntVec(colVec vector.IntVector, order []int, b []bool) {
 					} else {
 						cmpResult = 0
 					}
+				}
+
+				unique = cmpResult != 0
+			}
+
+			b[outputIdx] = b[outputIdx] || unique
+			lastVal = v
+		}
+	}
+}
+
+func partByteSliceVector(colVec vector.ByteSliceVector, order []int, b []bool) {
+	var lastVal []byte
+	var lastValNull bool
+	b[0] = true
+	if colVec.HasNulls() {
+		for outputIdx, checkIdx := range order {
+			null := !colVec.IsValid(checkIdx)
+			if null {
+				if !lastValNull {
+					// The current value is null while the previous was not.
+					b[outputIdx] = true
+				}
+			} else {
+				v := colVec.Get(checkIdx)
+				if lastValNull {
+					// The previous value was null while the current is not.
+					b[outputIdx] = true
+				} else {
+					// Neither value is null, so we must compare.
+					var unique bool
+
+					{
+						var cmpResult int
+
+						{
+							cmpResult = bytes.Compare(v, lastVal)
+						}
+
+						unique = cmpResult != 0
+					}
+
+					b[outputIdx] = b[outputIdx] || unique
+				}
+				lastVal = v
+			}
+			lastValNull = null
+		}
+	} else {
+		for outputIdx, checkIdx := range order {
+			v := colVec.Get(checkIdx)
+			var unique bool
+
+			{
+				var cmpResult int
+
+				{
+					cmpResult = bytes.Compare(v, lastVal)
 				}
 
 				unique = cmpResult != 0
@@ -358,58 +421,6 @@ func (op *SortOperator) Next() []interface{} {
 	return res
 }
 
-func (op *SortOperator) createFloatVector(v vector.FloatVector) vector.FloatVector {
-	var rv vector.FloatVector
-	total := 0
-	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetFloatVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendFloat(v.Values()[op.order[i]])
-			if v.IsValid(op.order[i]) {
-				rv.SetValid(i)
-			} else {
-				rv.SetInvalid(i)
-			}
-			total++
-		}
-	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableFloatVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendFloat(v.Values()[op.order[i]])
-			total++
-		}
-	}
-
-	rv.SetLen(total)
-	return rv
-}
-
-func (op *SortOperator) createBoolVector(v vector.BoolVector) vector.BoolVector {
-	var rv vector.BoolVector
-	total := 0
-	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetBoolVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendBool(v.Values()[op.order[i]])
-			if v.IsValid(op.order[i]) {
-				rv.SetValid(i)
-			} else {
-				rv.SetInvalid(i)
-			}
-			total++
-		}
-	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableBoolVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendBool(v.Values()[op.order[i]])
-			total++
-		}
-	}
-
-	rv.SetLen(total)
-	return rv
-}
-
 func (op *SortOperator) createByteSliceVector(v vector.ByteSliceVector) vector.ByteSliceVector {
 
 	var rv vector.ByteSliceVector
@@ -433,29 +444,5 @@ func (op *SortOperator) createByteSliceVector(v vector.ByteSliceVector) vector.B
 		}
 	}
 	rv.SetLen(total)
-	return rv
-}
-
-func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
-	var rv vector.IntVector
-	total := 0
-	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetIntVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendInt(v.Values()[op.order[i]])
-			if v.IsValid(op.order[i]) {
-				rv.SetValid(i)
-			} else {
-				rv.SetInvalid(i)
-			}
-			total++
-		}
-	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableIntVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendInt(v.Values()[op.order[i]])
-			total++
-		}
-	}
 	return rv
 }

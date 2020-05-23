@@ -30,11 +30,14 @@ type Pool interface {
 	GetByteSliceVector() ByteSliceVector
 	GetFloatVector() FloatVector
 	GetBoolVector() BoolVector
+	GetUintVector() UintVector
 
 	GetNotNullableIntVector() IntVector
 	GetNotNullableByteSliceVector() ByteSliceVector
 	GetNotNullableFloatVector() FloatVector
 	GetNotNullableBoolVector() BoolVector
+	GetNotNullableUintVector() UintVector
+
 	PutIntVector(vector IntVector)
 }
 
@@ -239,6 +242,27 @@ func (*defaultPool) GetNotNullableByteSliceVector() ByteSliceVector {
 	return ByteSliceVector{
 		valid: nil,
 		c:     8192 * 2,
+	}
+
+}
+
+func (*defaultPool) GetNotNullableUintVector() UintVector {
+
+	// TODO: parametrize vector capacity.
+
+	return UintVector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]uint, 8192*2),
+	}
+}
+
+func (*defaultPool) GetUintVector() UintVector {
+
+	// TODO: parametrize vector capacity.
+
+	return UintVector{
+		valid: nil,
+		buf:   make([]uint, 8192*2),
 	}
 
 }
