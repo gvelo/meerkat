@@ -20,6 +20,7 @@
 package executor
 
 import (
+	"math"
 	"meerkat/internal/storage/vector"
 )
 
@@ -45,6 +46,52 @@ func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
 		}
 	}
 	return rv
+}
+
+type IntVectorSorter struct {
+	order []int
+	v     *vector.IntVector
+	asc   bool
+	less  func(i, j int) bool
+}
+
+func (v *IntVectorSorter) Len() int { return len(v.order) }
+
+func (v *IntVectorSorter) lessNull(i, j int) bool {
+	vi := v.v.Values()[v.order[i]]
+	vj := v.v.Values()[v.order[j]]
+
+	// by default the nulls should be in the last positions.
+	if !v.v.IsValid(v.order[i]) {
+		vi = math.MaxInt64
+	}
+
+	if !v.v.IsValid(v.order[j]) {
+		vj = math.MaxInt64
+	}
+
+	if v.asc {
+		return vi < vj
+	} else {
+		return vi > vj
+	}
+
+}
+
+func (v *IntVectorSorter) lessNotNull(i, j int) bool {
+	if v.asc {
+		return v.v.Values()[v.order[i]] < v.v.Values()[v.order[j]]
+	} else {
+		return v.v.Values()[v.order[i]] > v.v.Values()[v.order[j]]
+	}
+}
+
+func (v *IntVectorSorter) Less(i, j int) bool {
+	return v.less(i, j)
+}
+
+func (v *IntVectorSorter) Swap(i, j int) {
+	v.order[i], v.order[j] = v.order[j], v.order[i]
 }
 
 func (op *SortOperator) createUintVector(v vector.UintVector) vector.UintVector {
@@ -93,6 +140,52 @@ func (op *SortOperator) createFloatVector(v vector.FloatVector) vector.FloatVect
 		}
 	}
 	return rv
+}
+
+type FloatVectorSorter struct {
+	order []int
+	v     *vector.FloatVector
+	asc   bool
+	less  func(i, j int) bool
+}
+
+func (v *FloatVectorSorter) Len() int { return len(v.order) }
+
+func (v *FloatVectorSorter) lessNull(i, j int) bool {
+	vi := v.v.Values()[v.order[i]]
+	vj := v.v.Values()[v.order[j]]
+
+	// by default the nulls should be in the last positions.
+	if !v.v.IsValid(v.order[i]) {
+		vi = math.MaxFloat64
+	}
+
+	if !v.v.IsValid(v.order[j]) {
+		vj = math.MaxFloat64
+	}
+
+	if v.asc {
+		return vi < vj
+	} else {
+		return vi > vj
+	}
+
+}
+
+func (v *FloatVectorSorter) lessNotNull(i, j int) bool {
+	if v.asc {
+		return v.v.Values()[v.order[i]] < v.v.Values()[v.order[j]]
+	} else {
+		return v.v.Values()[v.order[i]] > v.v.Values()[v.order[j]]
+	}
+}
+
+func (v *FloatVectorSorter) Less(i, j int) bool {
+	return v.less(i, j)
+}
+
+func (v *FloatVectorSorter) Swap(i, j int) {
+	v.order[i], v.order[j] = v.order[j], v.order[i]
 }
 
 func (op *SortOperator) createBoolVector(v vector.BoolVector) vector.BoolVector {

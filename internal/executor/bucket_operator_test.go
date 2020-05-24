@@ -23,8 +23,7 @@ import (
 )
 
 func setUpIntBucket() MultiVectorOperator {
-	l := make([][]int, 0)
-	l = append(l, appendNTimes(10, 10))
+	l := make([][]interface{}, 0)
 	l = append(l, appendNTimes(11, 10))
 	l = append(l, appendNTimes(12, 10))
 	l = append(l, appendNTimes(13, 10))
@@ -36,11 +35,12 @@ func setUpIntBucket() MultiVectorOperator {
 	l = append(l, appendNTimes(19, 10))
 	l = append(l, appendNTimes(20, 10))
 	l = append(l, appendNTimes(21, 10))
-	return NewTestOperator(l)
+
+	return &fakeMultiVectorOperator{vec: l}
 }
 
 func setUpTimeBucket(t0, n int, d time.Duration) MultiVectorOperator {
-	l := make([][]int, 0)
+	l := make([][]interface{}, 0)
 	l = append(l, appendNTimes(t0+int(10*d), n))
 	l = append(l, appendNTimes(t0+int(11*d), n))
 	l = append(l, appendNTimes(t0+int(12*d), n))
@@ -52,14 +52,14 @@ func setUpTimeBucket(t0, n int, d time.Duration) MultiVectorOperator {
 	l = append(l, appendNTimes(t0+int(18*d), n))
 	l = append(l, appendNTimes(t0+int(19*d), n))
 	l = append(l, appendNTimes(t0+int(20*d), n))
-	return NewTestOperator(l)
+	return &fakeMultiVectorOperator{vec: l}
 }
 
 func setUpTimeBucketParsing(d [][]string) MultiVectorOperator {
-	l := make([][]int, 0)
+	l := make([][]interface{}, 0)
 
 	for _, items := range d {
-		list := make([]int, 0)
+		list := make([]interface{}, 0)
 		for _, item := range items {
 			t, _ := time.Parse("02-01-2006 15:04:05 -07:00", item)
 			list = append(list, int(t.UnixNano()))
@@ -67,11 +67,11 @@ func setUpTimeBucketParsing(d [][]string) MultiVectorOperator {
 		l = append(l, list)
 	}
 
-	return NewTestOperator(l)
+	return &fakeMultiVectorOperator{vec: l}
 }
 
-func appendNTimes(n int, times int) []int {
-	l := make([]int, 0, 10)
+func appendNTimes(n int, times int) []interface{} {
+	l := make([]interface{}, 0, 10)
 	for i := 0; i < times; i++ {
 		l = append(l, n)
 	}

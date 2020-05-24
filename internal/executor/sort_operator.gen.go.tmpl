@@ -44,78 +44,53 @@ func (op *SortOperator) create{{.Name}}Vector(v vector.{{.Name}}Vector) vector.{
 }
 
 
+{{if or (eq .Name "Int") (eq .Name "Float") }}
 
-func part{{.Name}}Vec(colVec vector.{{.Name}}Vector, order []int, b []bool) {
-	var lastVal {{.name}}
-	var lastValNull bool
-	b[0] = true
-	if colVec.HasNulls() {
-		for outputIdx, checkIdx := range order {
-			null := !colVec.IsValid(checkIdx)
-			if null {
-				if !lastValNull {
-					// The current value is null while the previous was not.
-					b[outputIdx] = true
-				}
-			} else {
-				v := colVec.Get(checkIdx)
-				if lastValNull {
-					// The previous value was null while the current is not.
-					b[outputIdx] = true
-				} else {
-					// Neither value is null, so we must compare.
-					var unique bool
+    type {{.Name}}VectorSorter struct {
+        order []int
+        v     *vector.{{.Name}}Vector
+        asc   bool
+        less  func(i, j int) bool
+    }
 
-					{
-						var cmpResult int
+    func (v *{{.Name}}VectorSorter) Len() int { return len(v.order) }
 
-						{
-							a, b := int64(v), int64(lastVal)
-							if a < b {
-								cmpResult = -1
-							} else if a > b {
-								cmpResult = 1
-							} else {
-								cmpResult = 0
-							}
-						}
+    func (v *{{.Name}}VectorSorter) lessNull(i, j int) bool {
+        vi := v.v.Values()[v.order[i]]
+        vj := v.v.Values()[v.order[j]]
 
-						unique = cmpResult != 0
-					}
+        // by default the nulls should be in the last positions.
+        if !v.v.IsValid(v.order[i]) {
+            vi = math.Max{{.Name}}64
+        }
 
-					b[outputIdx] = b[outputIdx] || unique
-				}
-				lastVal = v
-			}
-			lastValNull = null
-		}
-	} else {
-		for outputIdx, checkIdx := range order {
-			v := colVec.Get(checkIdx)
-			var unique bool
+        if !v.v.IsValid(v.order[j]) {
+            vj = math.Max{{.Name}}64
+        }
 
-			{
-				var cmpResult int
+        if v.asc {
+            return vi < vj
+        } else {
+            return vi > vj
+        }
 
-				{
-					a, b := int64(v), int64(lastVal)
-					if a < b {
-						cmpResult = -1
-					} else if a > b {
-						cmpResult = 1
-					} else {
-						cmpResult = 0
-					}
-				}
+    }
 
-				unique = cmpResult != 0
-			}
+    func (v *{{.Name}}VectorSorter) lessNotNull(i, j int) bool {
+        if v.asc {
+            return v.v.Values()[v.order[i]] < v.v.Values()[v.order[j]]
+        } else {
+            return v.v.Values()[v.order[i]] > v.v.Values()[v.order[j]]
+        }
+    }
 
-			b[outputIdx] = b[outputIdx] || unique
-			lastVal = v
-		}
-	}
-}
+    func (v *{{.Name}}VectorSorter) Less(i, j int) bool {
+        return v.less(i, j)
+    }
 
+    func (v *{{.Name}}VectorSorter) Swap(i, j int) {
+        v.order[i], v.order[j] = v.order[j], v.order[i]
+    }
+ {{end}}
 
 {{ end }}

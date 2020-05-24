@@ -70,7 +70,7 @@ func TestSortOperator_build_diff_array(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			b := make([]bool, len(tc.order))
-			partIntVector(tc.v, tc.order, b)
+			buildDiffIntVector(tc.v, tc.order, b)
 
 			fId := 0
 			for i, it := range b {

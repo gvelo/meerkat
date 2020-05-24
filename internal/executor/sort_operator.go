@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"math"
 	"meerkat/internal/storage/vector"
+	"sort"
 )
 
 type SortOpt struct {
@@ -161,15 +162,19 @@ func createPartitions(b []bool, sel []int) []int {
 func buildDiffArray(so interface{}, o []int, b []bool) {
 	switch t := so.(type) {
 	case vector.IntVector:
-		partIntVector(t, o, b)
+		buildDiffIntVector(t, o, b)
 	case vector.ByteSliceVector:
-		partByteSliceVector(t, o, b)
+		buildDiffByteSliceVector(t, o, b)
+	case vector.FloatVector:
+		buildDiffFloatVector(t, o, b)
+	case vector.BoolVector:
+		panic(log.Error().Err(fmt.Errorf("wtf")))
 	default:
 		log.Error().Msg("No found.")
 	}
 }
 
-func partIntVector(colVec vector.IntVector, order []int, b []bool) {
+func buildDiffIntVector(colVec vector.IntVector, order []int, b []bool) {
 	var lastVal int
 	var lastValNull bool
 	b[0] = true
@@ -241,7 +246,95 @@ func partIntVector(colVec vector.IntVector, order []int, b []bool) {
 	}
 }
 
-func partByteSliceVector(colVec vector.ByteSliceVector, order []int, b []bool) {
+func buildDiffFloatVector(colVec vector.FloatVector, order []int, b []bool) {
+	var lastVal float64
+	var lastValNull bool
+	b[0] = true
+	if colVec.HasNulls() {
+		for outputIdx, checkIdx := range order {
+			null := !colVec.IsValid(checkIdx)
+			if null {
+				if !lastValNull {
+					// The current value is null while the previous was not.
+					b[outputIdx] = true
+				}
+			} else {
+				v := colVec.Get(checkIdx)
+				if lastValNull {
+					// The previous value was null while the current is not.
+					b[outputIdx] = true
+				} else {
+					// Neither value is null, so we must compare.
+					var unique bool
+
+					{
+						var cmpResult int
+
+						{
+							a, b := v, lastVal
+							if a < b {
+								cmpResult = -1
+							} else if a > b {
+								cmpResult = 1
+							} else if a == b {
+								cmpResult = 0
+							} else if math.IsNaN(a) {
+								if math.IsNaN(b) {
+									cmpResult = 0
+								} else {
+									cmpResult = -1
+								}
+							} else {
+								cmpResult = 1
+							}
+						}
+
+						unique = cmpResult != 0
+					}
+
+					b[outputIdx] = b[outputIdx] || unique
+				}
+				lastVal = v
+			}
+			lastValNull = null
+		}
+	} else {
+		for outputIdx, checkIdx := range order {
+			v := colVec.Get(checkIdx)
+			var unique bool
+
+			{
+				var cmpResult int
+
+				{
+					a, b := v, lastVal
+					if a < b {
+						cmpResult = -1
+					} else if a > b {
+						cmpResult = 1
+					} else if a == b {
+						cmpResult = 0
+					} else if math.IsNaN(a) {
+						if math.IsNaN(b) {
+							cmpResult = 0
+						} else {
+							cmpResult = -1
+						}
+					} else {
+						cmpResult = 1
+					}
+				}
+
+				unique = cmpResult != 0
+			}
+
+			b[outputIdx] = b[outputIdx] || unique
+			lastVal = v
+		}
+	}
+}
+
+func buildDiffByteSliceVector(colVec vector.ByteSliceVector, order []int, b []bool) {
 	var lastVal []byte
 	var lastValNull bool
 	b[0] = true
@@ -299,7 +392,8 @@ func partByteSliceVector(colVec vector.ByteSliceVector, order []int, b []bool) {
 	}
 }
 
-func getVectorSorter(v interface{}, order []int, asc bool) *IntVectorSorter {
+func getVectorSorter(v interface{}, order []int, asc bool) sort.Interface {
+	var r sort.Interface
 	switch t := v.(type) {
 	case vector.IntVector:
 		r := &IntVectorSorter{
@@ -315,56 +409,23 @@ func getVectorSorter(v interface{}, order []int, asc bool) *IntVectorSorter {
 		}
 
 		return r
+	case vector.FloatVector:
+		r := &FloatVectorSorter{
+			order: order,
+			v:     &t,
+			asc:   asc,
+		}
+
+		if t.HasNulls() {
+			r.less = r.lessNull
+		} else {
+			r.less = r.lessNotNull
+		}
+
 	default:
 		log.Error().Msg("No found.")
 	}
-	return nil
-}
-
-type IntVectorSorter struct {
-	order []int
-	v     *vector.IntVector
-	asc   bool
-	less  func(i, j int) bool
-}
-
-func (v *IntVectorSorter) Len() int { return len(v.order) }
-
-func (v *IntVectorSorter) lessNull(i, j int) bool {
-	vi := v.v.Values()[v.order[i]]
-	vj := v.v.Values()[v.order[j]]
-
-	// by default the nulls should be in the last positions.
-	if !v.v.IsValid(v.order[i]) {
-		vi = math.MaxInt64
-	}
-
-	if !v.v.IsValid(v.order[j]) {
-		vj = math.MaxInt64
-	}
-
-	if v.asc {
-		return vi < vj
-	} else {
-		return vi > vj
-	}
-
-}
-
-func (v *IntVectorSorter) lessNotNull(i, j int) bool {
-	if v.asc {
-		return v.v.Values()[v.order[i]] < v.v.Values()[v.order[j]]
-	} else {
-		return v.v.Values()[v.order[i]] > v.v.Values()[v.order[j]]
-	}
-}
-
-func (v *IntVectorSorter) Less(i, j int) bool {
-	return v.less(i, j)
-}
-
-func (v *IntVectorSorter) Swap(i, j int) {
-	v.order[i], v.order[j] = v.order[j], v.order[i]
+	return r
 }
 
 // Append all slices in vectors.

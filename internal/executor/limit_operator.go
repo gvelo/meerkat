@@ -19,7 +19,8 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-// NewLimitOperator creates a ColumnScanOperator
+// NewLimitOperator creates a LimitOperator
+// The Sort + Limit = Top Operator.
 func NewLimitOperator(ctx Context, child MultiVectorOperator, limit int) MultiVectorOperator {
 	return &LimitOperator{
 		ctx:   ctx,
