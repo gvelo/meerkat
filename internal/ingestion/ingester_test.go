@@ -15,32 +15,89 @@ package ingestion
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/hashicorp/serf/serf"
+	"meerkat/internal/ingestion/ingestionpb"
 	"testing"
 )
 
 var s string
 
 func init() {
-	s := `{"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
-          {"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
-          {"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
+	//s := `{"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
+    //      {"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
+    //      {"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
+
+	s = `{"field1":0}
+{"field1":1}
+{"field1":2}
+
 `
-	for i := 0; i < 20; i++ {
-		s=s+s
-	}
+	//for i := 0; i < 20; i++ {
+	//	s = s + s
+	//}
 
 	fmt.Println(len(s))
 }
 
+type clusterMock struct {
+}
+
+func (c clusterMock) SetTag(name string, value string) error {
+	panic("implement me")
+}
+
+func (c clusterMock) Members() []serf.Member {
+	panic("implement me")
+}
+
+func (c clusterMock) LiveMembers() []serf.Member {
+	return []serf.Member{{Name: "testmember1"}, {Name: "testmember2"}, {Name: "testmember3"}}
+}
+
+func (c clusterMock) Join() {
+	panic("implement me")
+}
+
+func (c clusterMock) Shutdown() {
+	panic("implement me")
+}
+
+func (c clusterMock) AddEventChan(ch chan serf.Event) {
+	panic("implement me")
+}
+
+func (c clusterMock) RemoveEventChan(ch chan serf.Event) {
+	panic("implement me")
+}
+
+func (c clusterMock) NodeName() string {
+	panic("implement me")
+}
+
+type ingestRpcMock struct {
+}
+
+func (i ingestRpcMock) SendRequest(ctx context.Context, member string, request *ingestionpb.IngestionRequest) error {
+	return nil
+}
+
+type buffReg struct {
+}
+
+func (b buffReg) Add(table *ingestionpb.Table) {
+
+}
+
 func TestTest(t *testing.T) {
 
-
-//fmt.Println(s)
+	fmt.Println(s)
 	r := bytes.NewReader([]byte(s))
 
-	ing := NewIngester()
-	_,err := ing.Parse(r,"testTable",3)
+	ing := NewIngester(&ingestRpcMock{}, &clusterMock{}, &buffReg{})
+
+	err := ing.Ingest(r, "testTable")
 
 	fmt.Println(err)
 	//fmt.Println(table.partitions[1].colSize[2])
@@ -50,7 +107,4 @@ func TestTest(t *testing.T) {
 	//	fmt.Println(d,string(d))
 	//}
 
-
 }
-
-

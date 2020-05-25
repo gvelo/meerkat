@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	createIndex()
+	//createIndex()
 
 	generateData()
 
@@ -63,7 +63,7 @@ func generateData() {
 
 	for i := 0; i < 5000; i++ {
 
-		go Post("http://127.0.0.1:9090/index/test-index/ingest", s)
+		go Post("http://127.0.0.1:9090/testTable/ingest", s)
 
 		time.Sleep(100 * time.Millisecond)
 

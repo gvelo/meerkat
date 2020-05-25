@@ -26,7 +26,7 @@ const (
 )
 
 type colData struct {
-	colType schema.FieldType
+	colType schema.ColumnType
 	id      string
 	name    string
 	bounds  io.Bounds
@@ -114,7 +114,7 @@ func (s *Segment) read() error {
 		c := colData{}
 		c.id = br.ReadString()
 		c.name = br.ReadString()
-		c.colType = schema.FieldType(br.ReadByte())
+		c.colType = schema.ColumnType(br.ReadByte())
 		c.bounds.End = br.ReadUVarint()
 		if i == 0 {
 			c.bounds.Start = s.start
@@ -140,15 +140,11 @@ func (s *Segment) readColumns(cd []colData) {
 		var col interface{}
 
 		switch cData.colType {
-		case schema.FieldType_TIMESTAMP:
+		case schema.ColumnType_TIMESTAMP:
 			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
-		case schema.FieldType_INT:
+		case schema.ColumnType_LONG:
 			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
-		case schema.FieldType_UINT:
-		case schema.FieldType_FLOAT:
-		case schema.FieldType_STRING:
-			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
-		case schema.FieldType_TEXT:
+		case schema.ColumnType_STRING:
 			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:
 			panic("unknown column type")

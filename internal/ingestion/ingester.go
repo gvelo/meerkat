@@ -15,6 +15,7 @@ package ingestion
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	hash2 "hash"
 	"io"
 	"meerkat/internal/cluster"
+	"meerkat/internal/indexbuffer"
 	"meerkat/internal/ingestion/ingestionpb"
 	"meerkat/internal/schema"
 	iobuff "meerkat/internal/storage/io"
@@ -105,8 +107,8 @@ func (t *Table) partition(p int) *Partition {
 	}
 
 	partition := &Partition{
-		colSize: make([]uint64, t.colIdx),
-		colLen:  make([]uint64, t.colIdx),
+		colSize: make([]uint64, t.colIdx+1),
+		colLen:  make([]uint64, t.colIdx+1),
 		writer:  NewRowSetWriter(4 * 1024),
 	}
 
@@ -204,6 +206,7 @@ type Parser struct {
 
 func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int) (*Table, int, []ParserError) {
 
+	fmt.Println("num of partition ",numOfPartitions)
 	var ingestionErrors []ParserError
 
 	table := NewTable(tableName)
@@ -218,6 +221,7 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 	for decoder.More() {
 
 		line++
+		fmt.Println(line)
 
 		m := make(map[string]interface{})
 
@@ -258,6 +262,8 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 		partition := table.partition(ing.getPartition(ts, numOfPartitions))
 		tsCol := table.columns[TSColName]
 		partition.writer.WriteFixedUInt64(tsCol.idx, uint64(ts))
+		fmt.Println(len(partition.colLen))
+		fmt.Println(tsCol.idx)
 		partition.colLen[tsCol.idx]++
 
 		for colName, colValue := range m {
@@ -346,25 +352,31 @@ func parseTS(i interface{}) (int64, error) {
 
 }
 
-func NewInester(localNodeName string, conReg cluster.ConnRegistry, bufferReg IngestBufferRegistry) *Ingester {
-	return &Ingester{
-		conReg:         conReg,
-		localNodeName:  localNodeName,
+type Ingester interface {
+	Ingest(stream io.Reader, tableName string) []ParserError
+}
+
+func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg indexbuffer.BufferRegistry) Ingester {
+	return &ingester{
+		rpc:            rpc,
+		cluster:        cluster,
 		indexBufferReg: bufferReg,
 	}
 }
 
-type Ingester struct {
-	conReg         cluster.ConnRegistry
+type ingester struct {
+	cluster        cluster.Cluster
+	rpc            IngesterRpc
 	localNodeName  string
-	indexBufferReg IngestBufferRegistry
+	indexBufferReg indexbuffer.BufferRegistry
 }
 
-func (ing *Ingester) Ingest(stream io.Reader, tableName string) []ParserError {
+func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
-	// TODO(gvelo): only for testing purposes. Remove.
-	m := ing.conReg.Members()
-	numOfPartitions := len(m)
+	// TODO(gvelo): all this ingest implementation if for testing purposes.
+
+	m := ing.cluster.LiveMembers()
+	numOfPartitions := len(m)+1 // num of members plus local node.
 
 	parser := NewParser()
 
@@ -393,7 +405,7 @@ func (ing *Ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 	for id, partition := range table.partitions {
 
 		p := &ingestionpb.Partition{
-			Id:      id,
+			Id:      uint64(id),
 			ColSize: partition.colSize,
 			ColLen:  partition.colLen,
 			Data:    partition.writer.Buf.Data(),
@@ -403,10 +415,27 @@ func (ing *Ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
 	}
 
-	pbTable := &ingestionpb.Table{
+	// first partition go to the local node
+	ing.indexBufferReg.Add(&ingestionpb.Table{
 		Name:       tableName,
-		Columns:    pbColumns
-		Partitions: pbPartitions,
+		Columns:    pbColumns,
+		Partitions: pbPartitions[:1],
+	})
+
+	for i, member := range m {
+		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestionpb.IngestionRequest{
+			Tables: &ingestionpb.Table{
+				Name:       tableName,
+				Columns:    pbColumns,
+				Partitions: pbPartitions[i+1 : i+2],
+			}})
+
+		if err != nil {
+			panic(err)
+		}
+
 	}
+
+	return pErr
 
 }

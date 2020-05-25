@@ -119,26 +119,26 @@ func (sw *SegmentWriter) writeTSColumn() []int {
 
 func (sw *SegmentWriter) writeColumns(perm []int) {
 
-	for _, f := range sw.table.Index().Fields {
-
-		// skip the timestamp column.
-		if f.Id == TSColID {
-			continue
-		}
-
-		b, ok := sw.table.Col(f.Id)
-
-		if !ok {
-			panic("error getting buffer for column")
-		}
-
-		w := NewColumWriter(f.FieldType, b, perm, sw.bw)
-
-		w.Write()
-
-		sw.offsets[f.Id] = sw.bw.Offset()
-
-	}
+	//for _, f := range sw.table.Index().Fields {
+	//
+	//	// skip the timestamp column.
+	//	if f.Id == TSColID {
+	//		continue
+	//	}
+	//
+	//	b, ok := sw.table.Col(f.Id)
+	//
+	//	if !ok {
+	//		panic("error getting buffer for column")
+	//	}
+	//
+	//	w := NewColumWriter(f.FieldType, b, perm, sw.bw)
+	//
+	//	w.Write()
+	//
+	//	sw.offsets[f.Id] = sw.bw.Offset()
+	//
+	//}
 
 }
 
@@ -149,9 +149,9 @@ func (sw *SegmentWriter) writeFooter() {
 	sw.bw.WriteRaw(sw.id[:])
 
 	// TODO(gvelo) refactor to [16]byte
-	sw.bw.WriteString(sw.table.Index().Id)
-
-	sw.bw.WriteString(sw.table.Index().Name)
+	//sw.bw.WriteString(sw.table.Index().Id)
+	//
+	//sw.bw.WriteString(sw.table.Index().Name)
 
 	sw.bw.WriteFixedInt(sw.fromDate)
 
@@ -159,19 +159,19 @@ func (sw *SegmentWriter) writeFooter() {
 
 	sw.bw.WriteUvarint(sw.table.Len())
 
-	sw.bw.WriteUvarint(len(sw.table.Cols()))
-
-	for _, f := range sw.table.Index().Fields {
-
-		sw.bw.WriteString(f.Id)
-
-		sw.bw.WriteString(f.Name)
-
-		sw.bw.WriteByte(byte(f.FieldType))
-
-		sw.bw.WriteUvarint(sw.offsets[f.Id])
-
-	}
+	//sw.bw.WriteUvarint(len(sw.table.Cols()))
+	//
+	//for _, f := range sw.table.Index().Fields {
+	//
+	//	sw.bw.WriteString(f.Id)
+	//
+	//	sw.bw.WriteString(f.Name)
+	//
+	//	sw.bw.WriteByte(byte(f.FieldType))
+	//
+	//	sw.bw.WriteUvarint(sw.offsets[f.Id])
+	//
+	//}
 
 	sw.bw.WriteFixedInt(entry)
 

@@ -34,7 +34,7 @@ type ColumnWriter interface {
 	Write()
 }
 
-func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+func NewColumWriter(columnType schema.ColumnType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
 
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
@@ -45,23 +45,23 @@ func NewColumWriter(fieldType schema.FieldType, buf buffer.Buffer, perm []int, b
 		validity = index.NewValidityBitmapIndex(bw)
 	}
 
-	switch fieldType {
-	case schema.FieldType_INT:
+	switch columnType {
+	case schema.ColumnType_LONG:
 		// TODO(gvelo): for plain encoded scalars blockindex is not necessary.
 		//              offset can be computed using the RID plus the
 		//              column's value width.
 		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
 		enc := encoding.NewIntPlainEncoder(blkWriter)
 
-		return NewIntColumnWriter(schema.FieldType_INT, src, enc, nil, blkIdx, validity, bw)
+		return NewIntColumnWriter(schema.ColumnType_LONG, src, enc, nil, blkIdx, validity, bw)
 
-	case schema.FieldType_STRING:
+	case schema.ColumnType_STRING:
 		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
-		return NewByteSliceColumnWriter(schema.FieldType_STRING, src, enc, nil, blkIdx, validity, bw)
+		return NewByteSliceColumnWriter(schema.ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
 
 	default:
-		panic("unknown fieldType")
+		panic("unknown columnType")
 
 	}
 
@@ -74,7 +74,7 @@ func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter 
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
 	enc := encoding.NewIntPlainEncoder(blkWriter)
-	cw := NewIntColumnWriter(schema.FieldType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
+	cw := NewIntColumnWriter(schema.ColumnType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
 
 	return cw
 

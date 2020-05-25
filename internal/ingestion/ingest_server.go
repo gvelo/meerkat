@@ -13,8 +13,27 @@
 
 package ingestion
 
-import "meerkat/internal/ingestion/ingestionpb"
+import (
+	"context"
+	"fmt"
+	"meerkat/internal/indexbuffer"
+	"meerkat/internal/ingestion/ingestionpb"
+)
 
-type IngestBufferRegistry interface {
-	Add(request ingestionpb.IngestionRequest)
+func NewIngestionServer(bufReg indexbuffer.BufferRegistry) ingestionpb.IngesterServer {
+	return &ingestServer{
+		bufReg: bufReg,
+	}
+}
+
+type ingestServer struct {
+	bufReg indexbuffer.BufferRegistry
+}
+
+func (i ingestServer) Ingest(ctx context.Context, request *ingestionpb.IngestionRequest) (*ingestionpb.IngestResponse, error) {
+
+	fmt.Println("------------ ingest server")
+
+	i.bufReg.Add(request.Tables)
+	return &ingestionpb.IngestResponse{},nil
 }

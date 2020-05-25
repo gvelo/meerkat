@@ -27,7 +27,7 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-func NewIntColumnWriter(fieldType schema.FieldType,
+func NewIntColumnWriter(columnType schema.ColumnType,
 	src colval.IntColSource,
 	encoder encoding.IntEncoder,
 	colIndex index.IntIndexWriter,
@@ -36,7 +36,7 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 	bw *io.BinaryWriter) *IntColumnWriter {
 
 	return &IntColumnWriter{
-		fieldType:  fieldType,
+		columnType: columnType,
 		src:        src,
 		bw:         bw,
 		encoder:    encoder,
@@ -48,7 +48,7 @@ func NewIntColumnWriter(fieldType schema.FieldType,
 }
 
 type IntColumnWriter struct {
-	fieldType   schema.FieldType
+	columnType  schema.ColumnType
 	bw          *io.BinaryWriter
 	src         colval.IntColSource
 	encoder     encoding.IntEncoder
@@ -143,7 +143,7 @@ func (w *IntColumnWriter) writeFooter() {
 
 }
 
-func NewUintColumnWriter(fieldType schema.FieldType,
+func NewUintColumnWriter(columnType schema.ColumnType,
 	src colval.UintColSource,
 	encoder encoding.UintEncoder,
 	colIndex index.UintIndexWriter,
@@ -152,7 +152,7 @@ func NewUintColumnWriter(fieldType schema.FieldType,
 	bw *io.BinaryWriter) *UintColumnWriter {
 
 	return &UintColumnWriter{
-		fieldType:  fieldType,
+		columnType: columnType,
 		src:        src,
 		bw:         bw,
 		encoder:    encoder,
@@ -164,7 +164,7 @@ func NewUintColumnWriter(fieldType schema.FieldType,
 }
 
 type UintColumnWriter struct {
-	fieldType   schema.FieldType
+	columnType  schema.ColumnType
 	bw          *io.BinaryWriter
 	src         colval.UintColSource
 	encoder     encoding.UintEncoder
@@ -259,7 +259,7 @@ func (w *UintColumnWriter) writeFooter() {
 
 }
 
-func NewFloatColumnWriter(fieldType schema.FieldType,
+func NewFloatColumnWriter(columnType schema.ColumnType,
 	src colval.FloatColSource,
 	encoder encoding.FloatEncoder,
 	colIndex index.FloatIndexWriter,
@@ -268,7 +268,7 @@ func NewFloatColumnWriter(fieldType schema.FieldType,
 	bw *io.BinaryWriter) *FloatColumnWriter {
 
 	return &FloatColumnWriter{
-		fieldType:  fieldType,
+		columnType: columnType,
 		src:        src,
 		bw:         bw,
 		encoder:    encoder,
@@ -280,7 +280,7 @@ func NewFloatColumnWriter(fieldType schema.FieldType,
 }
 
 type FloatColumnWriter struct {
-	fieldType   schema.FieldType
+	columnType  schema.ColumnType
 	bw          *io.BinaryWriter
 	src         colval.FloatColSource
 	encoder     encoding.FloatEncoder
@@ -375,7 +375,7 @@ func (w *FloatColumnWriter) writeFooter() {
 
 }
 
-func NewBoolColumnWriter(fieldType schema.FieldType,
+func NewBoolColumnWriter(columnType schema.ColumnType,
 	src colval.BoolColSource,
 	encoder encoding.BoolEncoder,
 	colIndex index.BoolIndexWriter,
@@ -384,7 +384,7 @@ func NewBoolColumnWriter(fieldType schema.FieldType,
 	bw *io.BinaryWriter) *BoolColumnWriter {
 
 	return &BoolColumnWriter{
-		fieldType:  fieldType,
+		columnType: columnType,
 		src:        src,
 		bw:         bw,
 		encoder:    encoder,
@@ -396,7 +396,7 @@ func NewBoolColumnWriter(fieldType schema.FieldType,
 }
 
 type BoolColumnWriter struct {
-	fieldType   schema.FieldType
+	columnType  schema.ColumnType
 	bw          *io.BinaryWriter
 	src         colval.BoolColSource
 	encoder     encoding.BoolEncoder
@@ -491,7 +491,7 @@ func (w *BoolColumnWriter) writeFooter() {
 
 }
 
-func NewByteSliceColumnWriter(fieldType schema.FieldType,
+func NewByteSliceColumnWriter(columnType schema.ColumnType,
 	src colval.ByteSliceColSource,
 	encoder encoding.ByteSliceEncoder,
 	colIndex index.ByteSliceIndexWriter,
@@ -500,7 +500,7 @@ func NewByteSliceColumnWriter(fieldType schema.FieldType,
 	bw *io.BinaryWriter) *ByteSliceColumnWriter {
 
 	return &ByteSliceColumnWriter{
-		fieldType:  fieldType,
+		columnType: columnType,
 		src:        src,
 		bw:         bw,
 		encoder:    encoder,
@@ -512,7 +512,7 @@ func NewByteSliceColumnWriter(fieldType schema.FieldType,
 }
 
 type ByteSliceColumnWriter struct {
-	fieldType   schema.FieldType
+	columnType  schema.ColumnType
 	bw          *io.BinaryWriter
 	src         colval.ByteSliceColSource
 	encoder     encoding.ByteSliceEncoder
