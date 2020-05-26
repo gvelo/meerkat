@@ -1,9 +1,9 @@
-package ingestion
+package jsoningester
 
 import (
 	"context"
 	"meerkat/internal/cluster"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/jsoningester/ingestionpb"
 )
 
 type IngesterRpc interface {

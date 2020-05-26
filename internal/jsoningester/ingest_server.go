@@ -11,29 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package indexbuffer
+package jsoningester
 
 import (
+	"context"
 	"fmt"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/ingestion"
+	"meerkat/internal/jsoningester/ingestionpb"
 )
 
-type BufferRegistry interface {
-	Add(table *ingestionpb.Table)
+func NewIngestionServer(bufReg ingestion.BufferRegistry) ingestionpb.IngesterServer {
+	return &ingestServer{
+		bufReg: bufReg,
+	}
 }
 
-func NewBufferRegistry() BufferRegistry {
-	return &bufferRegistry{}
+type ingestServer struct {
+	bufReg ingestion.BufferRegistry
 }
 
-type bufferRegistry struct {
-}
+func (i ingestServer) Ingest(ctx context.Context, request *ingestionpb.IngestionRequest) (*ingestionpb.IngestResponse, error) {
 
-func (b bufferRegistry) Add(table *ingestionpb.Table) {
+	fmt.Println("------------ ingest server")
 
-	fmt.Println("=========================")
-	fmt.Println(table.Name)
-	fmt.Println(table.Columns)
-	fmt.Println("=========================")
-
+	i.bufReg.Add(request.Tables)
+	return &ingestionpb.IngestResponse{},nil
 }

@@ -11,10 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package indexbuffer
+package ingestion
 
 import (
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/jsoningester/ingestionpb"
 	"meerkat/internal/schema"
 	iobuff "meerkat/internal/storage/io"
 )

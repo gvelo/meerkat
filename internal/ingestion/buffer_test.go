@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package indexbuffer
+package ingestion
 
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
-	"meerkat/internal/ingestion"
+	"meerkat/internal/jsoningester"
 	"meerkat/internal/util/testutil"
 	"testing"
 )
@@ -212,7 +212,7 @@ func TestTableBuffer(t *testing.T) {
 	json := []byte(`{"fieldA":"valueA"}`)
 	r := bytes.NewReader(json)
 
-	parser := ingestion.NewParser()
+	parser := jsoningester.NewParser()
 
 	table, ingestedRows, err := parser.Parse(r, "testTable", 1)
 
@@ -224,7 +224,7 @@ func TestTableBuffer(t *testing.T) {
 		t.Fatal("error parsing json")
 	}
 
-	tablePb := ingestion.CreatePBTable(table)
+	tablePb := jsoningester.CreatePBTable(table)
 
 	tableBuffer := NewTableBuffer("testTable", tablePb.Partitions[0].Id)
 

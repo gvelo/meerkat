@@ -21,9 +21,9 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
-	"meerkat/internal/indexbuffer"
 	"meerkat/internal/ingestion"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/jsoningester"
+	"meerkat/internal/jsoningester/ingestionpb"
 	"meerkat/internal/rest"
 	"meerkat/internal/storage"
 	"net"
@@ -116,8 +116,8 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
 	}
 
-	ingRcp := ingestion.NewIngestRPC(m.connRegistry)
-	bufReg := indexbuffer.NewBufferRegistry()
+	ingRcp := jsoningester.NewIngestRPC(m.connRegistry)
+	bufReg := ingestion.NewBufferRegistry()
 
 	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, bufReg)
 
@@ -128,7 +128,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 	m.apiServer.Start()
 
 	// ingestion server
-	ingServer := ingestion.NewIngestionServer(bufReg)
+	ingServer := jsoningester.NewIngestionServer(bufReg)
 	ingestionpb.RegisterIngesterServer(m.grpcServer, ingServer)
 
 	go func() {

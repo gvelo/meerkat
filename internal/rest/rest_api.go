@@ -19,8 +19,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/cluster"
-	"meerkat/internal/indexbuffer"
 	"meerkat/internal/ingestion"
+	"meerkat/internal/jsoningester"
 	"net/http"
 	"sync"
 )
@@ -32,8 +32,8 @@ type ApiServer struct {
 	mu      sync.Mutex
 	cluster cluster.Cluster
 	connReg cluster.ConnRegistry
-	ingRpc  ingestion.IngesterRpc
-	bufReg  indexbuffer.BufferRegistry
+	ingRpc  jsoningester.IngesterRpc
+	bufReg  ingestion.BufferRegistry
 }
 
 type ApiError struct {
@@ -51,8 +51,8 @@ const (
 func NewRestApi(
 	cluster cluster.Cluster,
 	connReg cluster.ConnRegistry,
-	ingRpc ingestion.IngesterRpc,
-	bufReg indexbuffer.BufferRegistry,
+	ingRpc jsoningester.IngesterRpc,
+	bufReg ingestion.BufferRegistry,
 ) (*ApiServer, error) {
 
 	// TODO(gvelo) set gin to production mode
@@ -400,7 +400,7 @@ func (s *ApiServer) ingest(c *gin.Context) {
 
 	tableName := c.Param("tableName")
 
-	ingester := ingestion.NewIngester( s.ingRpc, s.cluster, s.bufReg)
+	ingester := jsoningester.NewIngester( s.ingRpc, s.cluster, s.bufReg)
 
 	// TODO(gvelo) the ingester shoud return the parsing
 	//  errors plus the partition RCV status.

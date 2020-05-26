@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ingestion
+package jsoningester
 
 import (
 	"bufio"
@@ -24,8 +24,8 @@ import (
 	hash2 "hash"
 	"io"
 	"meerkat/internal/cluster"
-	"meerkat/internal/indexbuffer"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/ingestion"
+	"meerkat/internal/jsoningester/ingestionpb"
 	"meerkat/internal/schema"
 	iobuff "meerkat/internal/storage/io"
 	"strconv"
@@ -338,7 +338,7 @@ type Ingester interface {
 	Ingest(stream io.Reader, tableName string) []ParserError
 }
 
-func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg indexbuffer.BufferRegistry) Ingester {
+func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg ingestion.BufferRegistry) Ingester {
 	return &ingester{
 		rpc:            rpc,
 		cluster:        cluster,
@@ -350,7 +350,7 @@ type ingester struct {
 	cluster        cluster.Cluster
 	rpc            IngesterRpc
 	localNodeName  string
-	indexBufferReg indexbuffer.BufferRegistry
+	indexBufferReg ingestion.BufferRegistry
 }
 
 func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {

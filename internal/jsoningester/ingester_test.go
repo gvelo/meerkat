@@ -11,14 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ingestion
+package jsoningester
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"github.com/hashicorp/serf/serf"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/jsoningester/ingestionpb"
 	"testing"
 )
 

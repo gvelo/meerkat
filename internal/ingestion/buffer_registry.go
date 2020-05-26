@@ -14,26 +14,26 @@
 package ingestion
 
 import (
-	"context"
 	"fmt"
-	"meerkat/internal/indexbuffer"
-	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/jsoningester/ingestionpb"
 )
 
-func NewIngestionServer(bufReg indexbuffer.BufferRegistry) ingestionpb.IngesterServer {
-	return &ingestServer{
-		bufReg: bufReg,
-	}
+type BufferRegistry interface {
+	Add(table *ingestionpb.Table)
 }
 
-type ingestServer struct {
-	bufReg indexbuffer.BufferRegistry
+func NewBufferRegistry() BufferRegistry {
+	return &bufferRegistry{}
 }
 
-func (i ingestServer) Ingest(ctx context.Context, request *ingestionpb.IngestionRequest) (*ingestionpb.IngestResponse, error) {
+type bufferRegistry struct {
+}
 
-	fmt.Println("------------ ingest server")
+func (b bufferRegistry) Add(table *ingestionpb.Table) {
 
-	i.bufReg.Add(request.Tables)
-	return &ingestionpb.IngestResponse{},nil
+	fmt.Println("=========================")
+	fmt.Println(table.Name)
+	fmt.Println(table.Columns)
+	fmt.Println("=========================")
+
 }
