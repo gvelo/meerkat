@@ -15,18 +15,9 @@ package indexbuffer
 
 import (
 	"meerkat/internal/ingestion/ingestionpb"
+	"meerkat/internal/schema"
+	iobuff "meerkat/internal/storage/io"
 )
-
-type TableBuffer interface {
-	// Schema() curretnly all the ingestion is schemaless.
-	TableName() string
-	PartitionId() int
-	Columns() []*ingestionpb.Column
-	TSBuffer() TSBuffer
-	ColBuffer(colName string) interface{} // Always dense buffers
-	Add(columns []*ingestionpb.Column, partition *ingestionpb.Partition)
-	Len()
-}
 
 type TSBuffer struct {
 	buf []int64
@@ -317,4 +308,131 @@ func (b *Float64DenseBuffer) Values() []float64 {
 	return b.buf[:b.len]
 }
 
+type TableBufferX interface {
+	// Schema() curretnly all the ingestion is schemaless.
+	TableName() string
+	PartitionId() int
+	Columns() []*ingestionpb.Column
+	TSBuffer() TSBuffer
+	ColBuffer(colName string) interface{} // Always dense buffers
+	Add(columns []*ingestionpb.Column, partition *ingestionpb.Partition)
+	Len()
+}
 
+type ColumnBuffer struct {
+	col  *ingestionpb.Column
+	buff interface{}
+}
+
+type TableBuffer struct {
+	partitionID uint64
+	tableName   string
+	columns     map[string]*ColumnBuffer
+	// num of rows in the table.
+	len int
+}
+
+func NewTableBuffer(tableName string, partitionID uint64) *TableBuffer {
+	return &TableBuffer{
+		partitionID: partitionID,
+		tableName:   tableName,
+		len:         0,
+	}
+}
+
+func (b *TableBuffer) Columns() map[string]*ColumnBuffer {
+	return b.columns
+}
+
+func (b *TableBuffer) Append(partition *ingestionpb.Partition) {
+
+	if b.partitionID != partition.Id {
+		panic("error appending to table buffer: wrong partitionID")
+	}
+
+	colBuffers := make([]interface{}, len(partition.Columns))
+
+	for _, column := range partition.Columns {
+
+		if c, found := b.columns[column.Name]; found {
+
+			adaptType(c, column)
+
+			colBuffers[column.Idx] = c.buff
+
+			switch buff := c.buff.(type) {
+			case *TSBuffer:
+				buff.Reserve(int(column.Len))
+			case *ByteSliceSparseBuffer:
+				buff.Reserve(int(column.Len), int(column.ColSize))
+			default:
+				panic("invalid buffer type")
+			}
+			continue
+		}
+
+		var buff interface{}
+
+		if column.Name == "_TS" {
+			buff = NewTSBuffer(int(column.Len))
+		} else {
+			buff = NewByteSliceSparseBuffer(int(column.Len), int(column.ColSize))
+		}
+
+		colBuffers[column.Idx] = buff
+
+		newCol := &ColumnBuffer{
+			col:  column,
+			buff: buff,
+		}
+
+		b.columns[column.Name] = newCol
+
+	}
+
+	// leemos la data
+
+	if len(partition.Data) == 0 {
+		panic("error: invalid data len")
+	}
+
+	dataBuff := iobuff.NewBufferWithData(partition.Data)
+	var rowNum uint32
+
+	// read the first TS
+
+	colIdx := dataBuff.ReadUVarIntAsInt()
+
+	if colIdx != 0 {
+		panic("invalid column index")
+	}
+
+	ts := dataBuff.ReadFixedUInt64()
+	tsBuff := colBuffers[0].(*TSBuffer)
+	tsBuff.Append(int64(ts))
+
+	for dataBuff.GetPos() < len(partition.Data) {
+
+		colIdx := dataBuff.ReadUVarIntAsInt()
+
+		// TS
+		if colIdx == 0 {
+			rowNum++
+			ts := dataBuff.ReadFixedUInt64()
+			tsBuff := colBuffers[0].(*TSBuffer)
+			tsBuff.Append(int64(ts))
+			continue
+		}
+
+		colBuff := colBuffers[colIdx].(*ByteSliceSparseBuffer)
+		colBuff.Append(rowNum, dataBuff.ReadBytes())
+
+	}
+
+}
+
+func adaptType(current *ColumnBuffer, new *ingestionpb.Column) {
+	if current.col.Type != new.Type {
+		current.col.Type = schema.ColumnType_STRING
+	}
+}

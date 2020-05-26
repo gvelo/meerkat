@@ -25,6 +25,13 @@ func NewBuffer(cap int) *Buffer {
 	}
 }
 
+func NewBufferWithData(data []byte) *Buffer {
+	return &Buffer{
+		buf: data,
+		pos: 0,
+	}
+}
+
 type Buffer struct {
 	buf []byte
 	pos int
@@ -204,6 +211,12 @@ func (b *Buffer) ReadUVarIntAsInt() int {
 	return int(r)
 }
 
+func (b *Buffer) ReadFixedUInt64() uint64 {
+	r, n := b.UInt64(b.pos)
+	b.pos += n
+	return r
+}
+
 func (b *Buffer) Byte(pos int) byte {
 	return b.buf[pos]
 }
@@ -232,6 +245,11 @@ func (b *Buffer) UVarInt(pos int) (uint, int) {
 		panic("invalid Uvarint")
 	}
 	return uint(r), n
+}
+
+func (b *Buffer) UInt64(pos int) (uint64, int) {
+	r := binary.LittleEndian.Uint64(b.buf[pos:])
+	return r, 8
 }
 
 func (b *Buffer) UVarIntAsInt(pos int) (int, int) {

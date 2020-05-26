@@ -14,8 +14,10 @@
 package indexbuffer
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"meerkat/internal/ingestion"
 	"meerkat/internal/util/testutil"
 	"testing"
 )
@@ -64,7 +66,7 @@ func testByteSliceBuffer(t *testing.T, isDense bool) {
 	bsDense := bsb.ToDenseBuffer(rows)
 	validateBSBuff(bsDense, bytes, t)
 
-	bsb.Reserve(bsb.len*4,bsb.size*4)
+	bsb.Reserve(bsb.len*4, bsb.size*4)
 	bsDense = bsb.ToDenseBuffer(rows)
 	validateBSBuff(bsDense, bytes, t)
 
@@ -88,8 +90,6 @@ func validateBSBuff(bsDense *ByteSliceDenseBuffer, bytes []interface{}, t *testi
 
 }
 
-
-
 func testFloat64Buffer(t *testing.T, isDense bool) {
 
 	values, _, validCount := generateRandomSlice(float64(0), rows, isDense)
@@ -112,7 +112,7 @@ func testFloat64Buffer(t *testing.T, isDense bool) {
 	denseBuffer := buffer.ToDenseBuffer(rows)
 	validateFloatBuff(denseBuffer, values, t)
 
-	buffer.Reserve(buffer.len*4)
+	buffer.Reserve(buffer.len * 4)
 	denseBuffer = buffer.ToDenseBuffer(rows)
 	validateFloatBuff(denseBuffer, values, t)
 
@@ -149,7 +149,7 @@ func TestTSBuffer(t *testing.T) {
 
 	validateTSBuff(buffer, values, t)
 
-	buffer.Reserve(buffer.len*4)
+	buffer.Reserve(buffer.len * 4)
 	validateTSBuff(buffer, values, t)
 
 }
@@ -204,5 +204,30 @@ func generateRandomSlice(t interface{}, l int, dense bool) ([]interface{}, int, 
 	}
 
 	return values, size, valid
+
+}
+
+func TestTableBuffer(t *testing.T) {
+
+	json := []byte(`{"fieldA":"valueA"}`)
+	r := bytes.NewReader(json)
+
+	parser := ingestion.NewParser()
+
+	table, ingestedRows, err := parser.Parse(r, "testTable", 1)
+
+	if len(err) != 0 {
+		t.Fatal(err)
+	}
+
+	if ingestedRows == 0 {
+		t.Fatal("error parsing json")
+	}
+
+	tablePb := ingestion.CreatePBTable(table)
+
+	tableBuffer := NewTableBuffer("testTable", tablePb.Partitions[0].Id)
+
+	tableBuffer.Append(tablePb.Partitions[0])
 
 }

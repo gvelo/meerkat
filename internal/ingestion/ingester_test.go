@@ -80,6 +80,7 @@ type ingestRpcMock struct {
 }
 
 func (i ingestRpcMock) SendRequest(ctx context.Context, member string, request *ingestionpb.IngestionRequest) error {
+	fmt.Println(request.Table.Partitions)
 	return nil
 }
 
@@ -99,12 +100,5 @@ func TestTest(t *testing.T) {
 
 	err := ing.Ingest(r, "testTable")
 
-	fmt.Println(err)
-	//fmt.Println(table.partitions[1].colSize[2])
-	//fmt.Println(string(table.partitions[1].writer.Buf.Data()))
-	//
-	//for _, d := range table.partitions[1].writer.Buf.Data() {
-	//	fmt.Println(d,string(d))
-	//}
 
 }

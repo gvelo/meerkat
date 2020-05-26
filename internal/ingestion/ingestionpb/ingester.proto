@@ -20,28 +20,28 @@ import "google/protobuf/timestamp.proto";
 import "schema.proto";
 
 message IngestionRequest {
-  Table tables = 1;
+  Table table = 1;
 }
 
 message IngestResponse{}
 
 message Table {
   string   name                 = 1 ;
-  repeated Column  columns      = 2 ;
-  repeated Partition partitions = 3 ;
+  repeated Partition partitions = 2 ;
 }
 
 message Partition {
-  uint64          id      = 1 ;
-  repeated uint64 colSize = 2 ;
-  repeated uint64 colLen  = 3 ;
-  bytes           data    = 4 ;
+  uint64          id              = 1 ;
+  repeated        Column  columns = 2 ;
+  bytes           data            = 3 ;
 }
 
 message Column {
-  uint64            idx    = 1 ;
-  string            name   = 2 ;
-  schema.ColumnType type   = 3 ;
+  uint64            idx     = 1 ;
+  string            name    = 2 ;
+  uint64            colSize = 3 ;
+  uint64            len     = 4 ;
+  schema.ColumnType type    = 5 ;
 }
 
 service Ingester {

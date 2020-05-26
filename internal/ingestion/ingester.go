@@ -15,6 +15,7 @@ package ingestion
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -34,7 +35,6 @@ import (
 //go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/schema/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingestionpb/ingester.proto
 
 const (
-	EOR       = 0x00
 	TSColName = "_ts"
 )
 
@@ -44,25 +44,19 @@ type ParserError struct {
 	Error  string
 }
 
-type Column struct {
+type column struct {
 	idx         int
 	colType     schema.ColumnType
 	keepParsing bool
+	size        int
+	len         int
 }
 
 func NewTable(name string) *Table {
 
 	t := &Table{
-		columns:    make(map[string]*Column),
 		name:       name,
 		partitions: make(map[int]*Partition),
-		colIdx:     1, // 0 reserved for EOR
-	}
-
-	t.columns[TSColName] = &Column{
-		idx:         1,
-		colType:     schema.ColumnType_TIMESTAMP,
-		keepParsing: false,
 	}
 
 	return t
@@ -70,58 +64,56 @@ func NewTable(name string) *Table {
 }
 
 type Table struct {
-	columns    map[string]*Column
 	name       string
 	partitions map[int]*Partition
-	colIdx     int
-	numOfRows  int
 }
 
-func (t *Table) column(name string) *Column {
+func (t *Table) partition(partNum int) *Partition {
 
-	if c, ok := t.columns[name]; ok {
-		return c
-	}
-
-	t.colIdx++
-
-	c := &Column{
-		idx: t.colIdx,
-	}
-
-	t.columns[name] = c
-
-	for _, p := range t.partitions {
-		p.colSize = append(p.colSize, 0)
-		p.colLen = append(p.colLen, 0)
-	}
-
-	return c
-
-}
-
-func (t *Table) partition(p int) *Partition {
-
-	if partition, ok := t.partitions[p]; ok {
+	if partition, ok := t.partitions[partNum]; ok {
 		return partition
 	}
 
 	partition := &Partition{
-		colSize: make([]uint64, t.colIdx+1),
-		colLen:  make([]uint64, t.colIdx+1),
+		columns: make(map[string]*column),
 		writer:  NewRowSetWriter(4 * 1024),
 	}
 
-	t.partitions[p] = partition
+	partition.columns[TSColName] = &column{
+		idx:         0,
+		colType:     schema.ColumnType_TIMESTAMP,
+		keepParsing: false,
+	}
+
+	t.partitions[partNum] = partition
 
 	return partition
 
 }
 
 type Partition struct {
-	colSize []uint64
-	colLen  []uint64
-	writer  *RowSetWriter
+	colIdx    int
+	columns   map[string]*column
+	numOfRows int
+	writer    *RowSetWriter
+}
+
+func (p *Partition) column(name string) *column {
+
+	if col, ok := p.columns[name]; ok {
+		return col
+	}
+
+	p.colIdx++
+
+	col := &column{
+		idx: p.colIdx,
+	}
+
+	p.columns[name] = col
+
+	return col
+
 }
 
 type RowSetWriter struct {
@@ -179,11 +171,6 @@ func (rs *RowSetWriter) WriteFloat(colId int, f float64) {
 
 }
 
-func (rs *RowSetWriter) WriteEOR() {
-	rs.Reserve(1)
-	rs.Buf.WriteByte(EOR)
-}
-
 func (rs *RowSetWriter) Reserve(size int) {
 	if size > rs.Buf.Available() {
 		rs.Buf.Grow((rs.Buf.Cap() + size) * 2)
@@ -206,22 +193,24 @@ type Parser struct {
 
 func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int) (*Table, int, []ParserError) {
 
-	fmt.Println("num of partition ",numOfPartitions)
+	fmt.Println("num of partition ", numOfPartitions)
 	var ingestionErrors []ParserError
 
 	table := NewTable(tableName)
 
 	br := bufio.NewReader(reader)
-	decoder := json.NewDecoder(br)
-	decoder.UseNumber()
+	scanner := bufio.NewScanner(br)
 
 	line := 0
 	ingestedRows := 0
 
-	for decoder.More() {
+	for scanner.Scan() {
 
 		line++
 		fmt.Println(line)
+
+		decoder := json.NewDecoder(bytes.NewReader(scanner.Bytes()))
+		decoder.UseNumber()
 
 		m := make(map[string]interface{})
 
@@ -232,11 +221,7 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 				Line:  line,
 				Error: err.Error(),
 			})
-			// TODO(gvelo): seems like json.Decoder cannot recover
-			//  from errors on the stream. We need a parser that
-			//  can be able to recover errors skipping new lines.
-			//continue
-			return table, ingestedRows, ingestionErrors
+			continue
 		}
 
 		var ts int64
@@ -247,12 +232,11 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 
 			if err != nil {
 				ingestionErrors = append(ingestionErrors, ParserError{
-					Line:  line,
-					Error: err.Error(),
+					Line:   line,
+					Error:  err.Error(),
+					Column: TSColName,
 				})
-				// TODO(gvelo): see prev TODO.
-				//continue
-				return table, ingestedRows, ingestionErrors
+				continue
 			}
 
 		} else {
@@ -260,19 +244,17 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 		}
 
 		partition := table.partition(ing.getPartition(ts, numOfPartitions))
-		tsCol := table.columns[TSColName]
-		partition.writer.WriteFixedUInt64(tsCol.idx, uint64(ts))
-		fmt.Println(len(partition.colLen))
-		fmt.Println(tsCol.idx)
-		partition.colLen[tsCol.idx]++
+
+		tsCol := partition.columns[TSColName]
+		partition.writer.WriteFixedUInt64(0, uint64(ts))
+		tsCol.len++
+		partition.numOfRows++
+
+		delete(m, TSColName)
 
 		for colName, colValue := range m {
 
-			if colName == TSColName {
-				continue
-			}
-
-			col := table.column(colName)
+			col := partition.column(colName)
 
 			switch v := colValue.(type) {
 			case string:
@@ -285,8 +267,8 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 					}
 				}
 				partition.writer.WriteString(col.idx, v)
-				partition.colSize[col.idx] += uint64(len(v))
-				partition.colLen[col.idx]++
+				col.size += len(v)
+				col.len++
 			case json.Number:
 				s := string(v)
 				if col.keepParsing {
@@ -300,15 +282,15 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 
 				}
 				partition.writer.WriteString(col.idx, s)
-				partition.colSize[col.idx] += uint64(len(s))
-				partition.colLen[col.idx]++
+				col.size += len(s)
+				col.len++
 			default:
 				panic("unknown type")
 			}
 
 		}
+
 		ingestedRows++
-		partition.writer.WriteEOR()
 
 	}
 
@@ -373,10 +355,10 @@ type ingester struct {
 
 func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
-	// TODO(gvelo): all this ingest implementation if for testing purposes.
+	// TODO(gvelo): all this ingest implementation is for testing purposes.
 
 	m := ing.cluster.LiveMembers()
-	numOfPartitions := len(m)+1 // num of members plus local node.
+	numOfPartitions := len(m) + 1 // num of members plus local node.
 
 	parser := NewParser()
 
@@ -386,48 +368,19 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 		return pErr
 	}
 
-	var pbColumns []*ingestionpb.Column
+	pbTable := CreatePBTable(table)
 
-	for name, column := range table.columns {
-
-		c := &ingestionpb.Column{
-			Name: name,
-			Idx:  uint64(column.idx),
-			Type: column.colType,
-		}
-
-		pbColumns = append(pbColumns, c)
-
-	}
-
-	var pbPartitions []*ingestionpb.Partition
-
-	for id, partition := range table.partitions {
-
-		p := &ingestionpb.Partition{
-			Id:      uint64(id),
-			ColSize: partition.colSize,
-			ColLen:  partition.colLen,
-			Data:    partition.writer.Buf.Data(),
-		}
-
-		pbPartitions = append(pbPartitions, p)
-
-	}
-
-	// first partition go to the local node
+	// first partition goes to the local node
 	ing.indexBufferReg.Add(&ingestionpb.Table{
 		Name:       tableName,
-		Columns:    pbColumns,
-		Partitions: pbPartitions[:1],
+		Partitions: pbTable.Partitions[:1],
 	})
 
 	for i, member := range m {
 		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestionpb.IngestionRequest{
-			Tables: &ingestionpb.Table{
+			Table: &ingestionpb.Table{
 				Name:       tableName,
-				Columns:    pbColumns,
-				Partitions: pbPartitions[i+1 : i+2],
+				Partitions: pbTable.Partitions[i+1 : i+2],
 			}})
 
 		if err != nil {
@@ -437,5 +390,38 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 	}
 
 	return pErr
+
+}
+
+func CreatePBTable(table *Table) *ingestionpb.Table {
+
+	var pbPartitions []*ingestionpb.Partition
+
+	for id, partition := range table.partitions {
+
+		p := &ingestionpb.Partition{
+			Id:   uint64(id),
+			Data: partition.writer.Buf.Data(),
+		}
+
+		for colName, col := range partition.columns {
+			pbCol := &ingestionpb.Column{
+				Idx:     uint64(col.idx),
+				Name:    colName,
+				ColSize: uint64(col.size),
+				Len:     uint64(col.len),
+				Type:    col.colType,
+			}
+			p.Columns = append(p.Columns, pbCol)
+		}
+
+		pbPartitions = append(pbPartitions, p)
+
+	}
+
+	return &ingestionpb.Table{
+		Name:       table.name,
+		Partitions: pbPartitions,
+	}
 
 }
