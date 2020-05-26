@@ -15,11 +15,10 @@ package ingestion
 
 import (
 	"fmt"
-	"meerkat/internal/jsoningester/ingestionpb"
 )
 
 type BufferRegistry interface {
-	Add(table *ingestionpb.Table)
+	Add(table *Table)
 }
 
 func NewBufferRegistry() BufferRegistry {
@@ -29,11 +28,11 @@ func NewBufferRegistry() BufferRegistry {
 type bufferRegistry struct {
 }
 
-func (b bufferRegistry) Add(table *ingestionpb.Table) {
+func (b bufferRegistry) Add(table *Table) {
 
 	fmt.Println("=========================")
 	fmt.Println(table.Name)
-	fmt.Println(table.Columns)
+	fmt.Println(table.Partitions)
 	fmt.Println("=========================")
 
 }

@@ -25,14 +25,10 @@ import (
 	"io"
 	"meerkat/internal/cluster"
 	"meerkat/internal/ingestion"
-	"meerkat/internal/jsoningester/ingestionpb"
 	"meerkat/internal/schema"
-	iobuff "meerkat/internal/storage/io"
 	"strconv"
 	"time"
 )
-
-//go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/schema/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingestionpb/ingester.proto
 
 const (
 	TSColName = "_ts"
@@ -76,7 +72,7 @@ func (t *Table) partition(partNum int) *Partition {
 
 	partition := &Partition{
 		columns: make(map[string]*column),
-		writer:  NewRowSetWriter(4 * 1024),
+		writer:  ingestion.NewRowSetWriter(4 * 1024),
 	}
 
 	partition.columns[TSColName] = &column{
@@ -95,7 +91,7 @@ type Partition struct {
 	colIdx    int
 	columns   map[string]*column
 	numOfRows int
-	writer    *RowSetWriter
+	writer    *ingestion.RowSetWriter
 }
 
 func (p *Partition) column(name string) *column {
@@ -116,71 +112,6 @@ func (p *Partition) column(name string) *column {
 
 }
 
-type RowSetWriter struct {
-	Buf *iobuff.Buffer
-}
-
-func NewRowSetWriter(cap int) *RowSetWriter {
-	return &RowSetWriter{
-		Buf: iobuff.NewBuffer(cap),
-	}
-}
-
-func (rs *RowSetWriter) WriteString(colId int, str string) {
-
-	rs.Reserve(len(str) + binary.MaxVarintLen64*2)
-
-	rs.Buf.WriteIntAsUVarInt(colId)
-	rs.Buf.WriteString(str)
-
-}
-
-func (rs *RowSetWriter) WriteInt(colId int, i int) {
-
-	rs.Reserve(binary.MaxVarintLen64 * 2)
-
-	rs.Buf.WriteIntAsUVarInt(colId)
-	rs.Buf.WriteVarInt(i)
-
-}
-
-func (rs *RowSetWriter) WriteIntAsUVarInt(colId int, i int) {
-
-	rs.Reserve(binary.MaxVarintLen64 * 2)
-
-	rs.Buf.WriteIntAsUVarInt(colId)
-	rs.Buf.WriteIntAsUVarInt(i)
-
-}
-
-func (rs *RowSetWriter) WriteFixedUInt64(colId int, i uint64) {
-
-	rs.Reserve(binary.MaxVarintLen64 * 2)
-
-	rs.Buf.WriteIntAsUVarInt(colId)
-	rs.Buf.WriteFixedUInt64(i)
-
-}
-
-func (rs *RowSetWriter) WriteFloat(colId int, f float64) {
-
-	rs.Reserve(binary.MaxVarintLen64 * 2)
-
-	rs.Buf.WriteIntAsUVarInt(colId)
-	rs.Buf.WriteFloat64(f)
-
-}
-
-func (rs *RowSetWriter) Reserve(size int) {
-	if size > rs.Buf.Available() {
-		rs.Buf.Grow((rs.Buf.Cap() + size) * 2)
-	}
-}
-
-func (rs *RowSetWriter) grow(newSize int) {
-	rs.Buf.Grow(newSize)
-}
-
 func NewParser() *Parser {
 	return &Parser{
 		hash: murmur3.New64(),
@@ -193,7 +124,6 @@ type Parser struct {
 
 func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int) (*Table, int, []ParserError) {
 
-	fmt.Println("num of partition ", numOfPartitions)
 	var ingestionErrors []ParserError
 
 	table := NewTable(tableName)
@@ -207,7 +137,6 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 	for scanner.Scan() {
 
 		line++
-		fmt.Println(line)
 
 		decoder := json.NewDecoder(bytes.NewReader(scanner.Bytes()))
 		decoder.UseNumber()
@@ -371,14 +300,15 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 	pbTable := CreatePBTable(table)
 
 	// first partition goes to the local node
-	ing.indexBufferReg.Add(&ingestionpb.Table{
+	ing.indexBufferReg.Add(&ingestion.Table{
 		Name:       tableName,
 		Partitions: pbTable.Partitions[:1],
 	})
 
 	for i, member := range m {
-		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestionpb.IngestionRequest{
-			Table: &ingestionpb.Table{
+
+		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestion.IngestionRequest{
+			Table: &ingestion.Table{
 				Name:       tableName,
 				Partitions: pbTable.Partitions[i+1 : i+2],
 			}})
@@ -393,19 +323,19 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
 }
 
-func CreatePBTable(table *Table) *ingestionpb.Table {
+func CreatePBTable(table *Table) *ingestion.Table {
 
-	var pbPartitions []*ingestionpb.Partition
+	var pbPartitions []*ingestion.Partition
 
 	for id, partition := range table.partitions {
 
-		p := &ingestionpb.Partition{
+		p := &ingestion.Partition{
 			Id:   uint64(id),
 			Data: partition.writer.Buf.Data(),
 		}
 
 		for colName, col := range partition.columns {
-			pbCol := &ingestionpb.Column{
+			pbCol := &ingestion.Column{
 				Idx:     uint64(col.idx),
 				Name:    colName,
 				ColSize: uint64(col.size),
@@ -419,7 +349,7 @@ func CreatePBTable(table *Table) *ingestionpb.Table {
 
 	}
 
-	return &ingestionpb.Table{
+	return &ingestion.Table{
 		Name:       table.name,
 		Partitions: pbPartitions,
 	}

@@ -14,7 +14,6 @@
 package ingestion
 
 import (
-	"meerkat/internal/jsoningester/ingestionpb"
 	"meerkat/internal/schema"
 	iobuff "meerkat/internal/storage/io"
 )
@@ -308,19 +307,8 @@ func (b *Float64DenseBuffer) Values() []float64 {
 	return b.buf[:b.len]
 }
 
-type TableBufferX interface {
-	// Schema() curretnly all the ingestion is schemaless.
-	TableName() string
-	PartitionId() int
-	Columns() []*ingestionpb.Column
-	TSBuffer() TSBuffer
-	ColBuffer(colName string) interface{} // Always dense buffers
-	Add(columns []*ingestionpb.Column, partition *ingestionpb.Partition)
-	Len()
-}
-
 type ColumnBuffer struct {
-	col  *ingestionpb.Column
+	col  *Column
 	buff interface{}
 }
 
@@ -336,6 +324,7 @@ func NewTableBuffer(tableName string, partitionID uint64) *TableBuffer {
 	return &TableBuffer{
 		partitionID: partitionID,
 		tableName:   tableName,
+		columns:     make(map[string]*ColumnBuffer),
 		len:         0,
 	}
 }
@@ -344,7 +333,7 @@ func (b *TableBuffer) Columns() map[string]*ColumnBuffer {
 	return b.columns
 }
 
-func (b *TableBuffer) Append(partition *ingestionpb.Partition) {
+func (b *TableBuffer) Append(partition *Partition) {
 
 	if b.partitionID != partition.Id {
 		panic("error appending to table buffer: wrong partitionID")
@@ -373,7 +362,7 @@ func (b *TableBuffer) Append(partition *ingestionpb.Partition) {
 
 		var buff interface{}
 
-		if column.Name == "_TS" {
+		if column.Name == "_ts" {
 			buff = NewTSBuffer(int(column.Len))
 		} else {
 			buff = NewByteSliceSparseBuffer(int(column.Len), int(column.ColSize))
@@ -431,7 +420,7 @@ func (b *TableBuffer) Append(partition *ingestionpb.Partition) {
 
 }
 
-func adaptType(current *ColumnBuffer, new *ingestionpb.Column) {
+func adaptType(current *ColumnBuffer, new *Column) {
 	if current.col.Type != new.Type {
 		current.col.Type = schema.ColumnType_STRING
 	}

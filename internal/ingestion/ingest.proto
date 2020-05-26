@@ -13,7 +13,7 @@
 
 syntax = "proto3";
 package meerkat.ingestion;
-option go_package = "ingestionpb";
+option go_package = "ingestion";
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";

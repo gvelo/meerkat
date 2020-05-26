@@ -14,10 +14,9 @@
 package ingestion
 
 import (
-	"bytes"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
-	"meerkat/internal/jsoningester"
+	"meerkat/internal/schema"
 	"meerkat/internal/util/testutil"
 	"testing"
 )
@@ -209,25 +208,74 @@ func generateRandomSlice(t interface{}, l int, dense bool) ([]interface{}, int, 
 
 func TestTableBuffer(t *testing.T) {
 
-	json := []byte(`{"fieldA":"valueA"}`)
-	r := bytes.NewReader(json)
+	tsData, _, _ := generateRandomSlice(int64(0), 1024, true)
+	testColData, testSize, _ := generateRandomSlice([]byte{}, 1024, false)
 
-	parser := jsoningester.NewParser()
+	rsw := NewRowSetWriter(0)
 
-	table, ingestedRows, err := parser.Parse(r, "testTable", 1)
-
-	if len(err) != 0 {
-		t.Fatal(err)
+	tsCol := &Column{
+		Idx:     0,
+		Name:    "_ts",
+		ColSize: 0,
+		Len:     0,
+		Type:    schema.ColumnType_TIMESTAMP,
 	}
 
-	if ingestedRows == 0 {
-		t.Fatal("error parsing json")
+	testCol := &Column{
+		Idx:     1,
+		Name:    "testCol",
+		ColSize: 0,
+		Len:     0,
+		Type:    schema.ColumnType_STRING,
 	}
 
-	tablePb := jsoningester.CreatePBTable(table)
+	for i := 0; i < 1024; i++ {
 
-	tableBuffer := NewTableBuffer("testTable", tablePb.Partitions[0].Id)
+		rsw.WriteFixedInt64(0, tsData[i].(int64))
+		tsCol.Len++
 
-	tableBuffer.Append(tablePb.Partitions[0])
+		if testColData[i] != nil {
+			str := string(testColData[i].([]byte))
+			rsw.WriteString(1, str)
+			testCol.Len++
+			testCol.ColSize += uint64(len(str))
+		}
+
+	}
+
+	partition := &Partition{
+		Id:      0,
+		Columns: []*Column{tsCol, testCol},
+		Data:    rsw.Buf.Data(),
+	}
+
+	tb := NewTableBuffer("testtable", 0)
+
+	tb.Append(partition)
+
+	tsBuf := tb.Columns()["_ts"].buff.(*TSBuffer)
+
+	for i, v := range tsBuf.Values() {
+		assert.Equal(t, tsData[i], v)
+	}
+
+	assert.Equal(t, len(tsBuf.Values()), len(tsData))
+
+	testColBuf := tb.Columns()["testCol"].buff.(*ByteSliceSparseBuffer).ToDenseBuffer(1024)
+
+	assert.Equal(t, testSize, testColBuf.size)
+	assert.Equal(t, testColBuf.len, len(testColData))
+
+	for i, v := range testColData {
+
+		if v == nil {
+			assert.False(t, testColBuf.Valids()[i])
+			continue
+		}
+
+		assert.True(t, testColBuf.Valids()[i])
+		assert.Equal(t, testColBuf.Value(uint32(i)), v)
+
+	}
 
 }

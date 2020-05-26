@@ -11,29 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jsoningester
+package ingestion
+
+//go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/schema/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingest.proto
 
 import (
 	"context"
 	"fmt"
-	"meerkat/internal/ingestion"
-	"meerkat/internal/jsoningester/ingestionpb"
 )
 
-func NewIngestionServer(bufReg ingestion.BufferRegistry) ingestionpb.IngesterServer {
+func NewServer(bufReg BufferRegistry) IngesterServer {
 	return &ingestServer{
 		bufReg: bufReg,
 	}
 }
 
 type ingestServer struct {
-	bufReg ingestion.BufferRegistry
+	bufReg BufferRegistry
 }
 
-func (i ingestServer) Ingest(ctx context.Context, request *ingestionpb.IngestionRequest) (*ingestionpb.IngestResponse, error) {
+func (i ingestServer) Ingest(ctx context.Context, request *IngestionRequest) (*IngestResponse, error) {
 
 	fmt.Println("------------ ingest server")
 
-	i.bufReg.Add(request.Tables)
-	return &ingestionpb.IngestResponse{},nil
+	i.bufReg.Add(request.Table)
+	return &IngestResponse{}, nil
 }

@@ -128,7 +128,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 	m.apiServer.Start()
 
 	// ingestion server
-	ingServer := jsoningester.NewIngestionServer(bufReg)
+	ingServer := ingestion.NewServer(bufReg)
 	ingestionpb.RegisterIngesterServer(m.grpcServer, ingServer)
 
 	go func() {
