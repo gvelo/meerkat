@@ -286,6 +286,8 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
 	// TODO(gvelo): all this ingest implementation is for testing purposes.
 
+	// TODO(gvelo) add a partition router.
+
 	m := ing.cluster.LiveMembers()
 	numOfPartitions := len(m) + 1 // num of members plus local node.
 

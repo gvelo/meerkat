@@ -86,24 +86,24 @@ func TestIngestion(t *testing.T) {
           {"_ts":"2020-05-11T18:46:06.672Z","columnA":24}
           {"_ts":"2020-05-11T18:46:07.443Z","columnA":25}`
 
-	bufReg := &buffRegMock{}
-	clMock := &clusterMock{}
-	ingRpcMock := &ingestRpcMock{}
+	buffRegMock := &buffRegMock{}
+	clusterMock := &clusterMock{}
+	ingestRpcMock := &ingestRpcMock{}
 
-	clMock.On("LiveMembers").Return([]serf.Member{{Name: "testmember1"}, {Name: "testmember2"}, {Name: "testmember3"}})
-	ingRpcMock.On("SendRequest", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	bufReg.On("Add", mock.Anything)
+	clusterMock.On("LiveMembers").Return([]serf.Member{{Name: "testmember1"}, {Name: "testmember2"}, {Name: "testmember3"}})
+	ingestRpcMock.On("SendRequest", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	buffRegMock.On("Add", mock.Anything)
 
 	r := bytes.NewReader([]byte(s))
 
-	ing := NewIngester(ingRpcMock, clMock, bufReg)
-	err := ing.Ingest(r, "testTable")
+	ingester := NewIngester(ingestRpcMock, clusterMock, buffRegMock)
+	err := ingester.Ingest(r, "testTable")
 
 	assert.Equal(t, 0, len(err))
 
-	clMock.AssertExpectations(t)
-	ingRpcMock.AssertExpectations(t)
-	bufReg.AssertExpectations(t)
+	clusterMock.AssertExpectations(t)
+	ingestRpcMock.AssertExpectations(t)
+	buffRegMock.AssertExpectations(t)
 
 }
 
@@ -114,23 +114,23 @@ func TestIngestionError(t *testing.T) {
           {"_ts":"2020-05-11T18:46:06.672Z","columnA":24}
           {"_ts":"2020-05-11T18:46:07.443Z","columnA":25}`
 
-	bufReg := &buffRegMock{}
-	clMock := &clusterMock{}
-	ingRpcMock := &ingestRpcMock{}
+	buffRegMock := &buffRegMock{}
+	clusterMock := &clusterMock{}
+	ingestRpcMock := &ingestRpcMock{}
 
-	clMock.On("LiveMembers").Return([]serf.Member{{Name: "testmember1"}, {Name: "testmember2"}, {Name: "testmember3"}})
-	ingRpcMock.On("SendRequest", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	bufReg.On("Add", mock.Anything)
+	clusterMock.On("LiveMembers").Return([]serf.Member{{Name: "testmember1"}, {Name: "testmember2"}, {Name: "testmember3"}})
+	ingestRpcMock.On("SendRequest", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	buffRegMock.On("Add", mock.Anything)
 
 	r := bytes.NewReader([]byte(s))
 
-	ing := NewIngester(ingRpcMock, clMock, bufReg)
-	err := ing.Ingest(r, "testTable")
+	ingester := NewIngester(ingestRpcMock, clusterMock, buffRegMock)
+	err := ingester.Ingest(r, "testTable")
 
 	assert.Equal(t, 1, len(err))
 
-	clMock.AssertExpectations(t)
-	ingRpcMock.AssertExpectations(t)
-	bufReg.AssertExpectations(t)
+	clusterMock.AssertExpectations(t)
+	ingestRpcMock.AssertExpectations(t)
+	buffRegMock.AssertExpectations(t)
 
 }
