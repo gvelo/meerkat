@@ -83,7 +83,7 @@ func NewRestApi(
 	//server.router.POST("/index/:indexID/alloc", server.updateAlloc)
 	//server.router.GET("/index/:indexID/alloc", server.getAlloc)
 
-	server.router.POST("//:tableId/ingest", server.ingest)
+	server.router.POST("//:tableName/ingest", server.ingest)
 
 	return server, nil
 
@@ -400,7 +400,7 @@ func (s *ApiServer) ingest(c *gin.Context) {
 
 	tableName := c.Param("tableName")
 
-	ingester := jsoningester.NewIngester( s.ingRpc, s.cluster, s.bufReg)
+	ingester := jsoningester.NewIngester(s.ingRpc, s.cluster, s.bufReg)
 
 	// TODO(gvelo) the ingester shoud return the parsing
 	//  errors plus the partition RCV status.

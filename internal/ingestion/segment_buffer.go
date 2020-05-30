@@ -17,8 +17,8 @@ type SegmentBuffer struct {
 	tableName     string
 	partitionID   uint64
 	log           zerolog.Logger
-	// start stop mutex state
-	// segment writer
+	running       bool
+	mu            sync.Mutex
 }
 
 func NewSegmentBuffer(maxSize int,
@@ -45,25 +45,42 @@ func NewSegmentBuffer(maxSize int,
 }
 
 func (b *SegmentBuffer) Start() {
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.running {
+		return
+	}
+
+	b.running = true
 	b.log.Debug().Msg("start")
 	b.timer = time.NewTimer(b.flushInterval)
 	go b.run()
+
 }
 
 func (b *SegmentBuffer) Stop() {
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !b.running {
+		return
+	}
+
 	b.log.Debug().Msg("stop")
 	close(b.inCh)
 }
 
-func (b *SegmentBuffer) Add(partition *Partition) {
+func (b *SegmentBuffer) Append(partition *Partition) {
 	b.inCh <- partition
 }
 
 func (b *SegmentBuffer) run() {
 
 	defer func() {
-		// TODO(gvelo): handle panic
-		b.timer.Stop()
+		b.stopTimer()
 		b.wg.Done()
 	}()
 
@@ -71,9 +88,9 @@ func (b *SegmentBuffer) run() {
 
 		select {
 
-		case partition, chClosed := <-b.inCh:
+		case partition, ok := <-b.inCh:
 
-			if chClosed {
+			if !ok {
 				b.flush()
 				return
 			}
@@ -91,20 +108,19 @@ func (b *SegmentBuffer) run() {
 	}
 }
 
-func (b SegmentBuffer) add(partition *Partition) {
-
-	b.log.Debug().Int("size", len(partition.Data)).Msg("add partition")
+func (b *SegmentBuffer) add(partition *Partition) {
 
 	b.buf.Append(partition)
 
-	//TODO(gvelo): check buffer size and flush if it
-	// is above the configured threshold
+	// TODO(gvelo): check buffer size and flush if it
+	//  is above the configured threshold
 
 }
 
-func (b SegmentBuffer) flush() {
+func (b *SegmentBuffer) flush() {
 
-	b.log.Debug().Msg("flush")
+	b.log.Debug().Int("rows", b.buf.len).Msg("flush")
+
 	// flush here
 
 	// segmentWriter.writer( b.buf )
@@ -112,10 +128,17 @@ func (b SegmentBuffer) flush() {
 	b.buf = NewTableBuffer(b.tableName, b.partitionID)
 
 	// reset the timer.
-	if ! b.timer.Stop() {
-		<-b.timer.C
-	}
-
+	b.stopTimer()
 	b.timer.Reset(b.flushInterval)
 
+}
+
+func (b *SegmentBuffer) stopTimer() {
+	if !b.timer.Stop() {
+		// drain the timer channel if the timer is expired.
+		select {
+		case <-b.timer.C:
+		default:
+		}
+	}
 }

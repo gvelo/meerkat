@@ -302,7 +302,7 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 	pbTable := CreatePBTable(table)
 
 	// first partition goes to the local node
-	ing.indexBufferReg.Add(&ingestion.Table{
+	ing.indexBufferReg.AddToBuffer(&ingestion.Table{
 		Name:       tableName,
 		Partitions: pbTable.Partitions[:1],
 	})

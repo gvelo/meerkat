@@ -49,7 +49,8 @@ func Post(url string, body string) {
 
 	r, err := ioutil.ReadAll(resp.Body)
 
-	println("body=", string(r))
+	fmt.Println(resp.Status, resp.StatusCode, err)
+	fmt.Println("body=", string(r))
 
 }
 

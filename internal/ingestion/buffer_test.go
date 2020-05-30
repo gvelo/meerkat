@@ -208,65 +208,84 @@ func generateRandomSlice(t interface{}, l int, dense bool) ([]interface{}, int, 
 
 func TestTableBuffer(t *testing.T) {
 
-	tsData, _, _ := generateRandomSlice(int64(0), 1024, true)
-	testColData, testSize, _ := generateRandomSlice([]byte{}, 1024, false)
+	const numBatch = 5
+	const batchLen = 1024
 
-	rsw := NewRowSetWriter(0)
-
-	tsCol := &Column{
-		Idx:     0,
-		Name:    "_ts",
-		ColSize: 0,
-		Len:     0,
-		Type:    schema.ColumnType_TIMESTAMP,
-	}
-
-	testCol := &Column{
-		Idx:     1,
-		Name:    "testCol",
-		ColSize: 0,
-		Len:     0,
-		Type:    schema.ColumnType_STRING,
-	}
-
-	for i := 0; i < 1024; i++ {
-
-		rsw.WriteFixedInt64(0, tsData[i].(int64))
-		tsCol.Len++
-
-		if testColData[i] != nil {
-			str := string(testColData[i].([]byte))
-			rsw.WriteString(1, str)
-			testCol.Len++
-			testCol.ColSize += uint64(len(str))
-		}
-
-	}
-
-	partition := &Partition{
-		Id:      0,
-		Columns: []*Column{tsCol, testCol},
-		Data:    rsw.Buf.Data(),
-	}
+	var tsColumnData []interface{}
+	var testColumnData []interface{}
+	var testColumnDataSize int
 
 	tb := NewTableBuffer("testtable", 0)
 
-	tb.Append(partition)
+	for i := 0; i < numBatch; i++ {
+
+		tsDataBatch, _, _ := generateRandomSlice(int64(0), batchLen, true)
+		testColDataBatch, testColDataBatchSize, _ := generateRandomSlice([]byte{}, batchLen, false)
+
+		tsColumnData = append(tsColumnData, tsDataBatch...)
+		testColumnData = append(testColumnData, testColDataBatch...)
+
+		testColumnDataSize += testColDataBatchSize
+
+		rsw := NewRowSetWriter(0)
+
+		tsCol := &Column{
+			Idx:     0,
+			Name:    "_ts",
+			ColSize: 0,
+			Len:     0,
+			Type:    schema.ColumnType_TIMESTAMP,
+		}
+
+		testCol := &Column{
+			Idx:     1,
+			Name:    "testCol",
+			ColSize: 0,
+			Len:     0,
+			Type:    schema.ColumnType_STRING,
+		}
+
+		for i := 0; i < batchLen; i++ {
+
+			rsw.WriteFixedInt64(0, tsDataBatch[i].(int64))
+			tsCol.Len++
+
+			if testColDataBatch[i] != nil {
+				str := string(testColDataBatch[i].([]byte))
+				rsw.WriteString(1, str)
+				testCol.Len++
+				testCol.ColSize += uint64(len(str))
+			}
+
+		}
+
+		partition := &Partition{
+			Id:      0,
+			Columns: []*Column{tsCol, testCol},
+			Data:    rsw.Buf.Data(),
+		}
+
+		tb.Append(partition)
+
+	}
 
 	tsBuf := tb.Columns()["_ts"].buff.(*TSBuffer)
 
+	assert.Equal(t, len(tsColumnData), len(tsBuf.Values()))
+	assert.Equal(t, numBatch*batchLen, len(tsColumnData))
+	assert.Equal(t, numBatch*batchLen, int(tb.len))
+	assert.Equal(t, tsBuf.len, numBatch*batchLen)
+
 	for i, v := range tsBuf.Values() {
-		assert.Equal(t, tsData[i], v)
+		assert.Equal(t, tsColumnData[i].(int64), v)
 	}
 
-	assert.Equal(t, len(tsBuf.Values()), len(tsData))
+	testColBuf := tb.Columns()["testCol"].buff.(*ByteSliceSparseBuffer).ToDenseBuffer(int(tb.len))
 
-	testColBuf := tb.Columns()["testCol"].buff.(*ByteSliceSparseBuffer).ToDenseBuffer(1024)
+	assert.Equal(t, testColumnDataSize, testColBuf.size)
+	assert.Equal(t, len(testColumnData), testColBuf.len)
 
-	assert.Equal(t, testSize, testColBuf.size)
-	assert.Equal(t, testColBuf.len, len(testColData))
-
-	for i, v := range testColData {
+	for i, v := range testColumnData {
 
 		if v == nil {
 			assert.False(t, testColBuf.Valids()[i])

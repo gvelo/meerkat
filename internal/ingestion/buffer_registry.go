@@ -14,7 +14,6 @@
 package ingestion
 
 import (
-	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"sync"
@@ -24,6 +23,8 @@ import (
 // BufferRegistry is a registry of ingestion buffers.
 type BufferRegistry interface {
 	AddToBuffer(table *Table)
+	Start()
+	Stop()
 }
 
 func NewBufferRegistry(inChSize int,
@@ -32,7 +33,7 @@ func NewBufferRegistry(inChSize int,
 	segmentFlushInterval time.Duration,
 	segmentChSize int) BufferRegistry {
 	return &bufferRegistry{
-		buffers:              make(map[bufferKey]bufferEntry),
+		buffers:              make(map[bufferKey]*bufferEntry),
 		inCh:                 make(chan *Table, inChSize),
 		evictIdleTime:        evictIdleTime,
 		segmentMaxSize:       segmentMaxSize,
@@ -53,9 +54,9 @@ type bufferEntry struct {
 }
 
 type bufferRegistry struct {
-	buffers              map[bufferKey]bufferEntry
+	buffers              map[bufferKey]*bufferEntry
 	inCh                 chan *Table
-	wg                   *sync.WaitGroup
+	wg                   sync.WaitGroup
 	mu                   sync.Mutex
 	running              bool
 	log                  zerolog.Logger
@@ -108,9 +109,9 @@ func (b *bufferRegistry) run() {
 
 		select {
 
-		case table, done := <-b.inCh:
+		case table, ok := <-b.inCh:
 
-			if done {
+			if !ok {
 				b.closeBuffers()
 				return
 			}
@@ -129,11 +130,6 @@ func (b *bufferRegistry) add(table *Table) {
 
 	for _, partition := range table.Partitions {
 
-		fmt.Println("=========================")
-		fmt.Println(table.Name)
-		fmt.Println(table.Partitions)
-		fmt.Println("=========================")
-
 		key := bufferKey{
 			tableName:   table.Name,
 			partitionID: partition.Id,
@@ -141,7 +137,7 @@ func (b *bufferRegistry) add(table *Table) {
 
 		segmentBuffer := b.getEntry(key).buffer
 
-		segmentBuffer.add(partition)
+		segmentBuffer.Append(partition)
 
 	}
 
@@ -170,27 +166,28 @@ func (b *bufferRegistry) evictIdle() {
 }
 
 func (b bufferRegistry) AddToBuffer(table *Table) {
-
 	b.inCh <- table
-
 }
 
-func (b *bufferRegistry) getEntry(bufKey bufferKey) bufferEntry {
+func (b *bufferRegistry) getEntry(bufKey bufferKey) *bufferEntry {
 
 	if entry, found := b.buffers[bufKey]; found {
 		entry.lastAccess = time.Now()
 		return entry
 	}
 
-	entry := bufferEntry{
+	entry := &bufferEntry{
 		buffer: NewSegmentBuffer(b.segmentMaxSize,
 			b.segmentFlushInterval,
 			b.segmentChSize,
-			b.wg,
+			&b.wg,
 			bufKey.tableName,
 			bufKey.partitionID),
 		lastAccess: time.Now(),
 	}
+
+	b.wg.Add(1)
+	entry.buffer.Start()
 
 	b.buffers[bufKey] = entry
 

@@ -17,7 +17,6 @@ package ingestion
 
 import (
 	"context"
-	"fmt"
 )
 
 func NewServer(bufReg BufferRegistry) IngesterServer {
@@ -31,9 +30,6 @@ type ingestServer struct {
 }
 
 func (i ingestServer) Ingest(ctx context.Context, request *IngestionRequest) (*IngestResponse, error) {
-
-	fmt.Println("------------ ingest server")
-
-	i.bufReg.Add(request.Table)
+	i.bufReg.AddToBuffer(request.Table)
 	return &IngestResponse{}, nil
 }

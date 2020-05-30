@@ -316,8 +316,7 @@ type TableBuffer struct {
 	partitionID uint64
 	tableName   string
 	columns     map[string]*ColumnBuffer
-	// num of rows in the table.
-	len int
+	len         int
 }
 
 func NewTableBuffer(tableName string, partitionID uint64) *TableBuffer {
@@ -379,14 +378,11 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 	}
 
-	// leemos la data
-
 	if len(partition.Data) == 0 {
 		panic("error: invalid data len")
 	}
 
 	dataBuff := iobuff.NewBufferWithData(partition.Data)
-	var rowNum uint32
 
 	// read the first TS
 
@@ -406,7 +402,7 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 		// TS
 		if colIdx == 0 {
-			rowNum++
+			b.len++
 			ts := dataBuff.ReadFixedUInt64()
 			tsBuff := colBuffers[0].(*TSBuffer)
 			tsBuff.Append(int64(ts))
@@ -414,9 +410,12 @@ func (b *TableBuffer) Append(partition *Partition) {
 		}
 
 		colBuff := colBuffers[colIdx].(*ByteSliceSparseBuffer)
-		colBuff.Append(rowNum, dataBuff.ReadBytes())
+		colBuff.Append(uint32(b.len), dataBuff.ReadBytes())
 
 	}
+
+	// TODO(gvelo): check uint32 range.
+	b.len++
 
 }
 
