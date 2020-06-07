@@ -11,29 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testutil
-
-import (
-	"math/rand"
-	"strings"
-)
-
-var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
-	"abcdefghijklmnopqrstuvwxyzåäö" +
-	"0123456789")
-
-func RandomString(maxLenght int) string {
-	length := rand.Intn(maxLenght) + 1
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	return b.String()
-}
-
-func RandomBytes(l int) []byte {
-	i := rand.Intn(l)
-	b := make([]byte, i)
-	rand.Read(b)
-	return b
-}
+package schema
+//
+//type ColumnType byte
+//
+//const (
+//	Timestamp ColumnType = iota
+//	Datetime
+//	Long // int64
+//	Real // float64
+//	Bool
+//	String
+//)
+//

@@ -17,13 +17,79 @@ import (
 	"encoding/binary"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"meerkat/internal/util/testutil"
 	"testing"
+	"time"
 )
 
 const (
-	numOfValues = 1024 * 2
+	numOfValues = 1024 * 200
 	bufCap      = binary.MaxVarintLen64 * numOfValues
 )
+
+func TestBuffer(t *testing.T) {
+
+	values := make([]interface{}, numOfValues)
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	maxBufSize := 0
+
+	//TODO(gvelo): to cover all varint cases generate values
+	// uniformly distributed across the word size instead of
+	// distributed across the range of integer values.
+
+	for i := 0; i < numOfValues; i++ {
+		n := rnd.Intn(4)
+		switch n {
+		case 0:
+			values[i] = rnd.Int()
+			maxBufSize += binary.MaxVarintLen64
+		case 1:
+			values[i] = -rnd.Int()
+			maxBufSize += binary.MaxVarintLen64
+		case 2:
+			values[i] = uint(rnd.Int())
+			maxBufSize += binary.MaxVarintLen64
+		case 3:
+			b := testutil.RandomBytes(255)
+			values[i] = b
+			maxBufSize += binary.MaxVarintLen64 + len(b)
+		}
+	}
+
+	buf := Buffer{buf: make([]byte, maxBufSize)}
+
+	for _, value := range values {
+		switch v := value.(type) {
+		case int:
+			buf.WriteVarInt(v)
+		case uint:
+			buf.WriteUVarInt64(uint64(v))
+		case []byte:
+			buf.WriteByteSlice(v)
+		default:
+			panic("unknown type")
+		}
+	}
+
+	buf.Reset()
+
+	for _, value := range values {
+		switch v := value.(type) {
+		case int:
+			r := buf.ReadVarInt()
+			assert.Equal(t, v, r)
+		case uint:
+			r := buf.ReadUVarInt()
+			assert.Equal(t, v, r)
+		case []byte:
+			r := buf.ReadBytes()
+			assert.Equal(t, v, r)
+		default:
+			panic("unknown type")
+		}
+	}
+
+}
 
 func TestDecoderBuffer_Uvarint(t *testing.T) {
 

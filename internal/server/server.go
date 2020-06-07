@@ -21,9 +21,9 @@ import (
 	"meerkat/internal/build"
 	"meerkat/internal/cluster"
 	"meerkat/internal/config"
+	"meerkat/internal/ingestion"
+	"meerkat/internal/jsoningester"
 	"meerkat/internal/rest"
-	"meerkat/internal/schema"
-	"meerkat/internal/segments"
 	"meerkat/internal/storage"
 	"net"
 	"os"
@@ -38,13 +38,14 @@ type Meerkat struct {
 	grpcServer   *grpc.Server
 	cluster      cluster.Cluster
 	connRegistry cluster.ConnRegistry
-	schema       schema.Schema
-	apiServer    *rest.ApiServer
-	catalog      cluster.Catalog
-	Conf         config.Config
-	log          zerolog.Logger
-	segReg       *segments.SegmentBufferRegistry
-	writePool    *storage.SegmentWriterPool
+	//schema       schema.Schema
+	apiServer *rest.ApiServer
+	catalog   cluster.Catalog
+	Conf      config.Config
+	log       zerolog.Logger
+	//segReg    *segments.SegmentBufferRegistry
+	writePool *storage.SegmentWriterPool
+	bufReg    ingestion.BufferRegistry
 }
 
 func (m *Meerkat) Start(ctx context.Context) {
@@ -102,11 +103,11 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create catalog")
 	}
 
-	m.schema, err = schema.NewSchema(m.catalog)
-
-	if err != nil {
-		m.log.Panic().Err(err).Msg("cannot create schema")
-	}
+	//m.schema, err = schema.NewSchema(m.catalog)
+	//
+	//if err != nil {
+	//	m.log.Panic().Err(err).Msg("cannot create schema")
+	//}
 
 	m.writePool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
 
@@ -116,18 +117,29 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
 	}
 
-	// TODO(gvelo): use conf values.
-	sbf := segments.NewSegmentBufferFactory(1024, time.Second, m.writePool.InChan())
+	ingRcp := jsoningester.NewIngestRPC(m.connRegistry)
 
-	sbr := segments.NewSegmentBufferRegistry(m.schema, sbf)
+	// TODO(gvelo): all this params should be externalized to conf.
+	m.bufReg = ingestion.NewBufferRegistry(1024,
+		10*time.Second,
+		-1,
+		1*time.Second,
+		32,
+	)
 
-	m.apiServer, err = rest.NewRest(m.schema, sbr)
+	m.bufReg.Start()
+
+	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, m.bufReg)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create rest server")
 	}
 
 	m.apiServer.Start()
+
+	// ingestion server
+	ingServer := ingestion.NewServer(m.bufReg)
+	ingestion.RegisterIngesterServer(m.grpcServer, ingServer)
 
 	go func() {
 		err = m.grpcServer.Serve(m.listener)
@@ -161,7 +173,11 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.grpcServer.GracefulStop()
 
-	m.schema.Shutdown()
+	m.bufReg.Stop()
+
+	// TODO(gvelo): m.writePool stop ???
+
+	//m.schema.Shutdown()
 
 	err = m.catalog.Shutdown()
 

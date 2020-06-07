@@ -11,29 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testutil
+package ingestion
+
+//go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/schema/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingest.proto
 
 import (
-	"math/rand"
-	"strings"
+	"context"
 )
 
-var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
-	"abcdefghijklmnopqrstuvwxyzåäö" +
-	"0123456789")
-
-func RandomString(maxLenght int) string {
-	length := rand.Intn(maxLenght) + 1
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
+func NewServer(bufReg BufferRegistry) IngesterServer {
+	return &ingestServer{
+		bufReg: bufReg,
 	}
-	return b.String()
 }
 
-func RandomBytes(l int) []byte {
-	i := rand.Intn(l)
-	b := make([]byte, i)
-	rand.Read(b)
-	return b
+type ingestServer struct {
+	bufReg BufferRegistry
+}
+
+func (i ingestServer) Ingest(ctx context.Context, request *IngestionRequest) (*IngestResponse, error) {
+	i.bufReg.AddToBuffer(request.Table)
+	return &IngestResponse{}, nil
 }
