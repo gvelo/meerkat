@@ -19,10 +19,6 @@ import (
 	"testing"
 )
 
-type expected struct {
-	values interface{}
-}
-
 type input struct {
 	validity [][]uint64
 	length   []int
@@ -34,14 +30,22 @@ type queryTestCase struct {
 	name      string
 	batch     int
 	in        input
-	out       expected
+	out       interface{}
 	op        ComparisonOperation
 	value     interface{}
 }
 
 func TestQueryStringScanOperators(t *testing.T) {
 
-	testCases := []queryTestCase{
+	testCases := []struct {
+		fieldName string
+		name      string
+		batch     int
+		in        input
+		out       interface{}
+		op        ComparisonOperation
+		value     interface{}
+	}{
 		{
 			fieldName: "col",
 			name:      "Check batch 3  input not Null",
@@ -49,9 +53,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 			in: input{
 				values: [][]string{{"bbb", "aaa1", "aaa2", "aaa3", "aaa4", "bbbb"}, {"aaa01", "aaa02", "aaa03", "aaa04"}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
 			op:    Contains,
 			value: "a",
 		},
@@ -64,9 +66,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 				length:   []int{6, 6},
 				values:   [][]string{{"bbb", "aaa1", "aaa2", "aaa3", "aaa4", "bbbb"}, {"aaa01", "aaa02", "aaa03", "aaa04", "23234", "234234"}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 6, 7}, {8, 9}},
 			op:    Contains,
 			value: "a",
 		},
@@ -75,10 +75,6 @@ func TestQueryStringScanOperators(t *testing.T) {
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
-			if err := tc.init(); err != nil {
-				t.Fatal(err)
-			}
 
 			ctx := NewContext(createColFinder(tc.in), nil, tc.batch)
 
@@ -89,7 +85,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 			for ; n != nil; n = op1.Next() {
 				// assert.Equal(t, tc.out.cardinality[i], len(n), "length does not match.")
 				for x := 0; x < len(n); x++ {
-					assert.Equal(t, tc.out.values.([][]uint32)[i][x], n[x], "Not the same values")
+					assert.Equal(t, tc.out.([][]uint32)[i][x], n[x], "Not the same values")
 				}
 				i++
 			}
@@ -130,9 +126,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				validity: nil,
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
-			},
+			out:   [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			op:    Gt,
 			value: 1,
 		},
@@ -145,9 +139,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				length:   []int{3, 4},
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3, 4, 5}, {6}},
-			},
+			out:   [][]uint32{{1, 2, 3, 4, 5}, {6}},
 			op:    Gt,
 			value: 1,
 		},
@@ -159,9 +151,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				validity: nil,
 				values:   [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			op:    Gt,
 			value: 1,
 		},
@@ -174,9 +164,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				length:   []int{6, 4},
 				values:   [][]int{{-1, 4, 5, 4, 4, 3}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
 			op:    Gt,
 			value: 1,
 		},
@@ -188,9 +176,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				validity: nil,
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			op:    Gt,
 			value: 1,
 		},
@@ -203,9 +189,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				length:   []int{3, 4},
 				values:   [][]int{{-1, 4, 5}, {43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3}, {4, 5, 6}},
-			},
+			out:   [][]uint32{{1, 2, 3}, {4, 5, 6}},
 			op:    Gt,
 			value: 1,
 		},
@@ -217,9 +201,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				validity: nil,
 				values:   [][]int{{-1, 4, 5, 43, 4, 5, 7}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3, 4, 5, 6}},
-			},
+			out:   [][]uint32{{1, 2, 3, 4, 5, 6}},
 			op:    Gt,
 			value: 1,
 		},
@@ -233,9 +215,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				length:   []int{10, 10},
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 23, 32}, {-1, 5, 5, 33, 51, 54, 34, 32, 2, 3}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7, 11, 12, 13}, {14, 15, 16, 17}},
-			},
+			out:   [][]uint32{{1, 2, 3, 4, 5, 6, 7, 11, 12, 13}, {14, 15, 16, 17}},
 			op:    Gt,
 			value: 1,
 		},
@@ -248,9 +228,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 				length:   []int{10},         // TODO: revisar esto tambien en este caso podriamos meter un null en el medio.
 				values:   [][]int{{-1, 5, 5, 33, 51, 54, 34, 32, 33232, 22323233}},
 			},
-			out: expected{
-				values: [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
-			},
+			out:   [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
 			op:    Gt,
 			value: 1,
 		},
@@ -269,7 +247,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 			for ; n != nil; n = op1.Next() {
 				// assert.Equal(t, tc.out.cardinality[i], len(n), "length does not match.")
 				for x := 0; x < len(n); x++ {
-					assert.Equal(t, tc.out.values.([][]uint32)[i][x], n[x], "Not the same values")
+					assert.Equal(t, tc.out.([][]uint32)[i][x], n[x], "Not the same values")
 				}
 				i++
 			}

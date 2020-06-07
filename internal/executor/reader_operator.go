@@ -18,7 +18,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage"
-	"meerkat/internal/storage/vector"
 )
 
 func NewReaderOperator(ctx Context, child BitmapOperator, colName string) VectorOperator {
@@ -56,7 +55,7 @@ func (r *ReaderOperator) Destroy() {
 	r.child.Destroy()
 }
 
-func (r *ReaderOperator) Next() vector.Vector {
+func (r *ReaderOperator) Next() interface{} {
 
 	if r.it == nil {
 		return nil

@@ -14,58 +14,40 @@
 package executor
 
 import (
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage/vector"
 	"testing"
 )
 
-func sl(intVector vector.IntVector) vector.IntVector {
-	intVector.SetLen(intVector.Cap())
-	return intVector
-}
-
-func TestLimitOperator(t *testing.T) {
+func TestUnaryOperator(t *testing.T) {
 
 	testCases := []struct {
-		name  string
-		v     MultiVectorOperator
-		exp   interface{}
-		limit int
+		name string
+		fn   Fn
+		v    VectorOperator
+		exp  interface{}
 	}{
 		{
-			name: "Limit for 1 Vectors",
-			v: &fakeMultiVectorOperator{
-				vec: [][]interface{}{
-					{
-						sl(vector.NewIntVector([]int{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
-					},
+			name: "fStrLen",
+			fn:   &fStrLen{},
+			v: &fakeVectorOperator{
+				vec: []interface{}{
+					vector.NewByteSliceVectorFromByteArray([][]byte{[]byte("COSO"), []byte("COSO1"), []byte("COSO12")}, nil),
 				},
 				idx: 0,
 			},
-			exp:   []int{1},
-			limit: 1,
+			exp: []int{4, 5, 6},
 		},
 		{
-			name: "Limit for 5 Vectors",
-			v: &fakeMultiVectorOperator{
-				vec: [][]interface{}{
-					{
-						sl(vector.NewIntVector([]int{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
-					},
-					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
-					},
-					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
-					},
-					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
-					},
+			name: "fStrLen",
+			fn:   &fStrLen{},
+			v: &fakeVectorOperator{
+				vec: []interface{}{
+					vector.NewByteSliceVectorFromByteArray([][]byte{[]byte("COSO"), []byte("COSO1"), []byte("COSO12")}, nil),
 				},
 				idx: 0,
 			},
-			exp:   []int{8, 8, 8, 6},
-			limit: 30,
+			exp: []int{4, 5, 6},
 		},
 	}
 
@@ -74,19 +56,19 @@ func TestLimitOperator(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 
-				op1 := NewLimitOperator(nil, tc.v, tc.limit)
+				op1 := NewUnaryOperator(nil, tc.v, tc.fn)
 				op1.Init()
 				var i = 0
 				n := op1.Next()
 				total := 0
 				for ; n != nil; n = op1.Next() {
-					l := getLen(n[0].(interface{}))
+					l := getLen(n)
+					// TODO: make a function to check.
 					assert.Equal(t, l, tc.exp.([]int)[i], "Not the same values")
 					total = total + l
 					i++
 				}
 
-				assert.Equal(t, total, tc.limit, "Not the same values")
 			})
 		})
 	}

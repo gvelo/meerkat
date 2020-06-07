@@ -34,6 +34,28 @@ func (f *fakeMultiVectorOperator) Next() []interface{} {
 	return v
 }
 
+type fakeVectorOperator struct {
+	vec []interface{}
+	idx int
+}
+
+func (f *fakeVectorOperator) Init() {
+	f.idx = 0
+}
+
+func (f *fakeVectorOperator) Destroy() {
+	// nothing to do
+}
+
+func (f *fakeVectorOperator) Next() interface{} {
+	if f.idx == len(f.vec) {
+		return nil
+	}
+	v := f.vec[f.idx]
+	f.idx++
+	return v
+}
+
 func NewFakeColFinder(m map[string]storage.Column) storage.ColumnFinder {
 	return &fakeColFinder{m}
 }

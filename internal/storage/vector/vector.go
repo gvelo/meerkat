@@ -23,7 +23,13 @@ const (
 type Vector interface {
 	Len() int
 	Cap() int
+	HasNulls() bool
 }
+
+var _ Vector = &ByteSliceVector{}
+var _ Vector = &IntVector{}
+var _ Vector = &BoolVector{}
+var _ Vector = &UintVector{}
 
 type Pool interface {
 	GetIntVector() IntVector

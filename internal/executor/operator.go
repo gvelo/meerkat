@@ -104,7 +104,7 @@ type VectorOperator interface {
 	// if there is no more data to process.
 	// TODO(gvelo) should we destroy the operator automatically when
 	//  there is no more data ?
-	Next() vector.Vector
+	Next() interface{}
 }
 
 // MultiVectorOperator is an Operator that produces a Vector array as output
@@ -125,38 +125,6 @@ type StringOperator interface {
 	// Next returns the next result from this operator or nil
 	// if there is no more data to process.
 	Next() [][]string
-}
-
-func NewBufferOperator(ctx Context, child Uint32Operator, filter []string) Operator {
-	return &BufferOperator{
-		ctx: ctx,
-		//children: children,
-		log: log.With().Str("src", "BufferOperator").Logger(),
-	}
-}
-
-// BufferOperator reads all positions in the bitmap
-type BufferOperator struct {
-	ctx      Context
-	vKeys    [][]byte
-	children []VectorOperator
-	log      zerolog.Logger
-}
-
-func (r *BufferOperator) Init() {
-}
-
-func (r *BufferOperator) Destroy() {
-}
-
-func (r *BufferOperator) Next() []vector.Vector {
-	op := make([]vector.Vector, 0, len(r.children))
-	for i, c := range r.children {
-		// Paralelize
-		op[i] = c.Next()
-
-	}
-	return op
 }
 
 func NewMaterializeOperator(ctx Context, child Uint32Operator, filter []string) *MaterializeOperator {

@@ -23,31 +23,29 @@ import (
 
 func TestSortOperator_build_diff_array(t *testing.T) {
 
-	type DBTest struct {
+	v := vector.NewIntVector([]int{5, 6, 6, 55, 22}, []uint64{4})
+	v.SetLen(5)
+
+	v1 := vector.NewIntVector([]int{5, 6, 6, 55, 22}, nil)
+	v1.SetLen(5)
+
+	v2 := vector.NewIntVector([]int{1, 2, 3, 5, 8}, nil)
+	v2.SetLen(5)
+
+	v3 := vector.NewIntVector([]int{1, 3, 2, 8, 5}, nil)
+	v3.SetLen(5)
+
+	testCases := []struct {
 		name        string
 		order       []int
 		expFalseIdx []int
 		v           vector.IntVector
-	}
-
-	v := vector.NewIntVector([]int{5, 6, 6, 55, 22}, []uint64{4})
-	v.SetLen(5)
-
-	v1 := vector.NewIntVector([]int{5, 6, 6, 55, 22}, []uint64{})
-	v1.SetLen(5)
-
-	v2 := vector.NewIntVector([]int{1, 2, 3, 5, 8}, []uint64{})
-	v2.SetLen(5)
-
-	v3 := vector.NewIntVector([]int{1, 3, 2, 8, 5}, []uint64{})
-	v3.SetLen(5)
-
-	testCases := []DBTest{
+	}{
 		{
 			name:        "Test 1 w/nulls",
 			order:       []int{0, 1, 2, 3, 4},
 			v:           v,
-			expFalseIdx: []int{2},
+			expFalseIdx: []int{1, 4},
 		}, {
 			name:        "Test 1 w/o nulls",
 			order:       []int{0, 1, 2, 3, 4},
@@ -74,11 +72,9 @@ func TestSortOperator_build_diff_array(t *testing.T) {
 
 			fId := 0
 			for i, it := range b {
-				if len(tc.expFalseIdx) > 0 && tc.expFalseIdx[fId] == i {
+				if fId < len(tc.expFalseIdx) && tc.expFalseIdx[fId] == i {
 					assert.Equal(t, it, false)
-					if len(tc.expFalseIdx) < fId {
-						fId++
-					}
+					fId++
 				} else {
 					assert.Equal(t, it, true)
 				}

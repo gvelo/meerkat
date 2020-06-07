@@ -19,12 +19,6 @@ import (
 )
 
 type binQueryTestCase struct {
-	name string
-	l    Uint32Operator
-	r    Uint32Operator
-	exp  expected
-	op   BinaryOperation
-	sz   int
 }
 
 type fakeUint32Op struct {
@@ -50,7 +44,14 @@ func (f *fakeUint32Op) Next() []uint32 {
 
 func TestNewBinaryUint32Operator(t *testing.T) {
 
-	testCases := []binQueryTestCase{
+	testCases := []struct {
+		name string
+		l    Uint32Operator
+		r    Uint32Operator
+		exp  interface{}
+		op   BinaryOperation
+		sz   int
+	}{
 		{
 			name: "compare Xor 1",
 			op:   Xor,
@@ -62,10 +63,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
 			},
-			sz: 1,
-			exp: expected{
-				[][]uint32{{1}, {2}, {4}, {6}},
-			},
+			sz:  1,
+			exp: [][]uint32{{1}, {2}, {4}, {6}},
 		},
 		{
 			name: "compare Xor 3",
@@ -78,10 +77,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
 			},
-			sz: 3,
-			exp: expected{
-				[][]uint32{{1, 2, 4}, {6}},
-			},
+			sz:  3,
+			exp: [][]uint32{{1, 2, 4}, {6}},
 		},
 		{
 			name: "compare Or 3",
@@ -94,10 +91,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
 			},
-			sz: 3,
-			exp: expected{
-				[][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10}},
-			},
+			sz:  3,
+			exp: [][]uint32{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10}},
 		},
 		{
 			name: "compare And 1",
@@ -110,10 +105,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
 			},
-			sz: 1,
-			exp: expected{
-				[][]uint32{{3}, {5}, {7}, {8}, {9}, {10}},
-			},
+			sz:  1,
+			exp: [][]uint32{{3}, {5}, {7}, {8}, {9}, {10}},
 		},
 
 		{
@@ -127,10 +120,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
 			},
-			sz: 30,
-			exp: expected{
-				[][]uint32{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
-			},
+			sz:  30,
+			exp: [][]uint32{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
 		},
 		{
 			name: "compare AND 1",
@@ -143,10 +134,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
 			},
-			sz: 20,
-			exp: expected{
-				[][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
-			},
+			sz:  20,
+			exp: [][]uint32{{3, 4, 5, 7, 8, 9, 11, 15, 18}},
 		},
 		{
 			name: "compare Or 1",
@@ -159,10 +148,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{3, 5, 7}, {8, 9, 10}},
 			},
-			sz: 1,
-			exp: expected{
-				[][]uint32{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}},
-			},
+			sz:  1,
+			exp: [][]uint32{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}},
 		},
 		{
 			name: "compare And 3",
@@ -175,10 +162,8 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 				i: 0,
 				v: [][]uint32{{1, 2, 3, 4, 5, 6, 7}},
 			},
-			sz: 3,
-			exp: expected{
-				[][]uint32{{3, 5, 7}},
-			},
+			sz:  3,
+			exp: [][]uint32{{3, 5, 7}},
 		},
 	}
 	// RUN TC
@@ -192,7 +177,7 @@ func TestNewBinaryUint32Operator(t *testing.T) {
 			n := op1.Next()
 			for ; n != nil; n = op1.Next() {
 				for x := 0; x < len(n); x++ {
-					assert.Equal(t, tc.exp.values.([][]uint32)[i][x], n[x], "Not the same values")
+					assert.Equal(t, tc.exp.([][]uint32)[i][x], n[x], "Not the same values")
 				}
 				i++
 			}
