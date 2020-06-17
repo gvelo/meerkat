@@ -194,11 +194,11 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 
 	switch field.FieldType {
 	case schema.FieldType_TIMESTAMP:
-		testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
-		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testIterINTField(t, field, col.(*int64Column), buf.(*buffer.IntBuffer))
+		testReadINTField(t, field, col.(*int64Column), buf.(*buffer.IntBuffer))
 	case schema.FieldType_INT:
-		testIterINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
-		testReadINTField(t, field, col.(*intColumn), buf.(*buffer.IntBuffer))
+		testIterINTField(t, field, col.(*int64Column), buf.(*buffer.IntBuffer))
+		testReadINTField(t, field, col.(*int64Column), buf.(*buffer.IntBuffer))
 	case schema.FieldType_STRING:
 		testIterStringField(t, field, col.(*binaryColumn), buf.(*buffer.ByteSliceBuffer))
 		testReadStringField(t, field, col.(*binaryColumn), buf.(*buffer.ByteSliceBuffer))
@@ -208,7 +208,7 @@ func testCol(t *testing.T, field schema.Field, col interface{}, buf buffer.Buffe
 
 }
 
-func testIterINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntBuffer) {
+func testIterINTField(t *testing.T, f schema.Field, col *int64Column, buf *buffer.IntBuffer) {
 
 	var values []int
 	var nulls []bool
@@ -243,9 +243,9 @@ func testIterINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.
 
 }
 
-func testReadINTField(t *testing.T, f schema.Field, col *intColumn, buf *buffer.IntBuffer) {
+func testReadINTField(t *testing.T, f schema.Field, col *int64Column, buf *buffer.IntBuffer) {
 
-	v := vector.DefaultVectorPool().GetIntVector()
+	v := vector.DefaultVectorPool().GetInt64Vector()
 	l := v.Cap()
 
 	var rids []uint32

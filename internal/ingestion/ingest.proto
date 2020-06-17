@@ -17,7 +17,7 @@ option go_package = "ingestion";
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
-import "schema.proto";
+import "storage.proto";
 
 message IngestionRequest {
   Table table = 1;
@@ -37,11 +37,11 @@ message Partition {
 }
 
 message Column {
-  uint64            idx     = 1 ;
-  string            name    = 2 ;
-  uint64            colSize = 3 ;
-  uint64            len     = 4 ;
-  schema.ColumnType type    = 5 ;
+  uint64             idx     = 1 ;
+  string             name    = 2 ;
+  uint64             colSize = 3 ;
+  uint64             len     = 4 ;
+  storage.ColumnType type    = 5 ;
 }
 
 service Ingester {

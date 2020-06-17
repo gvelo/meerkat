@@ -18,27 +18,27 @@ import (
 	"meerkat/internal/util/sliceutil"
 )
 
-type IntPlainEncoder struct {
+type Int64PlainEncoder struct {
 	bw BlockWriter
 }
 
-func NewIntPlainEncoder(bw BlockWriter) *IntPlainEncoder {
-	return &IntPlainEncoder{
+func NewInt64PlainEncoder(bw BlockWriter) *Int64PlainEncoder {
+	return &Int64PlainEncoder{
 		bw: bw,
 	}
 }
 
-func (e *IntPlainEncoder) Flush() {
+func (e *Int64PlainEncoder) Flush() {
 }
 
-func (e *IntPlainEncoder) FlushBlocks() {
+func (e *Int64PlainEncoder) FlushBlocks() {
 }
 
-func (e *IntPlainEncoder) Type() EncodingType {
+func (e *Int64PlainEncoder) Type() EncodingType {
 	return Plain
 }
 
-func (e *IntPlainEncoder) Encode(v colval.IntColValues) {
-	b := sliceutil.I2B(v.Values())
+func (e *Int64PlainEncoder) Encode(v colval.Int64ColValues) {
+	b := sliceutil.I642B(v.Values())
 	e.bw.WriteBlock(b, v.Rid()[0])
 }

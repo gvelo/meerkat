@@ -22,19 +22,19 @@ type IndexWriter interface {
 	Cardinality() int
 }
 
-type IntIndexWriter interface {
+type Int64IndexWriter interface {
 	IndexWriter
-	Index(v colval.IntColValues)
+	Index(v colval.Int64ColValues)
 }
 
-type UintIndexWriter interface {
+type Int32IndexWriter interface {
 	IndexWriter
-	Index(v colval.UintColValues)
+	Index(v colval.Int32ColValues)
 }
 
-type FloatIndexWriter interface {
+type Float64IndexWriter interface {
 	IndexWriter
-	Index(v colval.FloatColValues)
+	Index(v colval.Float64ColValues)
 }
 
 type ByteSliceIndexWriter interface {

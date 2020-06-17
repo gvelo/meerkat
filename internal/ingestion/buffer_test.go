@@ -16,7 +16,7 @@ package ingestion
 import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
-	"meerkat/internal/schema"
+	"meerkat/internal/storage"
 	"meerkat/internal/util/testutil"
 	"testing"
 )
@@ -231,10 +231,10 @@ func TestTableBuffer(t *testing.T) {
 
 		tsCol := &Column{
 			Idx:     0,
-			Name:    "_ts",
+			Name:    storage.TSColumnName,
 			ColSize: 0,
 			Len:     0,
-			Type:    schema.ColumnType_TIMESTAMP,
+			Type:    storage.ColumnType_TIMESTAMP,
 		}
 
 		testCol := &Column{
@@ -242,7 +242,7 @@ func TestTableBuffer(t *testing.T) {
 			Name:    "testCol",
 			ColSize: 0,
 			Len:     0,
-			Type:    schema.ColumnType_STRING,
+			Type:    storage.ColumnType_STRING,
 		}
 
 		for i := 0; i < batchLen; i++ {
@@ -269,7 +269,7 @@ func TestTableBuffer(t *testing.T) {
 
 	}
 
-	tsBuf := tb.Columns()["_ts"].buff.(*TSBuffer)
+	tsBuf := tb.Columns()[storage.TSColumnName].buff.(*TSBuffer)
 
 	assert.Equal(t, len(tsColumnData), len(tsBuf.Values()))
 	assert.Equal(t, numBatch*batchLen, len(tsColumnData))

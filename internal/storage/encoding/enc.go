@@ -41,35 +41,35 @@ type Encoder interface {
 	Type() EncodingType
 }
 
-type IntEncoder interface {
+type Int64Encoder interface {
 	Encoder
-	Encode(v colval.IntColValues)
+	Encode(v colval.Int64ColValues)
 }
 
-type IntDecoderReader interface {
-	Decoder() IntDecoder
-	BlockReader() BlockReader
-}
-
-type IntDecoder interface {
-	Decode(block []byte, buf []int) []int
-}
-
-type UintEncoder interface {
+type Int32Encoder interface {
 	Encoder
-	Encode(v colval.UintColValues)
+	Encode(v colval.Int32ColValues)
 }
 
-type UintDecoder interface {
-	Decode(block []byte, buf []uint) []uint
+type Int64Decoder interface {
+	Decode(block []byte, buf []int64) []int64
 }
 
-type FloatEncoder interface {
+type Int32Encoder interface {
 	Encoder
-	Encode(v colval.FloatColValues)
+	Encode(v colval.Int32ColValues)
 }
 
-type FloatDecoder interface {
+type Int32Decoder interface {
+	Decode(block []byte, buf []int32) []int32
+}
+
+type Float64Encoder interface {
+	Encoder
+	Encode(v colval.Float64ColValues)
+}
+
+type Float64Decoder interface {
 	Decode(block []byte, buf []float64) []float64
 }
 
@@ -109,14 +109,14 @@ func DeltaDecode(data []int) {
 
 }
 
-func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (IntDecoder, BlockReader) {
+func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (Int64Decoder, BlockReader) {
 
-	var dec IntDecoder
+	var dec Int64Decoder
 	var br BlockReader
 
 	switch d {
 	case Plain:
-		dec = NewIntPlainDecoder()
+		dec = NewInt64PlainDecoder()
 		br = NewScalarPlainBlockReader(b, bounds, blockLen)
 	default:
 		panic("unknown encoding type")

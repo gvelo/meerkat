@@ -17,7 +17,6 @@ package storage
 
 import (
 	"meerkat/internal/buffer"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage/bufcolval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
@@ -34,7 +33,7 @@ type ColumnWriter interface {
 	Write()
 }
 
-func NewColumWriter(columnType schema.ColumnType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+func NewColumWriterOld(columnType ColumnType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
 
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
@@ -46,19 +45,19 @@ func NewColumWriter(columnType schema.ColumnType, buf buffer.Buffer, perm []int,
 	}
 
 	switch columnType {
-	case schema.ColumnType_LONG:
+	case ColumnType_INT64:
 		// TODO(gvelo): for plain encoded scalars blockindex is not necessary.
 		//              offset can be computed using the RID plus the
 		//              column's value width.
 		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
-		enc := encoding.NewIntPlainEncoder(blkWriter)
+		enc := encoding.NewInt64PlainEncoder(blkWriter)
 
-		return NewIntColumnWriter(schema.ColumnType_LONG, src, enc, nil, blkIdx, validity, bw)
+		return NewInt64ColumnWriter(ColumnType_INT64, src, enc, nil, blkIdx, validity, bw)
 
-	case schema.ColumnType_STRING:
+	case ColumnType_STRING:
 		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
-		return NewByteSliceColumnWriter(schema.ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
+		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
 
 	default:
 		panic("unknown columnType")
@@ -73,9 +72,81 @@ func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter 
 	src := bufcolval.NewTsBufColSource(buf, blockLen)
 	blkIdx := index.NewBlockIndexWriter(bw)
 	blkWriter := NewBlockWriter(bw, blkIdx)
-	enc := encoding.NewIntPlainEncoder(blkWriter)
-	cw := NewIntColumnWriter(schema.ColumnType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
+	enc := encoding.NewInt64PlainEncoder(blkWriter)
+	cw := NewInt64ColumnWriter(ColumnType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
 
 	return cw
+
+}
+
+func NewColumnWriter1(info *ColumnInfo, segmentSrc SegmentSource, bw *io.BinaryWriter) ColumnWriter {
+
+	switch info.ColumnType {
+
+	case ColumnType_TIMESTAMP:
+
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
+
+		return NewInt64ColumnWriter(ColumnType_TIMESTAMP,
+			src,
+			enc,
+			nil,
+			blkIdx,
+			nil, bw)
+
+	case ColumnType_DATETIME:
+		panic("not implemented yet")
+
+	case ColumnType_BOOL:
+		panic("not implemented yet")
+
+	case ColumnType_INT32:
+		panic("not implemented yet")
+
+	case ColumnType_INT64:
+
+		// TODO(gvelo): for plain encoded numeric columns, blockindex is not necessary.
+		// offset can be computed using the RID plus the column's value width.
+
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
+		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		var validity index.ValidityIndexWriter
+
+		if src.HasNulls() {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+
+		return NewInt64ColumnWriter(ColumnType_INT64, src, enc, nil, blkIdx, validity, bw)
+
+	case ColumnType_FLOAT64:
+		panic("not implemented yet")
+
+	case ColumnType_STRING:
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		src := segmentSrc.ColumnSource(info.Name, txtBlockSize).(ByteSliceColumnSource)
+		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+		var validity index.ValidityIndexWriter
+
+		if src.HasNulls() {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+
+		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
+
+	case ColumnType_DYNAMIC:
+		panic("not implemented yet")
+
+	case ColumnType_GUID:
+		panic("not implemented yet")
+
+	default:
+		panic("unknown column type")
+	}
 
 }

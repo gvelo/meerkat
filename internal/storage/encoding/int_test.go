@@ -20,17 +20,17 @@ import (
 	"testing"
 )
 
-type IntEncFactory func(bw BlockWriter) IntEncoder
+type IntEncFactory func(bw BlockWriter) Int64Encoder
 
 func TestIntEncoding(t *testing.T) {
 
-	testIntEncoding(t, func(bw BlockWriter) IntEncoder {
-		return NewIntPlainEncoder(bw)
-	}, NewIntPlainDecoder())
+	testIntEncoding(t, func(bw BlockWriter) Int64Encoder {
+		return NewInt64PlainEncoder(bw)
+	}, NewInt64PlainDecoder())
 
 }
 
-func testIntEncoding(t *testing.T, f IntEncFactory, d IntDecoder) {
+func testIntEncoding(t *testing.T, f IntEncFactory, d Int64Decoder) {
 
 	s := 1024
 

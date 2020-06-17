@@ -14,7 +14,7 @@
 package ingestion
 
 import (
-	"meerkat/internal/schema"
+	"meerkat/internal/storage"
 	iobuff "meerkat/internal/storage/io"
 )
 
@@ -361,7 +361,7 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 		var buff interface{}
 
-		if column.Name == "_ts" {
+		if column.Name == storage.TSColumnName {
 			buff = NewTSBuffer(int(column.Len))
 		} else {
 			buff = NewByteSliceSparseBuffer(int(column.Len), int(column.ColSize))
@@ -421,6 +421,6 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 func adaptType(current *ColumnBuffer, new *Column) {
 	if current.col.Type != new.Type {
-		current.col.Type = schema.ColumnType_STRING
+		current.col.Type = storage.ColumnType_STRING
 	}
 }

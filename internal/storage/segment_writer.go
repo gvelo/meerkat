@@ -13,6 +13,8 @@
 
 package storage
 
+//go:generate protoc -I . -I ../../build/proto/ --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./storage.proto
+
 import (
 	"github.com/google/uuid"
 	"meerkat/internal/buffer"
@@ -26,7 +28,7 @@ const (
 	TSColID        = "_ts" // TODO(gvelo) change to []byte
 )
 
-func NewSegmentWriter(path string, id uuid.UUID, table *buffer.Table) *SegmentWriter {
+func NewSegmentWriter(path string, src SegmentSource) *SegmentWriter {
 	return &SegmentWriter{
 		path:    path,
 		table:   table,
@@ -36,13 +38,10 @@ func NewSegmentWriter(path string, id uuid.UUID, table *buffer.Table) *SegmentWr
 }
 
 type SegmentWriter struct {
-	path     string
-	table    *buffer.Table
-	bw       *io.BinaryWriter
-	id       uuid.UUID
-	offsets  map[string]int
-	fromDate int
-	toDate   int
+	path    string
+	src     SegmentSource
+	bw      *io.BinaryWriter
+	offsets map[string]int
 }
 
 func (sw *SegmentWriter) Write() (err error) {
@@ -70,9 +69,11 @@ func (sw *SegmentWriter) Write() (err error) {
 
 	sw.writeHeader()
 
-	perm := sw.writeTSColumn()
+	sw.writeColumns()
 
-	sw.writeColumns(perm)
+	//perm := sw.writeTSColumn()
+	//
+	//sw.writeColumns(perm)
 
 	sw.writeFooter()
 
@@ -87,37 +88,45 @@ func (sw *SegmentWriter) writeHeader() {
 
 }
 
-func (sw *SegmentWriter) writeTSColumn() []int {
-
-	c, ok := sw.table.Col(TSColID)
-
-	if !ok {
-		panic("missing TS column")
+func (sw *SegmentWriter) writeColumns() {
+	for _, colInfo := range sw.src.Columns() {
+		columnWriter := NewColumnWriter1(colInfo, sw.src, sw.bw)
+		columnWriter.Write()
+		sw.offsets[colInfo.Name] = sw.bw.Offset()
 	}
-
-	tsColumn, ok := c.(*buffer.IntBuffer)
-
-	if !ok {
-		panic("wrong TS column type")
-	}
-
-	perm := sortTSColumn(tsColumn.Values())
-
-	// set the date range
-	sw.fromDate = tsColumn.Values()[0]
-	sw.toDate = tsColumn.Values()[tsColumn.Len()-1]
-
-	cw := NewTSColumnWriter(tsColumn, sw.bw)
-
-	cw.Write()
-
-	sw.offsets[TSColID] = sw.bw.Offset()
-
-	return perm
-
 }
 
-func (sw *SegmentWriter) writeColumns(perm []int) {
+//func (sw *SegmentWriter) writeTSColumn() []int {
+//
+//	c, ok := sw.table.Col(TSColID)
+//
+//	if !ok {
+//		panic("missing TS column")
+//	}
+//
+//	tsColumn, ok := c.(*buffer.IntBuffer)
+//
+//	if !ok {
+//		panic("wrong TS column type")
+//	}
+//
+//	perm := sortTSColumn(tsColumn.Values())
+//
+//	// set the date range
+//	sw.fromDate = tsColumn.Values()[0]
+//	sw.toDate = tsColumn.Values()[tsColumn.Len()-1]
+//
+//	cw := NewTSColumnWriter(tsColumn, sw.bw)
+//
+//	cw.Write()
+//
+//	sw.offsets[TSColID] = sw.bw.Offset()
+//
+//	return perm
+//
+//}
+
+//func (sw *SegmentWriter) writeColumns(perm []int) {
 
 	//for _, f := range sw.table.Index().Fields {
 	//
@@ -140,38 +149,25 @@ func (sw *SegmentWriter) writeColumns(perm []int) {
 	//
 	//}
 
-}
+//}
 
 func (sw *SegmentWriter) writeFooter() {
 
 	entry := sw.bw.Offset()
 
-	sw.bw.WriteRaw(sw.id[:])
+	sw.bw.WriteUvarint(int(sw.src.SegmentInfo().Len))
 
-	// TODO(gvelo) refactor to [16]byte
-	//sw.bw.WriteString(sw.table.Index().Id)
-	//
-	//sw.bw.WriteString(sw.table.Index().Name)
+	sw.bw.WriteUvarint(len(sw.src.Columns()))
 
-	sw.bw.WriteFixedInt(sw.fromDate)
+	for _, columnInfo := range sw.src.Columns() {
 
-	sw.bw.WriteFixedInt(sw.toDate)
+		sw.bw.WriteString(columnInfo.Name)
 
-	sw.bw.WriteUvarint(sw.table.Len())
+		sw.bw.WriteByte(byte(columnInfo.ColumnType)
 
-	//sw.bw.WriteUvarint(len(sw.table.Cols()))
-	//
-	//for _, f := range sw.table.Index().Fields {
-	//
-	//	sw.bw.WriteString(f.Id)
-	//
-	//	sw.bw.WriteString(f.Name)
-	//
-	//	sw.bw.WriteByte(byte(f.FieldType))
-	//
-	//	sw.bw.WriteUvarint(sw.offsets[f.Id])
-	//
-	//}
+		sw.bw.WriteUvarint(sw.offsets[columnInfo.Name])
+
+	}
 
 	sw.bw.WriteFixedInt(entry)
 
