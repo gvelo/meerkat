@@ -69,11 +69,16 @@ enum Encoding {
 
 
 message ColumnInfo {
-  string     name        = 1;
-  ColumnType column_type = 2;
-  IndexType  index_type  = 3;
-  Encoding   encoding    = 4;
-  uint32     len         = 5;
+  string     name            = 1;
+  ColumnType column_type     = 2;
+  IndexType  index_type      = 3;
+  Encoding   encoding        = 4;
+  uint32     len             = 5;
+  uint64     cardinality     = 6;
+  uint64     size_on_disk    = 7;
+  uint64     compressed_size = 8;
+  uint32     null_count      = 9;
+  // TODO(gvelo) add bit width histogram and value histogram
 }
 
 message SegmentInfo {
@@ -84,6 +89,7 @@ message SegmentInfo {
   uint64   partition_id          = 5;
   uint32   len                   = 6;
   Interval interval              = 7;
+  repeated ColumnInfo columns    = 8;
 }
 
 message Interval {
@@ -91,15 +97,3 @@ message Interval {
   google.protobuf.Timestamp to   = 2 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
 }
 
-
-message ColumnStats {
-  ColumnInfo column_info = 1;
-  uint64 cardinality     = 2;
-  uint64 len             = 3;
-  uint64 size            = 4;
-  uint64 compressedSize  = 5;
-  uint64 max             = 6;
-  uint64 min             = 7;
-  // bit width histogram
-  // value histogram
-}

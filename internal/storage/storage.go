@@ -2,6 +2,8 @@ package storage
 
 import "meerkat/internal/storage/colval"
 
+//go:generate protoc -I . -I ../../build/proto/ --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./storage.proto
+
 const (
 	TSColumnName = "_ts"
 )
@@ -36,8 +38,29 @@ type ByteSliceColumnSource interface {
 	Next() colval.ByteSliceColValues
 }
 
+type SegmentSourceInfo struct {
+	Id           []byte
+	DatabaseId   []byte
+	DatabaseName string
+	TableName    string
+	PartitionId  uint64
+	Len          uint32
+	Interval     Interval
+	columns      []ColumnSourceInfo
+}
+
+type ColumnSourceInfo struct {
+	Name       string
+	ColumnType ColumnType
+	IndexType  IndexType
+	Encoding   Encoding
+	Len        uint32
+}
+
 type SegmentSource interface {
-	SegmentInfo() *SegmentInfo
-	Columns() []*ColumnInfo
+	Info() SegmentSourceInfo
+	// TODO(gvelo): add blockSize and blockLen.
 	ColumnSource(colName string, blockSize int) ColumnSource
 }
+
+

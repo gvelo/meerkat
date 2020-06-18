@@ -55,11 +55,6 @@ type Int64Decoder interface {
 	Decode(block []byte, buf []int64) []int64
 }
 
-type Int32Encoder interface {
-	Encoder
-	Encode(v colval.Int32ColValues)
-}
-
 type Int32Decoder interface {
 	Decode(block []byte, buf []int32) []int32
 }

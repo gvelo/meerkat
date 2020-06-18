@@ -142,7 +142,7 @@ func (cr *int64Column) read() {
 
 }
 
-func (cr *int64Column) Iterator() IntIterator {
+func (cr *int64Column) Iterator() Int64Iterator {
 
 	dec, blockReader := encoding.GetIntDecoder(
 		cr.encoding,
@@ -171,7 +171,7 @@ func (cr *int64Column) Iterator() IntIterator {
 
 }
 
-func (cr *int64Column) Reader() IntColumnReader {
+func (cr *int64Column) Reader() Int64ColumnReader {
 
 	dec, blockReader := encoding.GetIntDecoder(
 		cr.encoding,
@@ -361,7 +361,7 @@ func NewIntColumnReader(br encoding.BlockReader,
 	pool vector.Pool,
 	colLen int,
 	blockLen int,
-) IntColumnReader {
+) Int64ColumnReader {
 
 	return &intColumnReader{
 		br:     br,
@@ -449,7 +449,7 @@ func NewIntNullColumnReader(br encoding.BlockReader,
 	validity *roaring.Bitmap,
 	colLen int,
 	pool vector.Pool,
-) IntColumnReader {
+) Int64ColumnReader {
 
 	return &intNullColumnReader{
 		br:       br,
@@ -661,7 +661,7 @@ func (cr *binaryColumn) read() {
 
 }
 
-func (cr *binaryColumn) Iterator() BinaryIterator {
+func (cr *binaryColumn) Iterator() ByteSliceIterator {
 
 	dec, blockReader := encoding.GetBinaryDecoder(
 		cr.encoding,

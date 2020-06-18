@@ -25,7 +25,7 @@ import (
 	"io"
 	"meerkat/internal/cluster"
 	"meerkat/internal/ingestion"
-	"meerkat/internal/schema"
+	"meerkat/internal/storage"
 	"strconv"
 	"time"
 )
@@ -42,7 +42,7 @@ type ParserError struct {
 
 type column struct {
 	idx         int
-	colType     schema.ColumnType
+	colType     storage.ColumnType
 	keepParsing bool
 	size        int
 	len         int
@@ -77,7 +77,7 @@ func (t *Table) partition(partNum int) *Partition {
 
 	partition.columns[TSColName] = &column{
 		idx:         0,
-		colType:     schema.ColumnType_TIMESTAMP,
+		colType:     storage.ColumnType_TIMESTAMP,
 		keepParsing: false,
 	}
 
@@ -192,7 +192,7 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 					if err != nil {
 						col.keepParsing = false
 					} else {
-						col.colType = schema.ColumnType_TIMESTAMP
+						col.colType = storage.ColumnType_TIMESTAMP
 					}
 				}
 				partition.writer.WriteString(col.idx, v)
@@ -204,9 +204,9 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 					_, err := strconv.ParseFloat(s, 64)
 					if err != nil {
 						col.keepParsing = false
-						col.colType = schema.ColumnType_STRING
+						col.colType = storage.ColumnType_STRING
 					} else {
-						col.colType = schema.ColumnType_REAL
+						col.colType = storage.ColumnType_FLOAT64
 					}
 
 				}
