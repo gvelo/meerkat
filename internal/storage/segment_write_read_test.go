@@ -13,7 +13,7 @@ import (
 
 func generateRandomColumnData(colType ColumnType, nullable bool, maxColLen uint32) ([]interface{}, uint32) {
 
-	var colData []interface{}
+	colData := make([]interface{}, 0, maxColLen)
 	var colLen uint32
 
 	for rid := uint32(0); rid < maxColLen; rid++ {
@@ -310,10 +310,9 @@ func generateRandomSegmentSrc(info SegmentSourceInfo) *TestSegmentSource {
 
 func TestReadWriteSegment(t *testing.T) {
 
-	segmentLen := 1024 * 8 * 3
+	segmentLen := 1024 * 1024 * 2
 
 	id := [16]byte(uuid.New())
-
 	segmentSrc := generateRandomSegmentSrc(SegmentSourceInfo{
 		Id:           id[:],
 		DatabaseId:   id[:],
@@ -380,12 +379,10 @@ func checkColumnsIterators(t *testing.T, segment *Segment, src *TestSegmentSourc
 		t.Logf("testing iterator on column %v", info.Name)
 
 		if col, found := segment.columns[info.Name]; found {
-
-			actual := readColumnIter(col, info)
+			actual := readColumnIter(col, info, src.Info().Len)
 			expected := src.columns[info.Name]
 			assert.Equal(t, expected, actual)
 			continue
-
 		}
 
 		panic("column not found")
@@ -394,9 +391,9 @@ func checkColumnsIterators(t *testing.T, segment *Segment, src *TestSegmentSourc
 
 }
 
-func readColumnIter(column interface{}, info ColumnSourceInfo) []interface{} {
+func readColumnIter(column interface{}, info ColumnSourceInfo, srcLen uint32) []interface{} {
 
-	var values []interface{}
+	values := make([]interface{}, 0, srcLen)
 
 	switch c := column.(type) {
 
