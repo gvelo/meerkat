@@ -14,7 +14,6 @@
 package storage
 
 import (
-	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
@@ -76,7 +75,7 @@ func (w *{{.Type}}ColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -111,7 +110,7 @@ func (w *{{.Type}}ColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 

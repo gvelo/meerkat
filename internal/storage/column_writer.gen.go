@@ -77,7 +77,7 @@ func (w *Int64ColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -112,7 +112,7 @@ func (w *Int64ColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -193,7 +193,7 @@ func (w *Int32ColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -228,7 +228,7 @@ func (w *Int32ColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -309,7 +309,7 @@ func (w *Float64ColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -344,7 +344,7 @@ func (w *Float64ColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -425,7 +425,7 @@ func (w *BoolColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -460,7 +460,7 @@ func (w *BoolColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -541,7 +541,7 @@ func (w *ByteSliceColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -576,7 +576,7 @@ func (w *ByteSliceColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 

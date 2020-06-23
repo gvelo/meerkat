@@ -115,7 +115,7 @@ func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.Bin
 		enc := encoding.NewInt64PlainEncoder(blkWriter)
 		var validity index.ValidityIndexWriter
 
-		if src.HasNulls() {
+		if info.Nullable {
 			validity = index.NewValidityBitmapIndex(bw)
 		}
 

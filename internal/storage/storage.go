@@ -10,6 +10,7 @@ const (
 
 type ColumnSource interface {
 	HasNext() bool
+	// TODO: remove, this flag is now on the columninfo
 	HasNulls() bool
 }
 
@@ -46,7 +47,7 @@ type SegmentSourceInfo struct {
 	PartitionId  uint64
 	Len          uint32
 	Interval     Interval
-	columns      []ColumnSourceInfo
+	Columns      []ColumnSourceInfo
 }
 
 type ColumnSourceInfo struct {
@@ -54,6 +55,7 @@ type ColumnSourceInfo struct {
 	ColumnType ColumnType
 	IndexType  IndexType
 	Encoding   Encoding
+	Nullable   bool
 	Len        uint32
 }
 
@@ -62,5 +64,3 @@ type SegmentSource interface {
 	// TODO(gvelo): add blockSize and blockLen.
 	ColumnSource(colName string, blockSize int) ColumnSource
 }
-
-

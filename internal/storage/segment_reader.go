@@ -15,6 +15,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/storage/io"
 	"time"
@@ -26,7 +27,6 @@ const (
 
 type colData struct {
 	colType ColumnType
-	id      string
 	name    string
 	bounds  io.Bounds
 }
@@ -83,7 +83,6 @@ type Segment struct {
 	columns map[string]interface{}
 }
 
-
 func (s *Segment) read() error {
 
 	// magicNumber + version
@@ -101,7 +100,6 @@ func (s *Segment) read() error {
 
 	for i := 0; i < s.numOfCol; i++ {
 		c := colData{}
-		c.id = br.ReadString()
 		c.name = br.ReadString()
 		c.colType = ColumnType(br.ReadByte())
 		c.bounds.End = br.ReadUVarint()
@@ -136,10 +134,10 @@ func (s *Segment) readColumns(cd []colData) {
 		case ColumnType_STRING:
 			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:
-			panic("unknown column type")
+			panic(fmt.Sprintf("unknown column type %v", cData.colType))
 		}
 
-		s.columns[cData.id] = col
+		s.columns[cData.name] = col
 
 	}
 

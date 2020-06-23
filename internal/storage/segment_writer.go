@@ -79,7 +79,7 @@ func (sw *SegmentWriter) writeHeader() {
 
 func (sw *SegmentWriter) writeColumns() {
 
-	for _, colInfo := range sw.src.Info().columns {
+	for _, colInfo := range sw.src.Info().Columns {
 		columnWriter := NewColumnWriter(colInfo, sw.src, sw.bw)
 		columnWriter.Write()
 		sw.offsets[colInfo.Name] = sw.bw.Offset()
@@ -93,9 +93,9 @@ func (sw *SegmentWriter) writeFooter() {
 
 	sw.bw.WriteUvarint(int(sw.src.Info().Len))
 
-	sw.bw.WriteUvarint(len(sw.src.Info().columns))
+	sw.bw.WriteUvarint(len(sw.src.Info().Columns))
 
-	for _, columnInfo := range sw.src.Info().columns {
+	for _, columnInfo := range sw.src.Info().Columns {
 
 		sw.bw.WriteString(columnInfo.Name)
 
