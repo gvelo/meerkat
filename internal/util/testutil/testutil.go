@@ -32,7 +32,7 @@ func RandomString(maxLenght int) string {
 }
 
 func RandomBytes(l int) []byte {
-	i := rand.Intn(l)
+	i := rand.Intn(l) + 1
 	b := make([]byte, i)
 	rand.Read(b)
 	return b

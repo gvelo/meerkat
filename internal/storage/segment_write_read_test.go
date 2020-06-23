@@ -35,7 +35,7 @@ func generateRandomColumnData(colType ColumnType, nullable bool, maxColLen uint3
 		case ColumnType_FLOAT64:
 			colData = append(colData, rand.Float64())
 		case ColumnType_STRING:
-			colData = append(colData, testutil.RandomString(10))
+			colData = append(colData, testutil.RandomBytes(10))
 		case ColumnType_TIMESTAMP:
 			colData = append(colData, rand.Int())
 		default:
@@ -129,7 +129,7 @@ func TestInt64TestColumnSrc(t *testing.T) {
 
 	nullCount := countNulls(colData)
 
-	assert.Equal(t, nullCount, colLen-uint32(len(values)))
+	assert.Equal(t, nullCount, int(segmentLen)-(len(values)))
 
 	assertEqual(t, colData, values, rids)
 
@@ -143,6 +143,93 @@ func countNulls(values []interface{}) int {
 		}
 	}
 	return i
+}
+
+type ByteSliceTestColumnSrc struct {
+	data      []interface{}
+	pos       int
+	blockSize int
+}
+
+func NewByteSliceTestColumnSrc(data []interface{}, blockSize int) *ByteSliceTestColumnSrc {
+	return &ByteSliceTestColumnSrc{
+		data:      data,
+		pos:       0,
+		blockSize: blockSize,
+	}
+}
+
+func (s *ByteSliceTestColumnSrc) HasNext() bool {
+	return s.pos < len(s.data)
+}
+
+func (s *ByteSliceTestColumnSrc) HasNulls() bool {
+	panic("implement me")
+}
+
+func (s *ByteSliceTestColumnSrc) Next() colval.ByteSliceColValues {
+
+	var rids []uint32
+	var data []byte
+	var offsets []int
+
+	for ; s.pos < len(s.data) && len(data) < s.blockSize; s.pos++ {
+
+		if s.data[s.pos] == nil {
+			continue
+		}
+
+		value := s.data[s.pos].([]byte)
+
+		data = append(data, value...)
+		offsets = append(offsets, len(data))
+		rids = append(rids, uint32(s.pos))
+
+	}
+
+	return colval.NewByteSliceColValues(data, rids, offsets)
+
+}
+
+func TestByteSliceTestColumnSrc(t *testing.T) {
+
+	const blockSize = 123
+	const segmentLen = uint32(2000)
+
+	colInfo := ColumnSourceInfo{
+		Name:       "testColumn",
+		ColumnType: ColumnType_STRING,
+		IndexType:  IndexType_NONE,
+		Encoding:   Encoding_PLAIN,
+		Nullable:   true,
+	}
+
+	colData, colLen := generateRandomColumnData(ColumnType_STRING, colInfo.Nullable, segmentLen)
+	colInfo.Len = colLen
+
+	src := NewByteSliceTestColumnSrc(colData, blockSize)
+
+	var values []interface{}
+	var rids []uint32
+
+	for src.HasNext() {
+
+		v := src.Next()
+
+		for i := 0; i < v.Len(); i++ {
+			values = append(values, v.Get(i))
+		}
+
+		rids = append(rids, v.Rid()...)
+
+	}
+
+	nullCount := countNulls(colData)
+
+	assert.Equal(t, nullCount, int(segmentLen)-len(values))
+
+	assertEqual(t, colData, values, rids)
+
 }
 
 func assertEqual(t *testing.T, expected []interface{}, values []interface{}, rids []uint32) {
@@ -196,7 +283,7 @@ func (t *TestSegmentSource) ColumnSource(colName string, blockSize int) ColumnSo
 		case ColumnType_TIMESTAMP:
 			panic("not implemented yet")
 		case ColumnType_STRING:
-			panic("not implemented yet")
+			return NewByteSliceTestColumnSrc(t.columns[colInfo.Name], blockSize)
 		default:
 			panic("not implemented yet")
 		}
@@ -237,15 +324,29 @@ func TestReadWriteSegment(t *testing.T) {
 		Interval:     Interval{},
 		Columns: []ColumnSourceInfo{
 			{
-				Name:       "column-test-0",
+				Name:       "column-test-int64",
 				ColumnType: ColumnType_INT64,
 				IndexType:  IndexType_NONE,
 				Encoding:   Encoding_PLAIN,
 				Nullable:   false,
 			},
 			{
-				Name:       "column-test-1",
+				Name:       "column-test-int64-nullable",
 				ColumnType: ColumnType_INT64,
+				IndexType:  IndexType_NONE,
+				Encoding:   Encoding_PLAIN,
+				Nullable:   true,
+			},
+			{
+				Name:       "column-test-string",
+				ColumnType: ColumnType_STRING,
+				IndexType:  IndexType_NONE,
+				Encoding:   Encoding_PLAIN,
+				Nullable:   false,
+			},
+			{
+				Name:       "column-test-string-nullable",
+				ColumnType: ColumnType_STRING,
 				IndexType:  IndexType_NONE,
 				Encoding:   Encoding_PLAIN,
 				Nullable:   true,
@@ -312,6 +413,19 @@ func readColumnIter(column interface{}, info ColumnSourceInfo) []interface{} {
 			}
 		}
 
+	case *binaryColumn:
+		iter := c.Iterator()
+		for iter.HasNext() {
+			vec := iter.Next()
+			for i := 0; i < vec.Len(); i++ {
+				if info.Nullable && !vec.IsValid(i) {
+					values = append(values, nil)
+				} else {
+					values = append(values, vec.Get(i))
+				}
+			}
+		}
+
 	default:
 		panic("unknown column type")
 	}
@@ -362,6 +476,17 @@ func readColumn(column interface{}, colInfo ColumnSourceInfo, rids []uint32) []i
 			if colInfo.Nullable && !vec.IsValid(i) {
 				values = append(values, nil)
 			} else {
+				values = append(values, v)
+			}
+		}
+
+	case *binaryColumn:
+		vec := c.Reader().Read(rids)
+		for i := 0; i < vec.Len(); i++ {
+			if colInfo.Nullable && !vec.IsValid(i) {
+				values = append(values, nil)
+			} else {
+				v := vec.Get(i)
 				values = append(values, v)
 			}
 		}
