@@ -22,22 +22,22 @@ const (
 	SegmentVersion = 1
 )
 
-func NewSegmentWriter(path string, src SegmentSource) *SegmentWriter {
-	return &SegmentWriter{
+func newSegmentWriter(path string, src SegmentSource) *segmentWriter {
+	return &segmentWriter{
 		path:    path,
 		src:     src,
 		offsets: make(map[string]int),
 	}
 }
 
-type SegmentWriter struct {
+type segmentWriter struct {
 	path    string
 	src     SegmentSource
 	bw      *io.BinaryWriter
 	offsets map[string]int
 }
 
-func (sw *SegmentWriter) Write() (err error) {
+func (sw *segmentWriter) Write() (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,14 +70,14 @@ func (sw *SegmentWriter) Write() (err error) {
 
 }
 
-func (sw *SegmentWriter) writeHeader() {
+func (sw *segmentWriter) writeHeader() {
 
 	sw.bw.WriteRaw([]byte(MagicNumber))
 	sw.bw.WriteByte(byte(SegmentVersion))
 
 }
 
-func (sw *SegmentWriter) writeColumns() {
+func (sw *segmentWriter) writeColumns() {
 
 	for _, colInfo := range sw.src.Info().Columns {
 		columnWriter := NewColumnWriter(colInfo, sw.src, sw.bw)
@@ -87,7 +87,7 @@ func (sw *SegmentWriter) writeColumns() {
 
 }
 
-func (sw *SegmentWriter) writeFooter() {
+func (sw *segmentWriter) writeFooter() {
 
 	entry := sw.bw.Offset()
 
@@ -110,6 +110,6 @@ func (sw *SegmentWriter) writeFooter() {
 }
 
 func WriteSegment(path string, src SegmentSource) error {
-	w := NewSegmentWriter(path, src)
+	w := newSegmentWriter(path, src)
 	return w.Write()
 }

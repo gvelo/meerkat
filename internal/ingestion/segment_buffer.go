@@ -3,6 +3,7 @@ package ingestion
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"meerkat/internal/storage"
 	"sync"
 	"time"
 )
@@ -19,6 +20,7 @@ type SegmentBuffer struct {
 	log           zerolog.Logger
 	running       bool
 	mu            sync.Mutex
+	segmentWriter storage.SegmentWriter
 }
 
 func NewSegmentBuffer(maxSize int,
@@ -26,7 +28,8 @@ func NewSegmentBuffer(maxSize int,
 	chSize int,
 	wg *sync.WaitGroup,
 	tableName string,
-	partitionID uint64) *SegmentBuffer {
+	partitionID uint64,
+	segmentWriter storage.SegmentWriter) *SegmentBuffer {
 
 	return &SegmentBuffer{
 		inCh:          make(chan *Partition, chSize),
@@ -36,6 +39,7 @@ func NewSegmentBuffer(maxSize int,
 		maxSize:       maxSize,
 		tableName:     tableName,
 		partitionID:   partitionID,
+		segmentWriter: segmentWriter,
 		log: log.With().
 			Str("src", "SegmentBuffer").
 			Str("table", tableName).
@@ -121,9 +125,9 @@ func (b *SegmentBuffer) flush() {
 
 	b.log.Debug().Int("rows", b.buf.len).Msg("flush")
 
-	// flush here
+	segmentSource := NewSegmentSource(b.buf)
 
-	// segmentWriter.writer( b.buf )
+	b.segmentWriter.Write(segmentSource)
 
 	b.buf = NewTableBuffer(b.tableName, b.partitionID)
 

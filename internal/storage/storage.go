@@ -60,6 +60,5 @@ type ColumnSourceInfo struct {
 
 type SegmentSource interface {
 	Info() SegmentSourceInfo
-	// TODO(gvelo): add blockSize and blockLen.
 	ColumnSource(colName string, blockSize int) ColumnSource
 }
