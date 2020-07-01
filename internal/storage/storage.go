@@ -10,8 +10,6 @@ const (
 
 type ColumnSource interface {
 	HasNext() bool
-	// TODO: remove, this flag is now on the columninfo
-	HasNulls() bool
 }
 
 type Int64ColumnSource interface {
@@ -53,10 +51,11 @@ type SegmentSourceInfo struct {
 type ColumnSourceInfo struct {
 	Name       string
 	ColumnType ColumnType
-	IndexType  IndexType
-	Encoding   Encoding
-	Nullable   bool
-	Len        uint32
+	// TODO(gvelo): indexing and encoding concerns should be in another component.
+	IndexType IndexType
+	Encoding  Encoding
+	Nullable  bool
+	Len       uint32
 }
 
 type SegmentSource interface {

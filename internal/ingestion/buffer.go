@@ -18,6 +18,10 @@ import (
 	iobuff "meerkat/internal/storage/io"
 )
 
+type Buffer interface {
+	Len() int
+}
+
 type TSBuffer struct {
 	buf []int64
 	len int
@@ -43,13 +47,8 @@ func (b *TSBuffer) Reserve(size int) {
 	}
 }
 
-func (b *TSBuffer) Values() []int64 {
-	return b.buf[:b.len]
-}
-
-func (b *TSBuffer) Len() int {
-	return b.len
-}
+func (b *TSBuffer) Values() []int64 { return b.buf[:b.len] }
+func (b *TSBuffer) Len() int        { return b.len }
 
 type ByteSliceSparseBuffer struct {
 	buf     []byte
@@ -95,6 +94,10 @@ func (b *ByteSliceSparseBuffer) Append(row uint32, v []byte) {
 	b.size += len(v)
 	b.offsets[b.len] = uint32(b.size) // TODO(gvelo): check b.size range
 	b.len++
+}
+
+func (b *ByteSliceSparseBuffer) Len() int {
+	return b.len
 }
 
 func (b *ByteSliceSparseBuffer) ToDenseBuffer(l int) *ByteSliceDenseBuffer {
@@ -158,7 +161,7 @@ type ByteSliceDenseBuffer struct {
 	size     int
 	len      int
 	valid    []bool // TODO(gvelo): should we use a bitmap here ?
-	hasNulls bool
+	hasNulls bool   // TODO(gvelo): remove , nullability is infered at segment src construction.
 }
 
 func (b *ByteSliceDenseBuffer) Reserve(l int, size int) {
@@ -203,6 +206,10 @@ func (b *ByteSliceDenseBuffer) Value(rowNum uint32) []byte {
 
 func (b *ByteSliceDenseBuffer) Valids() []bool {
 	return b.valid[:b.len]
+}
+
+func (b *ByteSliceDenseBuffer) Len() int {
+	return b.len
 }
 
 func (b *ByteSliceDenseBuffer) HasNulls() bool {
@@ -280,7 +287,7 @@ func (b *Float64SparseBuffer) ToDenseBuffer(l int) *Float64DenseBuffer {
 
 type Float64DenseBuffer struct {
 	buf      []float64
-	len      int ``
+	len      int
 	valids   []bool
 	hasNulls bool
 }
@@ -307,15 +314,113 @@ func (b *Float64DenseBuffer) Values() []float64 {
 	return b.buf[:b.len]
 }
 
-type ColumnBuffer struct {
-	col  *Column
-	buff interface{}
+type Int64SparseBuffer struct {
+	buf     []int64
+	rownums []uint32
+	len     int
+}
+
+func NewInt64SparseBuffer(len int) *Int64SparseBuffer {
+	return &Int64SparseBuffer{
+		buf:     make([]int64, len),
+		rownums: make([]uint32, len),
+	}
+}
+
+func (b *Int64SparseBuffer) Append(rowNum uint32, value int64) {
+	b.buf[b.len] = value
+	b.rownums[b.len] = rowNum
+	b.len++
+}
+
+func (b *Int64SparseBuffer) Reserve(l int) {
+
+	if b.len+l > len(b.buf) {
+		c := (len(b.buf) + l) * 2
+		buf := make([]int64, c)
+		rowNums := make([]uint32, c)
+		copy(buf, b.buf[:b.len])
+		copy(rowNums, b.rownums[:b.len])
+		b.buf = buf
+		b.rownums = rowNums
+	}
+
+}
+
+func (b *Int64SparseBuffer) ToDenseBuffer(l int) *Int64DenseBuffer {
+
+	if l == b.len {
+
+		valids := make([]bool, l)
+
+		// TODO(gvelo): memset ??
+		for i := 0; i < l; i++ {
+			valids[i] = true
+		}
+
+		return &Int64DenseBuffer{
+			buf:      b.buf,
+			len:      b.len,
+			valids:   valids,
+			hasNulls: false,
+		}
+	}
+
+	buf := make([]int64, l)
+	valids := make([]bool, l)
+
+	for i, f := range b.buf[:b.len] {
+		buf[b.rownums[i]] = f
+		valids[b.rownums[i]] = true
+	}
+
+	return &Int64DenseBuffer{
+		buf:      buf,
+		len:      l,
+		valids:   valids,
+		hasNulls: true,
+	}
+
+}
+
+type Int64DenseBuffer struct {
+	buf      []int64
+	len      int
+	valids   []bool
+	hasNulls bool
+}
+
+func (b *Int64DenseBuffer) Append(value int64) {
+	b.buf[b.len] = value
+	b.len++
+}
+
+func (b *Int64DenseBuffer) Reserve(l int) {
+	if b.len+l > len(b.buf) {
+		c := (len(b.buf) + l) * 2
+		buf := make([]int64, c)
+		copy(buf, b.buf[:b.len])
+		b.buf = buf
+	}
+}
+
+func (b *Int64DenseBuffer) Valids() []bool {
+	return b.valids[:b.len]
+}
+
+func (b *Int64DenseBuffer) Values() []int64 {
+	return b.buf[:b.len]
+}
+
+type tableColumn struct {
+	colType storage.ColumnType
+	buf     Buffer
 }
 
 type TableBuffer struct {
 	partitionID uint64
 	tableName   string
-	columns     map[string]*ColumnBuffer
+	columns     map[string]*tableColumn
 	len         int
 }
 
@@ -323,14 +428,13 @@ func NewTableBuffer(tableName string, partitionID uint64) *TableBuffer {
 	return &TableBuffer{
 		partitionID: partitionID,
 		tableName:   tableName,
-		columns:     make(map[string]*ColumnBuffer),
+		columns:     make(map[string]*tableColumn),
 		len:         0,
 	}
 }
 
-func (b *TableBuffer) Columns() map[string]*ColumnBuffer {
-	return b.columns
-}
+func (b *TableBuffer) Columns() map[string]*tableColumn { return b.columns }
+func (b *TableBuffer) Len() int                         { return b.len }
 
 func (b *TableBuffer) Append(partition *Partition) {
 
@@ -346,9 +450,9 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 			adaptType(c, column)
 
-			colBuffers[column.Idx] = c.buff
+			colBuffers[column.Idx] = c.buf
 
-			switch buff := c.buff.(type) {
+			switch buff := c.buf.(type) {
 			case *TSBuffer:
 				buff.Reserve(int(column.Len))
 			case *ByteSliceSparseBuffer:
@@ -359,7 +463,7 @@ func (b *TableBuffer) Append(partition *Partition) {
 			continue
 		}
 
-		var buff interface{}
+		var buff Buffer
 
 		if column.Name == storage.TSColumnName {
 			buff = NewTSBuffer(int(column.Len))
@@ -369,9 +473,9 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 		colBuffers[column.Idx] = buff
 
-		newCol := &ColumnBuffer{
-			col:  column,
-			buff: buff,
+		newCol := &tableColumn{
+			colType: column.Type,
+			buf:     buff,
 		}
 
 		b.columns[column.Name] = newCol
@@ -419,8 +523,8 @@ func (b *TableBuffer) Append(partition *Partition) {
 
 }
 
-func adaptType(current *ColumnBuffer, new *Column) {
-	if current.col.Type != new.Type {
-		current.col.Type = storage.ColumnType_STRING
+func adaptType(current *tableColumn, new *Column) {
+	if current.colType != new.Type {
+		current.colType = storage.ColumnType_STRING
 	}
 }

@@ -165,7 +165,7 @@ func (b *bufferRegistry) evictIdle() {
 
 }
 
-func (b bufferRegistry) AddToBuffer(table *Table) {
+func (b *bufferRegistry) AddToBuffer(table *Table) {
 	b.inCh <- table
 }
 

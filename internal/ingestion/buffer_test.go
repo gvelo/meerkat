@@ -269,7 +269,7 @@ func TestTableBuffer(t *testing.T) {
 
 	}
 
-	tsBuf := tb.Columns()[storage.TSColumnName].buff.(*TSBuffer)
+	tsBuf := tb.Columns()[storage.TSColumnName].buf.(*TSBuffer)
 
 	assert.Equal(t, len(tsColumnData), len(tsBuf.Values()))
 	assert.Equal(t, numBatch*batchLen, len(tsColumnData))
@@ -280,7 +280,7 @@ func TestTableBuffer(t *testing.T) {
 		assert.Equal(t, tsColumnData[i].(int64), v)
 	}
 
-	testColBuf := tb.Columns()["testCol"].buff.(*ByteSliceSparseBuffer).ToDenseBuffer(int(tb.len))
+	testColBuf := tb.Columns()["testCol"].buf.(*ByteSliceSparseBuffer).ToDenseBuffer(int(tb.len))
 
 	assert.Equal(t, testColumnDataSize, testColBuf.size)
 	assert.Equal(t, len(testColumnData), testColBuf.len)
