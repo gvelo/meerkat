@@ -39,13 +39,12 @@ type Meerkat struct {
 	cluster      cluster.Cluster
 	connRegistry cluster.ConnRegistry
 	//schema       schema.Schema
-	apiServer *rest.ApiServer
-	catalog   cluster.Catalog
-	Conf      config.Config
-	log       zerolog.Logger
-	//segReg    *segments.SegmentBufferRegistry
-	writePool *storage.SegmentWriterPool
-	bufReg    ingestion.BufferRegistry
+	apiServer         *rest.ApiServer
+	catalog           cluster.Catalog
+	Conf              config.Config
+	log               zerolog.Logger
+	segmentWriterPool *storage.SegmentWriterPool
+	bufReg            ingestion.BufferRegistry
 }
 
 func (m *Meerkat) Start(ctx context.Context) {
@@ -109,9 +108,9 @@ func (m *Meerkat) Start(ctx context.Context) {
 	//	m.log.Panic().Err(err).Msg("cannot create schema")
 	//}
 
-	m.writePool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
+	m.segmentWriterPool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
 
-	err = m.writePool.Start()
+	err = m.segmentWriterPool.Start()
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
@@ -125,6 +124,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 		-1,
 		1*time.Second,
 		32,
+		m.segmentWriterPool,
 	)
 
 	m.bufReg.Start()
@@ -175,7 +175,7 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.bufReg.Stop()
 
-	// TODO(gvelo): m.writePool stop ???
+	m.segmentWriterPool.Stop()
 
 	//m.schema.Shutdown()
 

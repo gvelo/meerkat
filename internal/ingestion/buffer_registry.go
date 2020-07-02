@@ -16,6 +16,7 @@ package ingestion
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"meerkat/internal/storage"
 	"sync"
 	"time"
 )
@@ -31,7 +32,8 @@ func NewBufferRegistry(inChSize int,
 	evictIdleTime time.Duration,
 	segmentMaxSize int,
 	segmentFlushInterval time.Duration,
-	segmentChSize int) BufferRegistry {
+	segmentChSize int,
+	segmentWriter storage.SegmentWriter) BufferRegistry {
 	return &bufferRegistry{
 		buffers:              make(map[bufferKey]*bufferEntry),
 		inCh:                 make(chan *Table, inChSize),
@@ -39,6 +41,7 @@ func NewBufferRegistry(inChSize int,
 		segmentMaxSize:       segmentMaxSize,
 		segmentFlushInterval: segmentFlushInterval,
 		segmentChSize:        segmentChSize,
+		segmentWriter:        segmentWriter,
 		log:                  log.With().Str("src", "BufferRegistry").Logger(),
 	}
 }
@@ -65,6 +68,7 @@ type bufferRegistry struct {
 	segmentMaxSize       int
 	segmentFlushInterval time.Duration
 	segmentChSize        int
+	segmentWriter        storage.SegmentWriter
 }
 
 func (b *bufferRegistry) Start() {
@@ -165,7 +169,7 @@ func (b *bufferRegistry) evictIdle() {
 
 }
 
-func (b bufferRegistry) AddToBuffer(table *Table) {
+func (b *bufferRegistry) AddToBuffer(table *Table) {
 	b.inCh <- table
 }
 
@@ -182,7 +186,8 @@ func (b *bufferRegistry) getEntry(bufKey bufferKey) *bufferEntry {
 			b.segmentChSize,
 			&b.wg,
 			bufKey.tableName,
-			bufKey.partitionID),
+			bufKey.partitionID,
+			b.segmentWriter),
 		lastAccess: time.Now(),
 	}
 

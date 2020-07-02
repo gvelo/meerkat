@@ -14,57 +14,71 @@
 package storage
 
 import (
+	"encoding/base64"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"meerkat/internal/buffer"
 	"os"
 	"path"
-	"path/filepath"
+	"sync"
 )
+
+const segmentFolderName = "segments"
+
+type SegmentWriter interface {
+	Write(src SegmentSource)
+}
 
 func NewSegmentWriterPool(chanSize int, poolSize int, dbPath string) *SegmentWriterPool {
 	return &SegmentWriterPool{
 		poolSize: poolSize,
-		inChan:   make(chan *buffer.Table, chanSize),
-		done:     make(chan struct{}),
-		path:     dbPath,
-		log:      log.With().Str("src", "SegmentWriterPool").Logger(),
+		inChan:   make(chan SegmentSource, chanSize),
+		path:     path.Join(dbPath, segmentFolderName),
+		log:      log.With().Str("src", "segmentWriterPool").Logger(),
 	}
 }
 
 type SegmentWriterPool struct {
 	poolSize int
-	inChan   chan *buffer.Table
-	done     chan struct{}
+	inChan   chan SegmentSource
+	wg       sync.WaitGroup
+	mu       sync.Mutex
+	running  bool
 	path     string
 	log      zerolog.Logger
 }
 
-func (s *SegmentWriterPool) Start() error {
+func (w *SegmentWriterPool) Start() error {
 
-	s.log.Info().Msg("start")
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	s.path = path.Join(s.path, "segments")
-
-	err := os.MkdirAll(s.path, 0770)
-
-	if err != nil {
-		return fmt.Errorf("could not create dir %v , %v", s.path, err)
+	if w.running {
+		return nil
 	}
 
-	for i := 0; i < s.poolSize; i++ {
+	w.log.Info().Msg("start")
+
+	w.running = true
+
+	err := os.MkdirAll(w.path, 0770)
+
+	if err != nil {
+		return fmt.Errorf("could not create dir %v , %v", w.path, err)
+	}
+
+	for i := 0; i < w.poolSize; i++ {
 
 		worker := &segmentWriterWorker{
 			id:     i,
-			inChan: s.inChan,
-			done:   s.done,
-			path:   s.path,
+			inChan: w.inChan,
+			wg:     &w.wg,
+			path:   w.path,
 			log:    log.With().Str("src", "SegmentWriterWorker").Int("id", i).Logger(),
 		}
 
-		go func() { worker.Start() }()
+		w.wg.Add(1)
+		go func() { worker.start() }()
 
 	}
 
@@ -72,48 +86,82 @@ func (s *SegmentWriterPool) Start() error {
 
 }
 
-func (s *SegmentWriterPool) InChan() chan *buffer.Table {
-	return s.inChan
+func (w *SegmentWriterPool) Stop() {
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.running {
+		return
+	}
+
+	w.log.Info().Msg("stopping segment writer pool")
+
+	w.running = false
+
+	close(w.inChan)
+	w.log.Info().Msg("waiting for workers to finish")
+
+	w.wg.Wait()
+
+	w.log.Info().Msg("stopped")
+
+}
+
+func (w *SegmentWriterPool) Write(src SegmentSource) {
+	w.inChan <- src
 }
 
 type segmentWriterWorker struct {
 	id     int
-	inChan chan *buffer.Table
-	done   chan struct{}
+	inChan chan SegmentSource
+	wg     *sync.WaitGroup
 	path   string
 	log    zerolog.Logger
 }
 
 // start worker
-func (w *segmentWriterWorker) Start() {
+func (w *segmentWriterWorker) start() {
+
+	defer w.wg.Done()
+
+	w.log.Info().Msg("started")
 
 	for {
 		select {
-		case table, ok := <-w.inChan:
+		case src, ok := <-w.inChan:
 			if !ok {
 				w.log.Info().Msg("inChan closed, quiting")
 				return
 			}
-			w.writeTable(table)
-		case <-w.done:
-			w.log.Info().Msg("done")
-			return
+			w.writeSegment(src)
 		}
 	}
+
 }
 
-func (w *segmentWriterWorker) writeTable(t *buffer.Table) {
+func (w *segmentWriterWorker) writeSegment(src SegmentSource) {
 
-	sid := uuid.New()
-	fileName := filepath.Join(w.path, sid.String())
+	info := src.Info()
 
-	w.log.Debug().Str("sid", sid.String()).Msg("writing segment")
+	fileName := base64.RawURLEncoding.EncodeToString(info.Id)
 
-	err := WriteSegment(fileName, sid, t)
+	filePath := path.Join(w.path, fileName)
+
+	logger := w.log.With().
+		Str("sid", fileName).
+		Str("table", info.TableName).
+		Uint64("partition", info.PartitionId).Logger()
+
+	logger.Debug().Msg("writing segment")
+
+	err := WriteSegment(filePath, src)
 
 	if err != nil {
-		// TODO: (sebad) what to do in this case?
-		w.log.Error().Err(err).Str("sid", sid.String()).Msg("error writing segment")
+		logger.Error().Err(err).Msg("error writing segment")
+		return
 	}
+
+	logger.Debug().Msg("segment successfully written")
 
 }

@@ -1,0 +1,100 @@
+// Copyright 2020 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package meerkat.storage;
+option go_package = "meerkat/internal/storage";
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+
+enum ColumnType {
+
+  // a column of type timestamp. Timestamp represent time as
+  // the number of nanoseconds elapsed since January 1, 1970 UTC
+  TIMESTAMP = 0;
+  // a datetime column type. Datetime columns are compatible with
+  // Kusto datetime type. Time values are measured in 100-nanosecond
+  // units called ticks, and a particular date is the number of ticks
+  // since 12:00 midnight, January 1, 0001 A.D. (C.E.) in the
+  // GregorianCalendar calendar (excluding ticks that would be added
+  // by leap seconds). For example, a ticks value of
+  // 31241376000000000 represents the date, Friday, January 01, 0100 12:00:00 midnight.
+  // This is sometimes called "a moment in linear time".
+  DATETIME  = 1;
+  // a column of type bool
+  BOOL      = 2;
+  // a column of type int32 ( int )
+  INT32     = 3;
+  // a column of type int64 ( long )
+  INT64     = 4;
+  // a column of type float64 ( real )
+  FLOAT64   = 5;
+  // a column of type String
+  STRING    = 6;
+  // a column of type dynamic
+  DYNAMIC   = 7;
+  // a column of type UUID
+  GUID      = 8;
+}
+
+enum IndexType {
+  // The column is not indexed.
+  NONE     = 0;
+  // The column is indexed using a full text index.
+  FULLTEXT = 1;
+  // The column is indexed using a string index (trie).
+  TRIE     = 2;
+  // The column is indexed using a range index.
+  RANGE    = 4;
+}
+
+enum Encoding {
+  PLAIN          = 0;
+  SNAPPY         = 1;
+  DICT           = 2;
+  DICT_BITPACKED = 3;
+}
+
+
+message ColumnInfo {
+  string     name = 1;
+  ColumnType column_type = 2;
+  IndexType  index_type = 3;
+  Encoding   encoding = 4;
+  bool       nullable = 5;
+  uint32     len = 6;
+  uint64     cardinality = 7;
+  uint64     size_on_disk = 8;
+  uint64     compressed_size = 9;
+  uint32     null_count = 10;
+  // TODO(gvelo) add bit width histogram and value histogram
+}
+
+message SegmentInfo {
+  bytes    id                    = 1;
+  bytes    database_id           = 2;
+  string   database_name         = 3;
+  string   table_name            = 4;
+  uint64   partition_id          = 5;
+  uint32   len                   = 6;
+  Interval interval              = 7;
+  repeated ColumnInfo columns    = 8;
+}
+
+message Interval {
+  google.protobuf.Timestamp from = 1 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+  google.protobuf.Timestamp to   = 2 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+}
+

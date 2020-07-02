@@ -14,38 +14,30 @@
 package storage
 
 import (
-	"github.com/google/uuid"
-	"meerkat/internal/buffer"
 	"meerkat/internal/storage/io"
-	"sort"
 )
 
 const (
 	MagicNumber    = "MEERKAT"
 	SegmentVersion = 1
-	TSColID        = "_ts" // TODO(gvelo) change to []byte
 )
 
-func NewSegmentWriter(path string, id uuid.UUID, table *buffer.Table) *SegmentWriter {
-	return &SegmentWriter{
+func newSegmentWriter(path string, src SegmentSource) *segmentWriter {
+	return &segmentWriter{
 		path:    path,
-		table:   table,
-		id:      id,
-		offsets: make(map[string]int, len(table.Cols())),
+		src:     src,
+		offsets: make(map[string]int),
 	}
 }
 
-type SegmentWriter struct {
-	path     string
-	table    *buffer.Table
-	bw       *io.BinaryWriter
-	id       uuid.UUID
-	offsets  map[string]int
-	fromDate int
-	toDate   int
+type segmentWriter struct {
+	path    string
+	src     SegmentSource
+	bw      *io.BinaryWriter
+	offsets map[string]int
 }
 
-func (sw *SegmentWriter) Write() (err error) {
+func (sw *segmentWriter) Write() (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,9 +62,7 @@ func (sw *SegmentWriter) Write() (err error) {
 
 	sw.writeHeader()
 
-	perm := sw.writeTSColumn()
-
-	sw.writeColumns(perm)
+	sw.writeColumns()
 
 	sw.writeFooter()
 
@@ -80,141 +70,46 @@ func (sw *SegmentWriter) Write() (err error) {
 
 }
 
-func (sw *SegmentWriter) writeHeader() {
+func (sw *segmentWriter) writeHeader() {
 
 	sw.bw.WriteRaw([]byte(MagicNumber))
 	sw.bw.WriteByte(byte(SegmentVersion))
 
 }
 
-func (sw *SegmentWriter) writeTSColumn() []int {
+func (sw *segmentWriter) writeColumns() {
 
-	c, ok := sw.table.Col(TSColID)
-
-	if !ok {
-		panic("missing TS column")
+	for _, colInfo := range sw.src.Info().Columns {
+		columnWriter := NewColumnWriter(colInfo, sw.src, sw.bw)
+		columnWriter.Write()
+		sw.offsets[colInfo.Name] = sw.bw.Offset()
 	}
-
-	tsColumn, ok := c.(*buffer.IntBuffer)
-
-	if !ok {
-		panic("wrong TS column type")
-	}
-
-	perm := sortTSColumn(tsColumn.Values())
-
-	// set the date range
-	sw.fromDate = tsColumn.Values()[0]
-	sw.toDate = tsColumn.Values()[tsColumn.Len()-1]
-
-	cw := NewTSColumnWriter(tsColumn, sw.bw)
-
-	cw.Write()
-
-	sw.offsets[TSColID] = sw.bw.Offset()
-
-	return perm
 
 }
 
-func (sw *SegmentWriter) writeColumns(perm []int) {
-
-	//for _, f := range sw.table.Index().Fields {
-	//
-	//	// skip the timestamp column.
-	//	if f.Id == TSColID {
-	//		continue
-	//	}
-	//
-	//	b, ok := sw.table.Col(f.Id)
-	//
-	//	if !ok {
-	//		panic("error getting buffer for column")
-	//	}
-	//
-	//	w := NewColumWriter(f.FieldType, b, perm, sw.bw)
-	//
-	//	w.Write()
-	//
-	//	sw.offsets[f.Id] = sw.bw.Offset()
-	//
-	//}
-
-}
-
-func (sw *SegmentWriter) writeFooter() {
+func (sw *segmentWriter) writeFooter() {
 
 	entry := sw.bw.Offset()
 
-	sw.bw.WriteRaw(sw.id[:])
+	sw.bw.WriteUvarint(int(sw.src.Info().Len))
 
-	// TODO(gvelo) refactor to [16]byte
-	//sw.bw.WriteString(sw.table.Index().Id)
-	//
-	//sw.bw.WriteString(sw.table.Index().Name)
+	sw.bw.WriteUvarint(len(sw.src.Info().Columns))
 
-	sw.bw.WriteFixedInt(sw.fromDate)
+	for _, columnInfo := range sw.src.Info().Columns {
 
-	sw.bw.WriteFixedInt(sw.toDate)
+		sw.bw.WriteString(columnInfo.Name)
 
-	sw.bw.WriteUvarint(sw.table.Len())
+		sw.bw.WriteByte(byte(columnInfo.ColumnType))
 
-	//sw.bw.WriteUvarint(len(sw.table.Cols()))
-	//
-	//for _, f := range sw.table.Index().Fields {
-	//
-	//	sw.bw.WriteString(f.Id)
-	//
-	//	sw.bw.WriteString(f.Name)
-	//
-	//	sw.bw.WriteByte(byte(f.FieldType))
-	//
-	//	sw.bw.WriteUvarint(sw.offsets[f.Id])
-	//
-	//}
+		sw.bw.WriteUvarint(sw.offsets[columnInfo.Name])
+
+	}
 
 	sw.bw.WriteFixedInt(entry)
 
 }
 
-func sortTSColumn(values []int) []int {
-
-	perm := make([]int, len(values))
-
-	for i := 0; i < len(perm); i++ {
-		perm[i] = i
-	}
-
-	tsSlice := &TSSlice{
-		ts:   values,
-		perm: perm,
-	}
-
-	sort.Stable(tsSlice)
-
-	return perm
-
-}
-
-type TSSlice struct {
-	ts   []int
-	perm []int
-}
-
-func (t *TSSlice) Len() int {
-	return len(t.ts)
-}
-
-func (t *TSSlice) Less(i, j int) bool {
-	return t.ts[i] < t.ts[j]
-}
-
-func (t *TSSlice) Swap(i, j int) {
-	t.ts[i], t.ts[j] = t.ts[j], t.ts[i]
-	t.perm[i], t.perm[j] = t.perm[j], t.perm[i]
-}
-
-func WriteSegment(path string, id uuid.UUID, table *buffer.Table) error {
-	w := NewSegmentWriter(path, id, table)
+func WriteSegment(path string, src SegmentSource) error {
+	w := newSegmentWriter(path, src)
 	return w.Write()
 }

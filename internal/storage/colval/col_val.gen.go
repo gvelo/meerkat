@@ -19,73 +19,73 @@
 
 package colval
 
-type IntColValues struct {
-	values []int
+type Int64ColValues struct {
+	values []int64
 	rid    []uint32
 }
 
-func (v *IntColValues) Len() int {
+func (v *Int64ColValues) Len() int {
 	return len(v.values)
 }
 
-func (v *IntColValues) Rid() []uint32 {
+func (v *Int64ColValues) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *IntColValues) Values() []int {
+func (v *Int64ColValues) Values() []int64 {
 	return v.values
 }
 
-func NewIntColValues(values []int, rid []uint32) IntColValues {
-	return IntColValues{
+func NewInt64ColValues(values []int64, rid []uint32) Int64ColValues {
+	return Int64ColValues{
 		values: values,
 		rid:    rid,
 	}
 }
 
-type UintColValues struct {
-	values []uint
+type Int32ColValues struct {
+	values []int32
 	rid    []uint32
 }
 
-func (v *UintColValues) Len() int {
+func (v *Int32ColValues) Len() int {
 	return len(v.values)
 }
 
-func (v *UintColValues) Rid() []uint32 {
+func (v *Int32ColValues) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *UintColValues) Values() []uint {
+func (v *Int32ColValues) Values() []int32 {
 	return v.values
 }
 
-func NewUintColValues(values []uint, rid []uint32) UintColValues {
-	return UintColValues{
+func NewInt32ColValues(values []int32, rid []uint32) Int32ColValues {
+	return Int32ColValues{
 		values: values,
 		rid:    rid,
 	}
 }
 
-type FloatColValues struct {
+type Float64ColValues struct {
 	values []float64
 	rid    []uint32
 }
 
-func (v *FloatColValues) Len() int {
+func (v *Float64ColValues) Len() int {
 	return len(v.values)
 }
 
-func (v *FloatColValues) Rid() []uint32 {
+func (v *Float64ColValues) Rid() []uint32 {
 	return v.rid
 }
 
-func (v *FloatColValues) Values() []float64 {
+func (v *Float64ColValues) Values() []float64 {
 	return v.values
 }
 
-func NewFloatColValues(values []float64, rid []uint32) FloatColValues {
-	return FloatColValues{
+func NewFloat64ColValues(values []float64, rid []uint32) Float64ColValues {
+	return Float64ColValues{
 		values: values,
 		rid:    rid,
 	}
@@ -113,24 +113,4 @@ func NewBoolColValues(values []bool, rid []uint32) BoolColValues {
 		values: values,
 		rid:    rid,
 	}
-}
-
-type IntColSource interface {
-	ColSource
-	Next() IntColValues
-}
-
-type UintColSource interface {
-	ColSource
-	Next() UintColValues
-}
-
-type FloatColSource interface {
-	ColSource
-	Next() FloatColValues
-}
-
-type BoolColSource interface {
-	ColSource
-	Next() BoolColValues
 }

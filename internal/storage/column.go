@@ -31,38 +31,38 @@ type Column interface {
 	Stats() *Stats
 }
 
-type IntColumn interface {
+type Int64Column interface {
 	Column
-	Index() IntIndex
-	Reader() IntColumnReader
-	Iterator() IntIterator
+	Index() Int64Index
+	Reader() Int64ColumnReader
+	Iterator() Int64Iterator
 }
 
-type IntColumnReader interface {
+type Int64ColumnReader interface {
 	// TODO(gvelo): hint the reader about index use.
 	//  ie. avoid index use in low selectivity search.
-	Read(rid []uint32) vector.IntVector
+	Read(rid []uint32) vector.Int64Vector
 }
 
-type FloatColumn interface {
+type Float64Column interface {
 	Column
 	Index() FloatIndex
-	Reader() FloatColumnReader
-	Iterator() FloatIterator
+	Read(pos []uint32) vector.Float64Vector
+	Iterator() Float64Iterator
 }
 
-type FloatColumnReader interface {
-	Read(pos []uint32) vector.FloatVector
+type Float64ColumnReader interface {
+	Read(pos []uint32) vector.Float64Vector
 }
 
-type StringColumn interface {
+type ByteSliceColumn interface {
 	Column
 	Dict() ByteSliceDict
 	Index() ByteSliceIndex
-	DictEncReader() IntColumnReader
+	DictEncReader() Int64ColumnReader
 	Reader() ByteSliceReader
-	Iterator() BinaryIterator
-	DictEncIterator() IntIterator
+	Iterator() ByteSliceIterator
+	DictEncIterator() Int64Iterator
 }
 
 type ByteSliceReader interface {
@@ -73,31 +73,31 @@ type TextColumn interface {
 	Column
 	Index() ByteSliceIndex
 	Reader() ByteSliceReader
-	Iterator() BinaryIterator
+	Iterator() ByteSliceIterator
 }
 
 type TimeColumn interface {
 	Column
 	Index() TimeIndex
-	Reader() IntColumnReader
-	Iterator() IntIterator
+	Reader() Int64ColumnReader
+	Iterator() Int64Iterator
 }
 
 type Iterator interface {
 	HasNext() bool
 }
 
-type IntIterator interface {
+type Int64Iterator interface {
 	Iterator
-	Next() vector.IntVector
+	Next() vector.Int64Vector
 }
 
-type FloatIterator interface {
+type Float64Iterator interface {
 	Iterator
-	Next() vector.FloatVector
+	Next() vector.Float64Vector
 }
 
-type BinaryIterator interface {
+type ByteSliceIterator interface {
 	Iterator
 	Next() vector.ByteSliceVector
 }
@@ -120,13 +120,13 @@ type ByteSliceIndex interface {
 	Search(s []byte) *roaring.Bitmap
 }
 
-type IntIndex interface {
-	Eq(i int) *roaring.Bitmap
-	Ne(i int) *roaring.Bitmap
-	Gt(i int) *roaring.Bitmap
-	Ge(i int) *roaring.Bitmap
-	Lt(i int) *roaring.Bitmap
-	Le(i int) *roaring.Bitmap
+type Int64Index interface {
+	Eq(i int64) *roaring.Bitmap
+	Ne(i int64) *roaring.Bitmap
+	Gt(i int64) *roaring.Bitmap
+	Ge(i int64) *roaring.Bitmap
+	Lt(i int64) *roaring.Bitmap
+	Le(i int64) *roaring.Bitmap
 }
 
 type FloatIndex interface {

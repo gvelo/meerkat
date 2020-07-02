@@ -41,6 +41,10 @@ func BS2S(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 }
 
+func I642B(s []int64) []byte {
+	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
+}
+
 func U642B(s []uint64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
@@ -62,6 +66,17 @@ func B2I(b []byte) []int {
 	s.Cap = h.Cap / Int64SizeBytes
 	return res
 }
+
+func B2I64(b []byte) []int64 {
+	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	var res []int64
+	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
+	s.Data = h.Data
+	s.Len = h.Len / Int64SizeBytes
+	s.Cap = h.Cap / Int64SizeBytes
+	return res
+}
+
 
 func B2U32(b []byte) []uint32 {
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))

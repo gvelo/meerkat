@@ -17,16 +17,16 @@ import (
 	"meerkat/internal/util/sliceutil"
 )
 
-type IntPlainDecoder struct {
+type Int64PlainDecoder struct {
 }
 
-func NewIntPlainDecoder() *IntPlainDecoder {
-	return &IntPlainDecoder{}
+func NewInt64PlainDecoder() *Int64PlainDecoder {
+	return &Int64PlainDecoder{}
 }
 
-func (d *IntPlainDecoder) Decode(block []byte, buf []int) []int {
+func (d *Int64PlainDecoder) Decode(block []byte, buf []int64) []int64 {
 
-	data := sliceutil.B2I(block)
+	data := sliceutil.B2I64(block)
 
 	if len(buf) < len(data) {
 		panic("there isn't enough space to decode integer values")

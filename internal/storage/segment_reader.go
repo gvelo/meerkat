@@ -15,8 +15,8 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage/io"
 	"time"
 )
@@ -26,8 +26,7 @@ const (
 )
 
 type colData struct {
-	colType schema.ColumnType
-	id      string
+	colType ColumnType
 	name    string
 	bounds  io.Bounds
 }
@@ -84,7 +83,6 @@ type Segment struct {
 	columns map[string]interface{}
 }
 
-// start = entry
 func (s *Segment) read() error {
 
 	// magicNumber + version
@@ -94,16 +92,6 @@ func (s *Segment) read() error {
 
 	br.Entry()
 
-	br.ReadRaw(s.id[:])
-
-	s.tableId = br.ReadString()
-
-	s.tableName = br.ReadString()
-
-	s.from = br.ReadFixed64()
-
-	s.to = br.ReadFixed64()
-
 	s.numOfRows = br.ReadUVarint()
 
 	s.numOfCol = br.ReadUVarint()
@@ -112,9 +100,8 @@ func (s *Segment) read() error {
 
 	for i := 0; i < s.numOfCol; i++ {
 		c := colData{}
-		c.id = br.ReadString()
 		c.name = br.ReadString()
-		c.colType = schema.ColumnType(br.ReadByte())
+		c.colType = ColumnType(br.ReadByte())
 		c.bounds.End = br.ReadUVarint()
 		if i == 0 {
 			c.bounds.Start = s.start
@@ -140,17 +127,17 @@ func (s *Segment) readColumns(cd []colData) {
 		var col interface{}
 
 		switch cData.colType {
-		case schema.ColumnType_TIMESTAMP:
-			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
-		case schema.ColumnType_LONG:
-			col = NewIntColumn(s.f.Bytes, cData.bounds, s.numOfRows)
-		case schema.ColumnType_STRING:
+		case ColumnType_TIMESTAMP:
+			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
+		case ColumnType_INT64:
+			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
+		case ColumnType_STRING:
 			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:
-			panic("unknown column type")
+			panic(fmt.Sprintf("unknown column type %v", cData.colType))
 		}
 
-		s.columns[cData.id] = col
+		s.columns[cData.name] = col
 
 	}
 

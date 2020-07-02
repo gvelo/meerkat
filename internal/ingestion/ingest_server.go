@@ -13,7 +13,7 @@
 
 package ingestion
 
-//go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/schema/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingest.proto
+//go:generate protoc  -I . -I ../../build/proto/ -I ../../internal/storage/   --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc:. ./ingest.proto
 
 import (
 	"context"

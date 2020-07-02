@@ -16,9 +16,6 @@
 package storage
 
 import (
-	"meerkat/internal/buffer"
-	"meerkat/internal/schema"
-	"meerkat/internal/storage/bufcolval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
@@ -34,48 +31,120 @@ type ColumnWriter interface {
 	Write()
 }
 
-func NewColumWriter(columnType schema.ColumnType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+//func NewColumWriterOld(columnType ColumnType, buf buffer.Buffer, perm []int, bw *io.BinaryWriter) ColumnWriter {
+//
+//	blkIdx := index.NewBlockIndexWriter(bw)
+//	blkWriter := NewBlockWriter(bw, blkIdx)
+//
+//	var validity index.ValidityIndexWriter
+//
+//	if buf.Nullable() {
+//		validity = index.NewValidityBitmapIndex(bw)
+//	}
+//
+//	switch columnType {
+//	case ColumnType_INT64:
+//		// TODO(gvelo): for plain encoded scalars blockindex is not necessary.
+//		//              offset can be computed using the RID plus the
+//		//              column's value width.
+//		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
+//		enc := encoding.NewInt64PlainEncoder(blkWriter)
+//
+//		return NewInt64ColumnWriter(ColumnType_INT64, src, enc, nil, blkIdx, validity, bw)
+//
+//	case ColumnType_STRING:
+//		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
+//		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+//		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
+//
+//	default:
+//		panic("unknown columnType")
+//
+//	}
+//
+//}
 
-	blkIdx := index.NewBlockIndexWriter(bw)
-	blkWriter := NewBlockWriter(bw, blkIdx)
+//func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter {
+//
+//	// plain 8k pages
+//	src := bufcolval.NewTsBufColSource(buf, blockLen)
+//	blkIdx := index.NewBlockIndexWriter(bw)
+//	blkWriter := NewBlockWriter(bw, blkIdx)
+//	enc := encoding.NewInt64PlainEncoder(blkWriter)
+//	cw := NewInt64ColumnWriter(ColumnType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
+//
+//	return cw
+//
+//}
 
-	var validity index.ValidityIndexWriter
+func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.BinaryWriter) ColumnWriter {
 
-	if buf.Nullable() {
-		validity = index.NewValidityBitmapIndex(bw)
-	}
+	switch info.ColumnType {
 
-	switch columnType {
-	case schema.ColumnType_LONG:
-		// TODO(gvelo): for plain encoded scalars blockindex is not necessary.
-		//              offset can be computed using the RID plus the
-		//              column's value width.
-		src := bufcolval.NewIntBufColSource(buf.(*buffer.IntBuffer), blockLen, perm)
-		enc := encoding.NewIntPlainEncoder(blkWriter)
+	case ColumnType_TIMESTAMP:
 
-		return NewIntColumnWriter(schema.ColumnType_LONG, src, enc, nil, blkIdx, validity, bw)
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
 
-	case schema.ColumnType_STRING:
-		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
+		return NewInt64ColumnWriter(ColumnType_TIMESTAMP,
+			src,
+			enc,
+			nil,
+			blkIdx,
+			nil, bw)
+
+	case ColumnType_DATETIME:
+		panic("not implemented yet")
+
+	case ColumnType_BOOL:
+		panic("not implemented yet")
+
+	case ColumnType_INT32:
+		panic("not implemented yet")
+
+	case ColumnType_INT64:
+
+		// TODO(gvelo): for plain encoded numeric columns, blockindex is not necessary.
+		// offset can be computed using the RID plus the column's value width.
+
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
+		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		var validity index.ValidityIndexWriter
+
+		if info.Nullable {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+
+		return NewInt64ColumnWriter(ColumnType_INT64, src, enc, nil, blkIdx, validity, bw)
+
+	case ColumnType_FLOAT64:
+		panic("not implemented yet")
+
+	case ColumnType_STRING:
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		src := segmentSrc.ColumnSource(info.Name, txtBlockSize).(ByteSliceColumnSource)
 		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
-		return NewByteSliceColumnWriter(schema.ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
+		var validity index.ValidityIndexWriter
+
+		if info.Nullable {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+
+		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
+
+	case ColumnType_DYNAMIC:
+		panic("not implemented yet")
+
+	case ColumnType_GUID:
+		panic("not implemented yet")
 
 	default:
-		panic("unknown columnType")
-
+		panic("unknown column type")
 	}
-
-}
-
-func NewTSColumnWriter(buf *buffer.IntBuffer, bw *io.BinaryWriter) ColumnWriter {
-
-	// plain 8k pages
-	src := bufcolval.NewTsBufColSource(buf, blockLen)
-	blkIdx := index.NewBlockIndexWriter(bw)
-	blkWriter := NewBlockWriter(bw, blkIdx)
-	enc := encoding.NewIntPlainEncoder(blkWriter)
-	cw := NewIntColumnWriter(schema.ColumnType_TIMESTAMP, src, enc, nil, blkIdx, nil, bw)
-
-	return cw
 
 }

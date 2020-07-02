@@ -20,22 +20,20 @@
 package storage
 
 import (
-	"meerkat/internal/schema"
-	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/index"
 	"meerkat/internal/storage/io"
 )
 
-func NewIntColumnWriter(columnType schema.ColumnType,
-	src colval.IntColSource,
-	encoder encoding.IntEncoder,
-	colIndex index.IntIndexWriter,
+func NewInt64ColumnWriter(columnType ColumnType,
+	src Int64ColumnSource,
+	encoder encoding.Int64Encoder,
+	colIndex index.Int64IndexWriter,
 	blockIndex index.BlockIndexWriter,
 	validityIndex index.ValidityIndexWriter,
-	bw *io.BinaryWriter) *IntColumnWriter {
+	bw *io.BinaryWriter) *Int64ColumnWriter {
 
-	return &IntColumnWriter{
+	return &Int64ColumnWriter{
 		columnType: columnType,
 		src:        src,
 		bw:         bw,
@@ -47,12 +45,12 @@ func NewIntColumnWriter(columnType schema.ColumnType,
 
 }
 
-type IntColumnWriter struct {
-	columnType  schema.ColumnType
+type Int64ColumnWriter struct {
+	columnType  ColumnType
 	bw          *io.BinaryWriter
-	src         colval.IntColSource
-	encoder     encoding.IntEncoder
-	colIndex    index.IntIndexWriter
+	src         Int64ColumnSource
+	encoder     encoding.Int64Encoder
+	colIndex    index.Int64IndexWriter
 	blockIndex  index.BlockIndexWriter
 	validity    index.ValidityIndexWriter
 	numOfValues int
@@ -65,7 +63,7 @@ type IntColumnWriter struct {
 	validityIdxEnd int
 }
 
-func (w *IntColumnWriter) Write() {
+func (w *Int64ColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
@@ -79,7 +77,7 @@ func (w *IntColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -114,7 +112,7 @@ func (w *IntColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -126,7 +124,7 @@ func (w *IntColumnWriter) Write() {
 
 }
 
-func (w *IntColumnWriter) writeFooter() {
+func (w *Int64ColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
@@ -143,15 +141,15 @@ func (w *IntColumnWriter) writeFooter() {
 
 }
 
-func NewUintColumnWriter(columnType schema.ColumnType,
-	src colval.UintColSource,
-	encoder encoding.UintEncoder,
-	colIndex index.UintIndexWriter,
+func NewInt32ColumnWriter(columnType ColumnType,
+	src Int32ColumnSource,
+	encoder encoding.Int32Encoder,
+	colIndex index.Int32IndexWriter,
 	blockIndex index.BlockIndexWriter,
 	validityIndex index.ValidityIndexWriter,
-	bw *io.BinaryWriter) *UintColumnWriter {
+	bw *io.BinaryWriter) *Int32ColumnWriter {
 
-	return &UintColumnWriter{
+	return &Int32ColumnWriter{
 		columnType: columnType,
 		src:        src,
 		bw:         bw,
@@ -163,12 +161,12 @@ func NewUintColumnWriter(columnType schema.ColumnType,
 
 }
 
-type UintColumnWriter struct {
-	columnType  schema.ColumnType
+type Int32ColumnWriter struct {
+	columnType  ColumnType
 	bw          *io.BinaryWriter
-	src         colval.UintColSource
-	encoder     encoding.UintEncoder
-	colIndex    index.UintIndexWriter
+	src         Int32ColumnSource
+	encoder     encoding.Int32Encoder
+	colIndex    index.Int32IndexWriter
 	blockIndex  index.BlockIndexWriter
 	validity    index.ValidityIndexWriter
 	numOfValues int
@@ -181,7 +179,7 @@ type UintColumnWriter struct {
 	validityIdxEnd int
 }
 
-func (w *UintColumnWriter) Write() {
+func (w *Int32ColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
@@ -195,7 +193,7 @@ func (w *UintColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -230,7 +228,7 @@ func (w *UintColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -242,7 +240,7 @@ func (w *UintColumnWriter) Write() {
 
 }
 
-func (w *UintColumnWriter) writeFooter() {
+func (w *Int32ColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
@@ -259,15 +257,15 @@ func (w *UintColumnWriter) writeFooter() {
 
 }
 
-func NewFloatColumnWriter(columnType schema.ColumnType,
-	src colval.FloatColSource,
-	encoder encoding.FloatEncoder,
-	colIndex index.FloatIndexWriter,
+func NewFloat64ColumnWriter(columnType ColumnType,
+	src Float64ColumnSource,
+	encoder encoding.Float64Encoder,
+	colIndex index.Float64IndexWriter,
 	blockIndex index.BlockIndexWriter,
 	validityIndex index.ValidityIndexWriter,
-	bw *io.BinaryWriter) *FloatColumnWriter {
+	bw *io.BinaryWriter) *Float64ColumnWriter {
 
-	return &FloatColumnWriter{
+	return &Float64ColumnWriter{
 		columnType: columnType,
 		src:        src,
 		bw:         bw,
@@ -279,12 +277,12 @@ func NewFloatColumnWriter(columnType schema.ColumnType,
 
 }
 
-type FloatColumnWriter struct {
-	columnType  schema.ColumnType
+type Float64ColumnWriter struct {
+	columnType  ColumnType
 	bw          *io.BinaryWriter
-	src         colval.FloatColSource
-	encoder     encoding.FloatEncoder
-	colIndex    index.FloatIndexWriter
+	src         Float64ColumnSource
+	encoder     encoding.Float64Encoder
+	colIndex    index.Float64IndexWriter
 	blockIndex  index.BlockIndexWriter
 	validity    index.ValidityIndexWriter
 	numOfValues int
@@ -297,7 +295,7 @@ type FloatColumnWriter struct {
 	validityIdxEnd int
 }
 
-func (w *FloatColumnWriter) Write() {
+func (w *Float64ColumnWriter) Write() {
 
 	for w.src.HasNext() {
 
@@ -311,7 +309,7 @@ func (w *FloatColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -346,7 +344,7 @@ func (w *FloatColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -358,7 +356,7 @@ func (w *FloatColumnWriter) Write() {
 
 }
 
-func (w *FloatColumnWriter) writeFooter() {
+func (w *Float64ColumnWriter) writeFooter() {
 
 	entry := w.bw.Offset()
 
@@ -375,8 +373,8 @@ func (w *FloatColumnWriter) writeFooter() {
 
 }
 
-func NewBoolColumnWriter(columnType schema.ColumnType,
-	src colval.BoolColSource,
+func NewBoolColumnWriter(columnType ColumnType,
+	src BoolColumnSource,
 	encoder encoding.BoolEncoder,
 	colIndex index.BoolIndexWriter,
 	blockIndex index.BlockIndexWriter,
@@ -396,9 +394,9 @@ func NewBoolColumnWriter(columnType schema.ColumnType,
 }
 
 type BoolColumnWriter struct {
-	columnType  schema.ColumnType
+	columnType  ColumnType
 	bw          *io.BinaryWriter
-	src         colval.BoolColSource
+	src         BoolColumnSource
 	encoder     encoding.BoolEncoder
 	colIndex    index.BoolIndexWriter
 	blockIndex  index.BlockIndexWriter
@@ -427,7 +425,7 @@ func (w *BoolColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -462,7 +460,7 @@ func (w *BoolColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 
@@ -491,8 +489,8 @@ func (w *BoolColumnWriter) writeFooter() {
 
 }
 
-func NewByteSliceColumnWriter(columnType schema.ColumnType,
-	src colval.ByteSliceColSource,
+func NewByteSliceColumnWriter(columnType ColumnType,
+	src ByteSliceColumnSource,
 	encoder encoding.ByteSliceEncoder,
 	colIndex index.ByteSliceIndexWriter,
 	blockIndex index.BlockIndexWriter,
@@ -512,9 +510,9 @@ func NewByteSliceColumnWriter(columnType schema.ColumnType,
 }
 
 type ByteSliceColumnWriter struct {
-	columnType  schema.ColumnType
+	columnType  ColumnType
 	bw          *io.BinaryWriter
-	src         colval.ByteSliceColSource
+	src         ByteSliceColumnSource
 	encoder     encoding.ByteSliceEncoder
 	colIndex    index.ByteSliceIndexWriter
 	blockIndex  index.BlockIndexWriter
@@ -543,7 +541,7 @@ func (w *ByteSliceColumnWriter) Write() {
 			w.colIndex.Index(values)
 		}
 
-		if w.src.HasNulls() {
+		if w.validity != nil {
 			w.validity.Index(values.Rid())
 		}
 
@@ -578,7 +576,7 @@ func (w *ByteSliceColumnWriter) Write() {
 
 	}
 
-	if w.src.HasNulls() {
+	if w.validity != nil {
 
 		w.validity.Flush()
 

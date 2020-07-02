@@ -23,41 +23,20 @@ const (
 type Vector interface {
 	Len() int
 	Cap() int
-	HasNulls() bool
 }
 
-var _ Vector = &ByteSliceVector{}
-var _ Vector = &IntVector{}
-var _ Vector = &BoolVector{}
-var _ Vector = &UintVector{}
-
 type Pool interface {
-	GetIntVector() IntVector
+	GetInt64Vector() Int64Vector
 	GetByteSliceVector() ByteSliceVector
-	GetFloatVector() FloatVector
-	GetBoolVector() BoolVector
-	GetUintVector() UintVector
-
-	GetNotNullableIntVector() IntVector
-	GetNotNullableByteSliceVector() ByteSliceVector
-	GetNotNullableFloatVector() FloatVector
-	GetNotNullableBoolVector() BoolVector
-	GetNotNullableUintVector() UintVector
-
-	PutIntVector(vector IntVector)
+	PutInt64Vector(vector Int64Vector)
 }
 
 type ByteSliceVector struct {
-	valid    []uint64
-	buf      []byte
-	offsets  []int
-	l        int
-	c        int
-	hasNulls bool
-}
-
-func (v *ByteSliceVector) HasNulls() bool {
-	return len(v.valid) != 0
+	valid   []uint64
+	buf     []byte
+	offsets []int
+	l       int
+	c       int
 }
 
 func (v *ByteSliceVector) Len() int {
@@ -104,9 +83,7 @@ func (v *ByteSliceVector) AppendSlice(slice []byte) {
 
 	v.buf = append(v.buf, slice...)
 	v.offsets = append(v.offsets, len(v.buf))
-	if v.hasNulls {
-		v.SetValid(v.l)
-	}
+	v.SetValid(v.l)
 	v.l++
 
 }
@@ -146,21 +123,7 @@ func NewByteSliceVector(data []byte, offsets []int, valid []uint64) ByteSliceVec
 		offsets: offsets,
 		buf:     data,
 		valid:   valid,
-		l:       len(offsets),
 	}
-}
-
-func NewByteSliceVectorFromByteArray(v [][]byte, valid []uint64) ByteSliceVector {
-	buff := make([]byte, 0)
-	offsets := make([]int, 0)
-
-	offset := 0
-	for _, it := range v {
-		offset = offset + len(it)
-		offsets = append(offsets, offset)
-		buff = append(buff, it...)
-	}
-	return NewByteSliceVector(buff, offsets, valid)
 }
 
 func DefaultVectorPool() Pool {
@@ -170,33 +133,13 @@ func DefaultVectorPool() Pool {
 type defaultPool struct {
 }
 
-func (*defaultPool) GetIntVector() IntVector {
+func (*defaultPool) GetInt64Vector() Int64Vector {
 
 	// TODO: parametrize vector capacity.
 
-	return IntVector{
+	return Int64Vector{
 		valid: make([]uint64, 8192*2),
-		buf:   make([]int, 8192*2),
-	}
-}
-
-func (*defaultPool) GetFloatVector() FloatVector {
-
-	// TODO: parametrize vector capacity.
-
-	return FloatVector{
-		valid: make([]uint64, 8192*2),
-		buf:   make([]float64, 8192*2),
-	}
-}
-
-func (*defaultPool) GetBoolVector() BoolVector {
-
-	// TODO: parametrize vector capacity.
-
-	return BoolVector{
-		valid: make([]uint64, 8192*2),
-		buf:   make([]bool, 8192*2),
+		buf:   make([]int64, 8192*2),
 	}
 }
 
@@ -211,80 +154,6 @@ func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 }
 
-func (*defaultPool) GetNotNullableIntVector() IntVector {
-
-	// TODO: parametrize vector capacity.
-
-	return IntVector{
-		valid: nil,
-		buf:   make([]int, 8192*2),
-	}
-}
-
-func (*defaultPool) GetNotNullableFloatVector() FloatVector {
-
-	// TODO: parametrize vector capacity.
-
-	return FloatVector{
-		valid: nil,
-		buf:   make([]float64, 8192*2),
-	}
-}
-
-func (*defaultPool) GetNotNullableBoolVector() BoolVector {
-
-	// TODO: parametrize vector capacity.
-
-	return BoolVector{
-		valid: nil,
-		buf:   make([]bool, 8192*2),
-	}
-}
-
-func (*defaultPool) GetNotNullableByteSliceVector() ByteSliceVector {
-
-	// TODO: parametrize vector capacity.
-
-	return ByteSliceVector{
-		valid: nil,
-		c:     8192 * 2,
-	}
-
-}
-
-func (*defaultPool) GetNotNullableUintVector() UintVector {
-
-	// TODO: parametrize vector capacity.
-
-	return UintVector{
-		valid: make([]uint64, 8192*2),
-		buf:   make([]uint, 8192*2),
-	}
-}
-
-func (*defaultPool) GetUintVector() UintVector {
-
-	// TODO: parametrize vector capacity.
-
-	return UintVector{
-		valid: nil,
-		buf:   make([]uint, 8192*2),
-	}
-
-}
-
-func (*defaultPool) PutIntVector(vector IntVector) {
-	panic("implement me")
-}
-
-func (*defaultPool) PutBoolVector(vector BoolVector) {
-	panic("implement me")
-}
-
-func (*defaultPool) PutFloatVector(vector FloatVector) {
-	panic("implement me")
-}
-
-func (*defaultPool) PutByteSliceVector(vector ByteSliceVector) {
+func (*defaultPool) PutInt64Vector(vector Int64Vector) {
 	panic("implement me")
 }
