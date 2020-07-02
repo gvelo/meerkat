@@ -26,9 +26,9 @@ type Vector interface {
 }
 
 type Pool interface {
-	GetIntVector() IntVector
+	GetInt64Vector() Int64Vector
 	GetByteSliceVector() ByteSliceVector
-	PutIntVector(vector IntVector)
+	PutInt64Vector(vector Int64Vector)
 }
 
 type ByteSliceVector struct {
@@ -133,13 +133,13 @@ func DefaultVectorPool() Pool {
 type defaultPool struct {
 }
 
-func (*defaultPool) GetIntVector() IntVector {
+func (*defaultPool) GetInt64Vector() Int64Vector {
 
 	// TODO: parametrize vector capacity.
 
-	return IntVector{
+	return Int64Vector{
 		valid: make([]uint64, 8192*2),
-		buf:   make([]int, 8192*2),
+		buf:   make([]int64, 8192*2),
 	}
 }
 
@@ -154,6 +154,6 @@ func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 }
 
-func (*defaultPool) PutIntVector(vector IntVector) {
+func (*defaultPool) PutInt64Vector(vector Int64Vector) {
 	panic("implement me")
 }

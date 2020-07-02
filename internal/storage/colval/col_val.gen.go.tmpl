@@ -43,18 +43,3 @@ func New{{.Name}}ColValues(values []{{.Type}}, rid []uint32) {{.Name}}ColValues 
 
 {{ end }}
 
-
-
-
-
-
-{{range .}}
-
-type {{.Name}}ColSource interface {
-	ColSource
-	Next() {{.Name}}ColValues
-}
-
-{{ end }}
-
-

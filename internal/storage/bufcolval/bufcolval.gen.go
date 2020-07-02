@@ -21,6 +21,7 @@ package bufcolval
 
 import (
 	"meerkat/internal/buffer"
+	"meerkat/internal/storage"
 	"meerkat/internal/storage/colval"
 )
 
@@ -121,22 +122,22 @@ func NewBoolColValues(values []bool, rid []uint32) BoolColValues {
 }
 
 type IntColSource interface {
-	colval.ColSource
+	storage.ColumnSource
 	Next() IntColValues
 }
 
 type UintColSource interface {
-	colval.ColSource
+	storage.ColumnSource
 	Next() UintColValues
 }
 
 type FloatColSource interface {
-	colval.ColSource
+	storage.ColumnSource
 	Next() FloatColValues
 }
 
 type BoolColSource interface {
-	colval.ColSource
+	storage.ColumnSource
 	Next() BoolColValues
 }
 

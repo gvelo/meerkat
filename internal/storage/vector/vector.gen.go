@@ -19,160 +19,160 @@
 
 package vector
 
-type IntVector struct {
+type Int64Vector struct {
 	valid []uint64
-	buf   []int
+	buf   []int64
 	l     int
 }
 
-func (v *IntVector) Len() int {
+func (v *Int64Vector) Len() int {
 	return v.l
 }
 
-func (v *IntVector) Cap() int {
+func (v *Int64Vector) Cap() int {
 	return len(v.buf)
 }
 
-func (v *IntVector) RemainingLen() int {
+func (v *Int64Vector) RemainingLen() int {
 	return len(v.buf) - v.l
 }
 
-func (v *IntVector) Remaining() []int {
+func (v *Int64Vector) Remaining() []int64 {
 	return v.buf[v.l:]
 }
 
-func (v *IntVector) SetLen(l int) {
+func (v *Int64Vector) SetLen(l int) {
 	v.l = l
 }
 
-func (v *IntVector) Values() []int {
+func (v *Int64Vector) Values() []int64 {
 	return v.buf[:v.l]
 }
 
-func (v *IntVector) Buf() []int {
+func (v *Int64Vector) Buf() []int64 {
 	return v.buf
 }
 
-func (v *IntVector) IsValid(i int) bool {
+func (v *Int64Vector) IsValid(i int) bool {
 	return v.valid[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }
 
-func (v *IntVector) SetValid(i int) {
+func (v *Int64Vector) SetValid(i int) {
 	v.valid[uint(i)>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
 }
 
-func (v *IntVector) SetInvalid(i int) {
+func (v *Int64Vector) SetInvalid(i int) {
 	v.valid[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
 }
 
-func NewIntVector(buf []int, valid []uint64) IntVector {
-	return IntVector{
+func NewInt64Vector(buf []int64, valid []uint64) Int64Vector {
+	return Int64Vector{
 		buf:   buf,
 		valid: valid,
 	}
 }
 
-type UintVector struct {
+type Int32Vector struct {
 	valid []uint64
-	buf   []uint
+	buf   []int32
 	l     int
 }
 
-func (v *UintVector) Len() int {
+func (v *Int32Vector) Len() int {
 	return v.l
 }
 
-func (v *UintVector) Cap() int {
+func (v *Int32Vector) Cap() int {
 	return len(v.buf)
 }
 
-func (v *UintVector) RemainingLen() int {
+func (v *Int32Vector) RemainingLen() int {
 	return len(v.buf) - v.l
 }
 
-func (v *UintVector) Remaining() []uint {
+func (v *Int32Vector) Remaining() []int32 {
 	return v.buf[v.l:]
 }
 
-func (v *UintVector) SetLen(l int) {
+func (v *Int32Vector) SetLen(l int) {
 	v.l = l
 }
 
-func (v *UintVector) Values() []uint {
+func (v *Int32Vector) Values() []int32 {
 	return v.buf[:v.l]
 }
 
-func (v *UintVector) Buf() []uint {
+func (v *Int32Vector) Buf() []int32 {
 	return v.buf
 }
 
-func (v *UintVector) IsValid(i int) bool {
+func (v *Int32Vector) IsValid(i int) bool {
 	return v.valid[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }
 
-func (v *UintVector) SetValid(i int) {
+func (v *Int32Vector) SetValid(i int) {
 	v.valid[uint(i)>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
 }
 
-func (v *UintVector) SetInvalid(i int) {
+func (v *Int32Vector) SetInvalid(i int) {
 	v.valid[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
 }
 
-func NewUintVector(buf []uint, valid []uint64) UintVector {
-	return UintVector{
+func NewInt32Vector(buf []int32, valid []uint64) Int32Vector {
+	return Int32Vector{
 		buf:   buf,
 		valid: valid,
 	}
 }
 
-type FloatVector struct {
+type Float64Vector struct {
 	valid []uint64
 	buf   []float64
 	l     int
 }
 
-func (v *FloatVector) Len() int {
+func (v *Float64Vector) Len() int {
 	return v.l
 }
 
-func (v *FloatVector) Cap() int {
+func (v *Float64Vector) Cap() int {
 	return len(v.buf)
 }
 
-func (v *FloatVector) RemainingLen() int {
+func (v *Float64Vector) RemainingLen() int {
 	return len(v.buf) - v.l
 }
 
-func (v *FloatVector) Remaining() []float64 {
+func (v *Float64Vector) Remaining() []float64 {
 	return v.buf[v.l:]
 }
 
-func (v *FloatVector) SetLen(l int) {
+func (v *Float64Vector) SetLen(l int) {
 	v.l = l
 }
 
-func (v *FloatVector) Values() []float64 {
+func (v *Float64Vector) Values() []float64 {
 	return v.buf[:v.l]
 }
 
-func (v *FloatVector) Buf() []float64 {
+func (v *Float64Vector) Buf() []float64 {
 	return v.buf
 }
 
-func (v *FloatVector) IsValid(i int) bool {
+func (v *Float64Vector) IsValid(i int) bool {
 	return v.valid[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }
 
-func (v *FloatVector) SetValid(i int) {
+func (v *Float64Vector) SetValid(i int) {
 	v.valid[uint(i)>>log2WordSize] |= 1 << (uint(i) & (wordSize - 1))
 }
 
-func (v *FloatVector) SetInvalid(i int) {
+func (v *Float64Vector) SetInvalid(i int) {
 	v.valid[i>>log2WordSize] &^= 1 << (uint(i) & (wordSize - 1))
 }
 
-func NewFloatVector(buf []float64, valid []uint64) FloatVector {
-	return FloatVector{
+func NewFloat64Vector(buf []float64, valid []uint64) Float64Vector {
+	return Float64Vector{
 		buf:   buf,
 		valid: valid,
 	}

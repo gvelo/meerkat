@@ -15,20 +15,21 @@ package encoding
 
 import (
 	"encoding/binary"
+	"github.com/golang/snappy"
 	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/io"
 )
 
 type ByteSlicePlainEncoder struct {
 	bw        BlockWriter
-	buf       *io.EncoderBuffer
+	buf       *io.Buffer
 	offsetBuf []int
 }
 
 func NewByteSlicePlainEncodeer(bw BlockWriter) *ByteSlicePlainEncoder {
 	return &ByteSlicePlainEncoder{
 		bw:        bw,
-		buf:       io.NewEncoderBuffer(64 * 1024),
+		buf:       io.NewBuffer(64 * 1024),
 		offsetBuf: make([]int, 1024*4),
 	}
 }
@@ -46,12 +47,17 @@ func (e *ByteSlicePlainEncoder) Type() EncodingType {
 func (e *ByteSlicePlainEncoder) Encode(v colval.ByteSliceColValues) {
 
 	// make sure that the buffer has enough space to accommodate
-	// the offsets slice plus the encoded data.
+	// the offsets slice plus the encoded data. We need to avoid
+	// allocation inside the snappy encoder.
 	// ( header size + offset slice size ) * MaxVarintLen64 + enc data size
+	size := binary.MaxVarintLen64*(v.Len()+2) + snappy.MaxEncodedLen(len(v.Data()))
 
-	size := binary.MaxVarintLen64*(v.Len()+2) + len(v.Data())
+	if size > e.buf.Cap() {
+		// TODO(gvelo) check this grow policy.
+		e.buf = io.NewBuffer(size + size/2)
+	}
 
-	e.buf.Reset(size)
+	e.buf.Reset()
 
 	if v.Len() > len(e.offsetBuf) {
 		e.offsetBuf = make([]int, v.Len()*2)
@@ -60,20 +66,21 @@ func (e *ByteSlicePlainEncoder) Encode(v colval.ByteSliceColValues) {
 	DeltaEncode(v.Offsets(), e.offsetBuf)
 
 	// left enough room at the beginning of the block to write the
-	// block length encoded as uvarint
-	e.buf.WriteVarUintSliceAt(binary.MaxVarintLen64, e.offsetBuf[:v.Len()])
+	// header ( block length encoded as uvarint )
+	e.buf.Pos(binary.MaxVarintLen64)
+
+	e.buf.WriteVarUintSlice(e.offsetBuf[:v.Len()])
 
 	// write the vector data
 	e.buf.WriteBytes(v.Data())
+	blockSize := e.buf.GetPos() - binary.MaxVarintLen64
 
-	blockSize := e.buf.Len() - binary.MaxVarintLen64
+	headerOffset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
+	e.buf.PutIntAsUVarInt(headerOffset,blockSize)
 
-	offset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
-
-	e.buf.WriteUvarintAt(offset, blockSize)
-
-	block := e.buf.Bytes()[offset:]
+	block := e.buf.Data()[headerOffset:]
 
 	e.bw.WriteBlock(block, v.Rid()[0])
+
 
 }

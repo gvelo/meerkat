@@ -16,13 +16,14 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/serf v0.8.3
-	github.com/json-iterator/go v1.1.7 // indirect
+	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1
 	github.com/rs/zerolog v1.14.3
 	github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac // indirect
 	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.4.0

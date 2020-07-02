@@ -1,12 +1,12 @@
 [
   {
-    "Type": "Int"
+    "Type": "Int64"
   },
   {
-    "Type": "Uint"
+    "Type": "Int32"
   },
   {
-    "Type": "Float"
+    "Type": "Float64"
   },
   {
     "Type": "Bool"

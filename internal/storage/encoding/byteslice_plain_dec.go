@@ -18,13 +18,13 @@ import (
 )
 
 type ByteSlicePlainDecoder struct {
-	buf     *io.DecoderBuffer
+	buf     *io.Buffer
 	offsets []int
 }
 
 func NewByteSlicePlainDecoder() *ByteSlicePlainDecoder {
 	return &ByteSlicePlainDecoder{
-		buf:     io.NewDecoderBuffer(),
+		buf:     &io.Buffer{},
 		offsets: make([]int, 1024*4),
 	}
 }
@@ -35,18 +35,18 @@ func (d *ByteSlicePlainDecoder) Decode(block []byte) ([]byte, []int) {
 
 	d.offsets = d.offsets[0:cap(d.offsets)]
 
-	d.buf.SetBytes(block)
+	d.buf.SetBuf(block)
 
 	// read the len of the offsets slice
-	l := d.buf.ReadUvarint()
+	l := d.buf.ReadUVarIntAsInt()
 
 	// grow the offset buffer if needed
 	if l > len(d.offsets) {
-		d.offsets = make([]int, l)
+		d.offsets = make([]int, l*2)
 	}
 
 	for i := 0; i < l; i++ {
-		d.offsets[i] = d.buf.ReadUvarint()
+		d.offsets[i] = d.buf.ReadUVarIntAsInt()
 	}
 
 	d.offsets = d.offsets[:l]
@@ -55,7 +55,7 @@ func (d *ByteSlicePlainDecoder) Decode(block []byte) ([]byte, []int) {
 	DeltaDecode(d.offsets)
 
 	// read data
-	data := d.buf.Remaining()
+	data := d.buf.Free()
 
 	return data, d.offsets
 

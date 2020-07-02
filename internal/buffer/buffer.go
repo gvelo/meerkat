@@ -15,11 +15,6 @@
 
 package buffer
 
-import (
-	"log"
-	"meerkat/internal/schema"
-)
-
 type Buffer interface {
 	Len() int
 	Size() int
@@ -185,28 +180,28 @@ func (r *Row) Reset() {
 }
 
 type Table struct {
-	cols  map[string]Buffer
-	index schema.IndexInfo
-	len   int
+	cols map[string]Buffer
+	//index schema.IndexInfo
+	len int
 }
 
-func (t *Table) AppendRow(r *Row) {
-
-	t.len++
-
-	for _, f := range t.index.Fields {
-
-		v, ok := r.GetCol(f.Id)
-
-		if !ok {
-			t.cols[f.Id].AppendNull()
-			continue
-		}
-
-		t.cols[f.Id].Append(v)
-
-	}
-}
+//func (t *Table) AppendRow(r *Row) {
+//
+//	t.len++
+//
+//	for _, f := range t.index.Fields {
+//
+//		v, ok := r.GetCol(f.Id)
+//
+//		if !ok {
+//			t.cols[f.Id].AppendNull()
+//			continue
+//		}
+//
+//		t.cols[f.Id].Append(v)
+//
+//	}
+//}
 
 func (t *Table) AppendTable(b *Table) {
 
@@ -240,38 +235,38 @@ func (t *Table) Len() int {
 	return t.len
 }
 
-func (t *Table) Index() schema.IndexInfo {
-	return t.index
-}
+//func (t *Table) Index() schema.IndexInfo {
+//	return t.index
+//}
 
-func NewTable(idx schema.IndexInfo) *Table {
-
-	t := &Table{
-		cols:  make(map[string]Buffer, len(idx.Fields)),
-		index: idx,
-	}
-
-	for _, f := range idx.Fields {
-		switch f.FieldType {
-		case schema.FieldType_FLOAT:
-			t.cols[f.Id] = NewFloatBuffer(f.Nullable, 0)
-		case schema.FieldType_INT:
-			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
-		case schema.FieldType_STRING:
-			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
-		case schema.FieldType_TEXT:
-			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
-		case schema.FieldType_TIMESTAMP:
-			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
-		case schema.FieldType_BOOLEAN:
-			t.cols[f.Id] = NewBoolBuffer(f.Nullable, 0)
-		case schema.FieldType_UINT:
-			t.cols[f.Id] = NewUintBuffer(f.Nullable, 0)
-		default:
-			log.Panicf("invalid field type %v", f.FieldType)
-		}
-	}
-
-	return t
-
-}
+//func NewTable(idx schema.IndexInfo) *Table {
+//
+//	t := &Table{
+//		cols:  make(map[string]Buffer, len(idx.Fields)),
+//		index: idx,
+//	}
+//
+//	for _, f := range idx.Fields {
+//		switch f.FieldType {
+//		case schema.FieldType_FLOAT:
+//			t.cols[f.Id] = NewFloatBuffer(f.Nullable, 0)
+//		case schema.FieldType_INT:
+//			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
+//		case schema.FieldType_STRING:
+//			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
+//		case schema.FieldType_TEXT:
+//			t.cols[f.Id] = NewByteSliceBuffer(f.Nullable, 0)
+//		case schema.FieldType_TIMESTAMP:
+//			t.cols[f.Id] = NewIntBuffer(f.Nullable, 0)
+//		case schema.FieldType_BOOLEAN:
+//			t.cols[f.Id] = NewBoolBuffer(f.Nullable, 0)
+//		case schema.FieldType_UINT:
+//			t.cols[f.Id] = NewUintBuffer(f.Nullable, 0)
+//		default:
+//			log.Panicf("invalid field type %v", f.FieldType)
+//		}
+//	}
+//
+//	return t
+//
+//}

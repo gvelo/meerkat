@@ -14,6 +14,8 @@
 package encoding
 
 import (
+	"encoding/binary"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"meerkat/internal/storage/colval"
 	"meerkat/internal/util/testutil"
@@ -28,6 +30,12 @@ type blockWriterMock struct {
 }
 
 func (w *blockWriterMock) Flush() {
+}
+
+
+func (w *blockWriterMock) Block() []byte {
+	_, n := binary.Uvarint(w.block)
+	return w.block[n:]
 }
 
 func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) {
@@ -62,9 +70,14 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d ByteSliceDecoder) {
 	data := make([]byte, len(v.Data())*2)
 	offsets := make([]int, s)
 
-	data, offsets = d.Decode(pw.block)
-	assert.Equal(t, v.Data(), data, "decoded data doesn't match")
+	data, offsets = d.Decode(pw.Block())
+	fmt.Println("exp ",v.Data())
+	fmt.Println("act ",data)
+	fmt.Println(len(v.Data()))
+	fmt.Println(len(data))
+
 	assert.Equal(t, v.Offsets(), offsets, "decoded offsets doesn't match")
+	assert.Equal(t, v.Data(), data, "decoded data doesn't match")
 
 }
 

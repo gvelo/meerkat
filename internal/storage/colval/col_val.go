@@ -15,16 +15,6 @@
 
 package colval
 
-type ColSource interface {
-	HasNext() bool
-	HasNulls() bool
-}
-
-type ByteSliceColSource interface {
-	ColSource
-	Next() ByteSliceColValues
-}
-
 type ByteSliceColValues struct {
 	rid     []uint32
 	data    []byte
