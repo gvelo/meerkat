@@ -148,27 +148,6 @@ type MaterializeOperator struct {
 func (op *MaterializeOperator) Init() {
 	op.child.Init()
 	op.cols = make([]interface{}, 0)
-	if op.filter != nil {
-
-		fp := make([]schema.Field, 0, len(op.filter))
-
-		for _, it := range op.filter {
-			f, err := op.ctx.IndexInfo().FieldByName(it)
-			if err != nil {
-				op.log.Err(err)
-			} else {
-				fp = append(fp, f)
-			}
-			op.cols = append(op.cols, op.ctx.Segment().Col(it))
-		}
-		op.ctx.SetFieldProcessed(fp)
-	} else {
-		op.ctx.SetFieldProcessed(op.ctx.IndexInfo().Fields)
-		for _, it := range op.ctx.IndexInfo().Fields {
-			op.cols = append(op.cols, op.ctx.Segment().Col(it.Name))
-		}
-
-	}
 }
 
 func (op *MaterializeOperator) Destroy() {
@@ -297,7 +276,7 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 		if t.HasNulls() && !t.IsValid(i) {
 			return "null"
 		}
-		if op.ctx.GetFieldProcessed().Fields[x].FieldType == schema.FieldType_TIMESTAMP {
+		if op.ctx.GetFieldProcessed().Fields[x].FieldType == schema.ColumnType_TIMESTAMP {
 			time := time.Unix(0, int64(t.Values()[i]))
 			return fmt.Sprintf(time.Format(op.TimeFormat))
 		} else {

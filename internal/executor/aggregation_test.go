@@ -2,13 +2,9 @@ package executor
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"github.com/stretchr/testify/assert"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	encoding2 "meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
-	"testing"
-	"time"
 )
 
 // FAKES //TODO(sebad): make code more compact and legible, remove duplicates, use switchs.
@@ -54,10 +50,6 @@ func (f *fakeVectorOperator) Next() interface{} {
 	v := f.vec[f.idx]
 	f.idx++
 	return v
-}
-
-func NewFakeColFinder(m map[string]storage.Column) storage.ColumnFinder {
-	return &fakeColFinder{m}
 }
 
 type fakeColFinder struct {
@@ -197,61 +189,24 @@ func (f *fakeBinaryIterator) HasNext() bool {
 
 }
 
-type field struct {
-	name     string
-	t        schema.FieldType
-	nullable bool
-}
-
-func createIndexInfo(name string, fields ...field) *schema.IndexInfo {
-
-	ii := &schema.IndexInfo{
-		Id:             "1",
-		Name:           name,
-		Desc:           "Aca estan los logs",
-		Created:        time.Time{},
-		Updated:        time.Time{},
-		PartitionAlloc: schema.PartitionAlloc{},
-	}
-
-	fList := make([]schema.Field, 0)
-	for _, it := range fields {
-		ft := schema.Field{
-			Id:        it.name,
-			Name:      it.name,
-			Desc:      it.name,
-			IndexId:   ii.Id,
-			FieldType: it.t,
-			Nullable:  it.nullable,
-			Created:   time.Time{},
-			Updated:   time.Time{},
-		}
-
-		fList = append(fList, ft)
-	}
-
-	ii.Fields = fList
-
-	return ii
-}
-
 func (f *fakeBinaryIterator) Next() vector.ByteSliceVector {
 	var v1 vector.ByteSliceVector
-	/*if len(f.validity) > 0 {
-		v1 = vector.NewByteSliceVector(f.v[f.i], f.validity[f.i])
-	} else {*/
-	data := make([]byte, 0, 1000)
-	offset := make([]int, 0, 1000)
-	idx := 0
-	for _, y := range f.v[f.i] {
-		data = append(data, []byte(y)...)
-		idx = idx + len(y)
-		offset = append(offset, idx)
+	if len(f.validity) > 0 {
+		panic(" FIX !!!!!!")
+		// v1 = vector.NewByteSliceVector( f.v[f.i] , []int{0} , f.validity[f.i])
+	} else {
+		data := make([]byte, 0, 1000)
+		offset := make([]int, 0, 1000)
+		idx := 0
+		for _, y := range f.v[f.i] {
+			data = append(data, []byte(y)...)
+			idx = idx + len(y)
+			offset = append(offset, idx)
 
+		}
+		v1 = vector.NewByteSliceVector(data, offset, []uint64{})
 	}
-	v1 = vector.NewByteSliceVector(data, offset, []uint64{})
-	// }
-	v1.SetLen(len(offset))
+	// v1.SetLen(len(f.offset))
 	f.i++
 	return v1
 }
@@ -346,6 +301,7 @@ func multiplyFloatVector(v []float64, n []uint64, times int) (rv []float64, rn [
 	return
 }
 
+/*
 func multiplyBsVector(v []byte, o []int, n []uint64, times int) (rv []byte, ro []int, rn []uint64) {
 
 	rv = make([]byte, 0)
@@ -388,33 +344,8 @@ func setUp(vec [][]interface{}, ag []Aggregation, g []int, isHash bool) interfac
 
 	fs := &fakeColFinder{sMap: sMap}
 
-	fields := []field{
-		{
-			name:     "c1",
-			t:        schema.FieldType_FLOAT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "c3",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-	// Create ctx
-	ctx := NewContext(fs, ii, 100)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
+	// Create ctx // TODO: meter Segmento.
+	ctx := NewContext( nil, 100)
 
 	if isHash {
 		return NewHashAggregateOperator(ctx, f, ag, g)
@@ -656,3 +587,4 @@ func TestSortScenario2(t *testing.T) {
 	a.InDelta(1.6, r[3].(*vector.FloatVector).Values()[4], 0.1)
 
 }
+*/

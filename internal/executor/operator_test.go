@@ -14,8 +14,6 @@
 package executor
 
 import (
-	"meerkat/internal/schema"
-	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"testing"
 	"time"
@@ -70,29 +68,7 @@ func TestQueryKusto(t *testing.T) {
 func TestQuery1(t *testing.T) {
 	// a := assert.New(t)
 
-	var s storage.ColumnFinder
-
-	fields := []field{
-		{
-			name:     "c1",
-			t:        schema.FieldType_FLOAT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "c2",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-
-	ctx := NewContext(s, ii, 100)
+	ctx := NewContext(nil, 100)
 	print(ctx)
 	/*
 		op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1

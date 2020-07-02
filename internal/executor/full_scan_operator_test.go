@@ -15,7 +15,6 @@ package executor
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/storage"
 	"testing"
 )
 
@@ -76,7 +75,7 @@ func TestQueryStringScanOperators(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ctx := NewContext(createColFinder(tc.in), nil, tc.batch)
+			ctx := NewContext(nil, tc.batch)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(string), tc)
 			op1.Init()
@@ -95,14 +94,6 @@ func TestQueryStringScanOperators(t *testing.T) {
 
 func (tc *queryTestCase) init() error {
 	return nil
-}
-
-func createColFinder(in interface{}) storage.ColumnFinder {
-	m := make(map[string]storage.Column)
-	m["col"] = NewFakeColumn(in)
-	s := NewFakeColFinder(m)
-	return s
-
 }
 
 func newColumnScanOperator(ctx Context, op ComparisonOperation, value interface{}, tc queryTestCase) Uint32Operator {
@@ -238,7 +229,7 @@ func TestQueryIntScanOperators(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ctx := NewContext(createColFinder(tc.in), nil, tc.batch)
+			ctx := NewContext(nil, tc.batch)
 
 			op1 := newColumnScanOperator(ctx, tc.op, tc.value.(int), tc)
 			op1.Init()

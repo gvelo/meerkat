@@ -15,7 +15,6 @@ package executor
 
 import (
 	"github.com/magiconair/properties/assert"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"testing"
@@ -120,41 +119,9 @@ func TestSortOperator(t *testing.T) {
 	sMap["n1"] = &fakeIntColumn{}
 	sMap["n2"] = &fakeIntColumn{}
 
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "_ts",
-			t:        schema.FieldType_TIMESTAMP,
-			nullable: false,
-		},
-		{
-			name:     "hola",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-		{
-			name:     "n1",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-		{
-			name:     "n2",
-			t:        schema.FieldType_INT,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-
 	// Create ctx
-	ctx := NewContext(fs, ii, 100)
+	ctx := NewContext(nil, 100)
 
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
 	opts := []SortOpt{
 		{
 			"n1",
@@ -208,41 +175,9 @@ func TestSortOperator2(t *testing.T) {
 	sMap["n1"] = &fakeIntColumn{}
 	sMap["n2"] = &fakeIntColumn{}
 
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "_ts",
-			t:        schema.FieldType_TIMESTAMP,
-			nullable: false,
-		},
-		{
-			name:     "hola",
-			t:        schema.FieldType_STRING,
-			nullable: false,
-		},
-		{
-			name:     "n1",
-			t:        schema.FieldType_INT,
-			nullable: true,
-		},
-		{
-			name:     "n2",
-			t:        schema.FieldType_INT,
-			nullable: true,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-
 	// Create ctx
-	ctx := NewContext(fs, ii, 100)
+	ctx := NewContext(nil, 100)
 
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
 	opts := []SortOpt{
 		{
 			"n1",

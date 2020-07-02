@@ -1,16 +1,6 @@
 package executor
 
-import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"math"
-	"meerkat/internal/storage/vector"
-)
-
-// HashAggregateOperator
+/* HashAggregateOperator
 func NewHashAggregateOperator(ctx Context, child MultiVectorOperator, aggCols []Aggregation, keyCols []int) MultiVectorOperator {
 	return &HashAggregateOperator{
 		ctx:     ctx,
@@ -41,9 +31,9 @@ func (r *HashAggregateOperator) Destroy() {
 	r.child.Destroy()
 }
 
-/*
-  TODO(sebad): We need to spill out to disk we we do not have memory
-*/
+
+//  TODO(sebad): We need to spill out to disk we we do not have memory
+
 func (r *HashAggregateOperator) Next() []interface{} {
 
 	mKey := make(map[string]int)
@@ -271,3 +261,5 @@ func pivotAndBuildVectors(ctx Context, rKey [][]interface{}, rAgg [][]interface{
 
 	return resVec
 }
+
+*/

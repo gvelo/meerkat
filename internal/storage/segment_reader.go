@@ -70,11 +70,6 @@ func NewSegment(f *io.MMFile) *Segment {
 	}
 }
 
-// TODO: o algo asi
-type ColumnFinder interface {
-	Col(id string) interface{}
-}
-
 type Segment struct {
 	f         *io.MMFile
 	id        uuid.UUID

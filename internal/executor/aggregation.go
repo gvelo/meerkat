@@ -1,15 +1,6 @@
 package executor
 
-import (
-	"github.com/rs/zerolog/log"
-	"math"
-	"meerkat/internal/schema"
-	"meerkat/internal/storage"
-	"meerkat/internal/storage/vector"
-	"strings"
-	"time"
-)
-
+/*
 type AggregationOperator struct {
 }
 
@@ -137,8 +128,8 @@ func (c *counter) ValueOf(aggType AggType) float64 {
 	}
 }
 
-func createSlice(name string, ctx Context) interface{} {
-	c := ctx.Segment().Col(name)
+func createSlice( ctx Context) interface{} {
+	c := ctx.Segment()
 
 	// Not found this should be an aggregated column.
 	str := name
@@ -235,3 +226,5 @@ func updateNewKeyMap(ctx Context, keyCols []int, aggCols []Aggregation) {
 	ctx.SetFieldProcessed(nkv)
 
 }
+
+*/

@@ -39,26 +39,23 @@ func (pf *ProcessedField) FindField(name string) (schema.Field, int, error) {
 type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
-	Segment() storage.ColumnFinder
-	IndexInfo() *schema.IndexInfo
 	GetFieldProcessed() *ProcessedField
 	SetFieldProcessed(fields []schema.Field)
+	Segment() *storage.Segment
 	Sz() int
 }
 
 type ctx struct {
-	cf storage.ColumnFinder
+	s  *storage.Segment
 	m  map[string]interface{}
-	ii *schema.IndexInfo
 	fp *ProcessedField
 	sz int
 }
 
-func NewContext(s storage.ColumnFinder, ii *schema.IndexInfo, sz int) Context {
+func NewContext(s *storage.Segment, sz int) Context {
 	return &ctx{
-		cf: s,
+		s:  s,
 		m:  make(map[string]interface{}),
-		ii: ii,
 		sz: sz,
 	}
 }
@@ -76,12 +73,8 @@ func (c *ctx) Get(key string) (interface{}, bool) {
 	return i, ok
 }
 
-func (c *ctx) Segment() storage.ColumnFinder {
-	return c.cf
-}
-
-func (c *ctx) IndexInfo() *schema.IndexInfo {
-	return c.ii
+func (c *ctx) Segment() *storage.Segment {
+	return c.s
 }
 
 func (c *ctx) SetFieldProcessed(fields []schema.Field) {

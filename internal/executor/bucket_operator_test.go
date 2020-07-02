@@ -15,7 +15,6 @@ package executor
 
 import (
 	"github.com/stretchr/testify/assert"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"testing"
@@ -90,26 +89,8 @@ func TestTimeBucketInSecs(t *testing.T) {
 	sMap := make(map[string]storage.Column)
 	sMap["_ts"] = &fakeIntColumn{}
 
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "_ts",
-			t:        schema.FieldType_TIMESTAMP,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
-
 	// Create ctx
-	ctx := NewContext(fs, ii, 100)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
+	ctx := NewContext(nil, 100)
 
 	list := setUpTimeBucket(int(t0.UnixNano()), 10, time.Second)
 	op := NewTimeBucketOperator(ctx, list, "5s")
@@ -146,25 +127,8 @@ func TestTimeBucketInHour(t *testing.T) {
 	sMap := make(map[string]storage.Column)
 	sMap["_ts"] = &fakeIntColumn{}
 
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "_ts",
-			t:        schema.FieldType_TIMESTAMP,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs, ii, 100)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
+	ctx := NewContext(nil, 100)
 
 	op := NewTimeBucketOperator(ctx, list, "1h")
 
@@ -194,25 +158,8 @@ func TestIntBucket(t *testing.T) {
 	sMap := make(map[string]storage.Column)
 	sMap["_ts"] = &fakeIntColumn{}
 
-	fs := &fakeColFinder{sMap: sMap}
-
-	fields := []field{
-		{
-			name:     "_ts",
-			t:        schema.FieldType_TIMESTAMP,
-			nullable: false,
-		},
-	}
-
-	ii := createIndexInfo("Logs", fields...)
 	// Create ctx
-	ctx := NewContext(fs, ii, 100)
-
-	fp := make([]schema.Field, 0)
-	for i := 0; i < len(ii.Fields); i++ {
-		fp = append(fp, ii.Fields[i])
-	}
-	ctx.SetFieldProcessed(fp)
+	ctx := NewContext(nil, 100)
 
 	op := NewBucketOperator(ctx, list, 5)
 
