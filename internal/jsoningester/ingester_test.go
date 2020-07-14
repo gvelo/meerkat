@@ -82,7 +82,7 @@ func (b *buffRegMock) Add(table *ingestion.Table) {
 
 func TestIngestion(t *testing.T) {
 
-	s := `{"_ts":"2020-05-11T18:46:06.577Z","columnA":23,"columnB":{ "columnF": 23}}
+	s := `{"_ts":"2020-05-11T18:46:06.577Z","columnA":23}
           {"_ts":"2020-05-11T18:46:06.672Z","columnA":24}
           {"_ts":"2020-05-11T18:46:07.443Z","columnA":25}`
 
