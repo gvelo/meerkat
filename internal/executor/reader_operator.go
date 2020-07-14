@@ -65,7 +65,7 @@ func (r *ReaderOperator) Next() interface{} {
 	s := r.it.NextMany(buff)
 	if s != 0 {
 		c := r.ctx.Segment().Col(r.colName)
-		v := c.(storage.IntColumn).Reader().Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
+		v := c.(storage.Int64Column).Reader().Read(buff) // Check error? TODO(sebad): hacer un operator por tipo
 		return &v
 	} else {
 		return nil

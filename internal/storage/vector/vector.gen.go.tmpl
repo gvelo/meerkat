@@ -88,6 +88,7 @@ func New{{.Name}}Vector(buf []{{.Type}}, valid []uint64) {{.Name}}Vector {
 	return {{.Name}}Vector{
 		buf:  buf,
 		valid: valid,
+		l: len(buf),
 	}
 }
 

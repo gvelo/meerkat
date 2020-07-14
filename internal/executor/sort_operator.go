@@ -27,7 +27,7 @@ import (
 )
 
 type SortOpt struct {
-	keyName  string
+	id       int
 	orderAsc bool
 }
 
@@ -52,19 +52,9 @@ type SortOperator struct {
 	log            zerolog.Logger
 }
 
-// TODO(sebad): This operator should spill over disk ... some day.
+// TODO(sebad): This operator should spill over disk ...
 func (op *SortOperator) Init() {
 	op.child.Init()
-
-	colIds := make([]int, 0, len(op.sortOpts))
-	for _, it := range op.sortOpts {
-		_, id, err := op.ctx.GetFieldProcessed().FindField(it.keyName)
-		if err != nil {
-			log.Error().Err(err)
-		}
-
-		colIds = append(colIds, id)
-	}
 
 	n := op.child.Next()
 	op.slicesAppended = n
@@ -110,20 +100,20 @@ func (op *SortOperator) Init() {
 	//  2 4
 	//  2 6
 
-	so := getVectorSorter(op.slicesAppended[colIds[0]], op.order, op.sortOpts[0].orderAsc)
+	so := getVectorSorter(op.slicesAppended[op.sortOpts[0].id], op.order, op.sortOpts[0].orderAsc)
 	// Sort the 1st vector.
 	timsort.TimSort(so)
 
-	if len(colIds) > 1 {
+	if len(op.sortOpts) > 1 {
 
 		b := make([]bool, len(op.order))
 		sv := make([]int, 16)
 
-		for i := 1; i < len(colIds); i++ {
+		for i := 1; i < len(op.sortOpts); i++ {
 			// Create the dif array from prev col.
-			buildDiffArray(op.slicesAppended[colIds[i-1]], op.order, b)
+			buildDiffArray(op.slicesAppended[op.sortOpts[i-1].id], op.order, b)
 			sv = createPartitions(b, sv[:0])
-			sortPartitions(op.slicesAppended[colIds[i]], op.order, op.sortOpts[i].orderAsc, sv)
+			sortPartitions(op.slicesAppended[op.sortOpts[i].id], op.order, op.sortOpts[i].orderAsc, sv)
 		}
 	}
 
@@ -161,11 +151,11 @@ func createPartitions(b []bool, sel []int) []int {
 
 func buildDiffArray(so interface{}, o []int, b []bool) {
 	switch t := so.(type) {
-	case vector.IntVector:
+	case vector.Int64Vector:
 		buildDiffIntVector(t, o, b)
 	case vector.ByteSliceVector:
 		buildDiffByteSliceVector(t, o, b)
-	case vector.FloatVector:
+	case vector.Float64Vector:
 		buildDiffFloatVector(t, o, b)
 	case vector.BoolVector:
 		panic(log.Error().Err(fmt.Errorf("wtf")))
@@ -174,8 +164,8 @@ func buildDiffArray(so interface{}, o []int, b []bool) {
 	}
 }
 
-func buildDiffIntVector(colVec vector.IntVector, order []int, b []bool) {
-	var lastVal int
+func buildDiffIntVector(colVec vector.Int64Vector, order []int, b []bool) {
+	var lastVal int64
 	var lastValNull bool
 	b[0] = true
 	if colVec.HasNulls() {
@@ -246,7 +236,7 @@ func buildDiffIntVector(colVec vector.IntVector, order []int, b []bool) {
 	}
 }
 
-func buildDiffFloatVector(colVec vector.FloatVector, order []int, b []bool) {
+func buildDiffFloatVector(colVec vector.Float64Vector, order []int, b []bool) {
 	var lastVal float64
 	var lastValNull bool
 	b[0] = true
@@ -395,7 +385,7 @@ func buildDiffByteSliceVector(colVec vector.ByteSliceVector, order []int, b []bo
 func getVectorSorter(v interface{}, order []int, asc bool) sort.Interface {
 	var r sort.Interface
 	switch t := v.(type) {
-	case vector.IntVector:
+	case vector.Int64Vector:
 		r := &IntVectorSorter{
 			order: order,
 			v:     &t,
@@ -409,7 +399,7 @@ func getVectorSorter(v interface{}, order []int, asc bool) sort.Interface {
 		}
 
 		return r
-	case vector.FloatVector:
+	case vector.Float64Vector:
 		r := &FloatVectorSorter{
 			order: order,
 			v:     &t,
@@ -433,14 +423,14 @@ func (op *SortOperator) appendSlices(src []interface{}) {
 	for i, it := range src {
 
 		switch s := it.(type) {
-		case vector.IntVector:
-			v := op.slicesAppended[i].(vector.IntVector)
+		case vector.Int64Vector:
+			v := op.slicesAppended[i].(vector.Int64Vector)
 			v.Append(s.Values())
 		case vector.ByteSliceVector:
 			v := op.slicesAppended[i].(vector.ByteSliceVector)
 			v.AppendSlice(s.Data())
-		case vector.FloatVector:
-			v := op.slicesAppended[i].(vector.FloatVector)
+		case vector.Float64Vector:
+			v := op.slicesAppended[i].(vector.Float64Vector)
 			v.Append(s.Values())
 		case vector.BoolVector:
 			v := op.slicesAppended[i].(vector.BoolVector)
@@ -466,14 +456,14 @@ func (op *SortOperator) Next() []interface{} {
 
 	for i, it := range op.slicesAppended {
 		switch it.(type) {
-		case vector.IntVector:
-			res[i] = op.createIntVector(it.(vector.IntVector))
+		case vector.Int64Vector:
+			res[i] = op.createIntVector(it.(vector.Int64Vector))
 		case vector.ByteSliceVector:
 			res[i] = op.createByteSliceVector(it.(vector.ByteSliceVector))
 		case vector.BoolVector:
 			res[i] = op.createBoolVector(it.(vector.BoolVector))
-		case vector.FloatVector:
-			res[i] = op.createFloatVector(it.(vector.FloatVector))
+		case vector.Float64Vector:
+			res[i] = op.createFloatVector(it.(vector.Float64Vector))
 		default:
 			log.Error().Err(fmt.Errorf("type not mapped %v", it))
 		}

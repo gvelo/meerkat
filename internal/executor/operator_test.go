@@ -161,7 +161,7 @@ func TestQuery2(t *testing.T) {
 
 }
 
-func createTimeArray(start string, n int, duration string) ([]int, error) {
+func createTimeArray(start string, n int, duration string) ([]int64, error) {
 	d, err1 := time.ParseDuration(duration)
 	if err1 != nil {
 		return nil, err1
@@ -171,9 +171,9 @@ func createTimeArray(start string, n int, duration string) ([]int, error) {
 		return nil, err2
 	}
 	t := time.Add(d)
-	timeArr := make([]int, n)
+	timeArr := make([]int64, n)
 	for i := 0; i < n; i++ {
-		timeArr[i] = int(t.UnixNano())
+		timeArr[i] = t.UnixNano()
 		t = t.Add(d)
 	}
 

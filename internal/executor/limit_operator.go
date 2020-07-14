@@ -78,24 +78,20 @@ func (op *LimitOperator) Next() []interface{} {
 func (op *LimitOperator) cutVectors(n []interface{}, limit int) []interface{} {
 	for i, _ := range n {
 		switch n[i].(type) {
-		case vector.IntVector:
-			vv := n[i].(vector.IntVector)
+		case vector.Int64Vector:
+			vv := n[i].(vector.Int64Vector)
 			vv.SetLen(limit)
 			n[i] = vv
 		case vector.BoolVector:
 			vv := n[i].(vector.BoolVector)
 			vv.SetLen(limit)
 			n[i] = vv
-		case vector.FloatVector:
-			vv := n[i].(vector.FloatVector)
+		case vector.Float64Vector:
+			vv := n[i].(vector.Float64Vector)
 			vv.SetLen(limit)
 			n[i] = vv
 		case vector.ByteSliceVector:
 			vv := n[i].(vector.ByteSliceVector)
-			vv.SetLen(limit)
-			n[i] = vv
-		case vector.UintVector:
-			vv := n[i].(vector.UintVector)
 			vv.SetLen(limit)
 			n[i] = vv
 		default:

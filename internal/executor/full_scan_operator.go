@@ -62,15 +62,15 @@ func selectStringOpFn(op ComparisonOperation) func(x []byte, y string) bool {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value string, fieldName string, nullable bool) Uint32Operator {
+func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value string, col storage.ByteSliceColumn) Uint32Operator {
 	v := &StringColumnScanOperator{
 		ctx:   ctx,
 		opFn:  selectStringOpFn(op),
 		value: value,
-		fn:    fieldName,
+		col:   col,
 		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
-	if nullable {
+	if col.HasNulls() {
 		v.processFn = v.processNullVector
 	} else {
 		v.processFn = v.processVector
@@ -81,10 +81,10 @@ func NewStringColumnScanOperator(ctx Context, op ComparisonOperation, value stri
 type StringColumnScanOperator struct {
 	ctx           Context
 	opFn          func(x []byte, y string) bool
-	fn            string
+	col           storage.ByteSliceColumn
 	value         string
 	sz            int
-	iterator      storage.BinaryIterator
+	iterator      storage.ByteSliceIterator
 	lastRid       uint32
 	resultLeft    []uint32
 	lastCheckedId int
@@ -133,8 +133,7 @@ func (op *StringColumnScanOperator) Next() []uint32 {
 }
 
 func (op *StringColumnScanOperator) Init() {
-	c := op.ctx.Segment().Col(op.fn).(storage.StringColumn)
-	op.iterator = c.Iterator()
+	op.iterator = op.col.Iterator()
 }
 
 func (op *StringColumnScanOperator) Destroy() {
@@ -186,31 +185,31 @@ func (op *StringColumnScanOperator) processNullVector(lastValuePos, lastCheckedI
 	return r
 }
 
-func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
-	var v func(x, y int) bool
+func selectInt64OpFn(op ComparisonOperation) func(x, y int64) bool {
+	var v func(x, y int64) bool
 	switch op {
 	case Eq:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x == y
 		}
 	case Gt:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x > y
 		}
 	case Ge:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x >= y
 		}
 	case Le:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x <= y
 		}
 	case Lt:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x < y
 		}
 	case Ne:
-		v = func(x, y int) bool {
+		v = func(x, y int64) bool {
 			return x != y
 		}
 	case IsNull:
@@ -222,16 +221,16 @@ func selectIntOpFn(op ComparisonOperation) func(x, y int) bool {
 }
 
 // NewColumnScanOperator creates a ColumnScanOperator
-func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fieldName string, nullable bool) Uint32Operator {
+func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int64, col storage.Int64Column) Uint32Operator {
 
 	v := &IntColumnScanOperator{
 		ctx:   ctx,
-		opFn:  selectIntOpFn(op),
+		opFn:  selectInt64OpFn(op),
 		value: value,
-		fn:    fieldName,
+		col:   col,
 		log:   log.With().Str("src", "IntColumnScanOperator").Logger(),
 	}
-	if nullable {
+	if col.HasNulls() {
 		v.processFn = v.processNullVector
 	} else {
 		v.processFn = v.processVector
@@ -241,21 +240,20 @@ func NewIntColumnScanOperator(ctx Context, op ComparisonOperation, value int, fi
 
 type IntColumnScanOperator struct {
 	ctx           Context
-	opFn          func(x, y int) bool
-	fn            string
-	value         int
-	iterator      storage.IntIterator
+	opFn          func(x, y int64) bool
+	col           storage.Int64Column
+	value         int64
+	iterator      storage.Int64Iterator
 	lastRid       uint32
 	lastCheckedId int
 	lastValuePos  int
-	lastVector    *vector.IntVector
+	lastVector    *vector.Int64Vector
 	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
 	log           zerolog.Logger
 }
 
 func (op *IntColumnScanOperator) Init() {
-	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
-	op.iterator = c.Iterator()
+	op.iterator = op.col.Iterator()
 }
 
 func (op *IntColumnScanOperator) Destroy() {
@@ -344,35 +342,35 @@ func (op *IntColumnScanOperator) Next() []uint32 {
 
 }
 
-func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
-	var v func(x, y, z int) bool
+func selectTimeOpFn(op ComparisonOperation) func(x, y, z int64) bool {
+	var v func(x, y, z int64) bool
 	switch op {
 	case Eq:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x == y
 		}
 	case Gt:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x > y
 		}
 	case Between:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x > y && x < z
 		}
 	case Ge:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x >= y
 		}
 	case Le:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x <= y
 		}
 	case Lt:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x < y
 		}
 	case Ne:
-		v = func(x, y, z int) bool {
+		v = func(x, y, z int64) bool {
 			return x != y
 		}
 	case IsNull:
@@ -384,14 +382,14 @@ func selectTimeOpFn(op ComparisonOperation) func(x, y, z int) bool {
 }
 
 // NewTimeColumnScanOperator creates a TimeColumnScanOperator
-func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, valueTo int, fieldName string, nullable bool) Uint32Operator {
+func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, valueTo int64, col storage.TimeColumn) Uint32Operator {
 
 	v := &TimeColumnScanOperator{
 		ctx:     ctx,
 		opFn:    selectTimeOpFn(op),
 		value:   valueFrom,
 		valueTo: valueTo,
-		fn:      fieldName,
+		col:     col,
 		log:     log.With().Str("src", "TimeColumnScanOperator").Logger(),
 	}
 
@@ -400,24 +398,23 @@ func NewTimeColumnScanOperator(ctx Context, op ComparisonOperation, valueFrom, v
 
 type TimeColumnScanOperator struct {
 	ctx           Context
-	opFn          func(x, y, z int) bool
-	fn            string
-	value         int
-	valueTo       int
+	opFn          func(x, y, z int64) bool
+	col           storage.TimeColumn
+	value         int64
+	valueTo       int64
 	sz            int
-	iterator      storage.IntIterator
+	iterator      storage.Int64Iterator
 	lastRid       uint32
 	resultLeft    []uint32
 	lastCheckedId int
 	lastValuePos  int
-	lastVector    *vector.IntVector
+	lastVector    *vector.Int64Vector
 	processFn     func(lastValuePos, lastCheckedId int, r []uint32) []uint32
 	log           zerolog.Logger
 }
 
 func (op *TimeColumnScanOperator) Init() {
-	c := op.ctx.Segment().Col(op.fn).(storage.IntColumn)
-	op.iterator = c.Iterator()
+	op.iterator = op.col.Iterator()
 }
 
 func (op *TimeColumnScanOperator) Destroy() {

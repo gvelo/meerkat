@@ -14,33 +14,14 @@
 package executor
 
 import (
-	"errors"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 )
 
 // save a slice that maps the vector index to column ids in cf.
 
-type ProcessedField struct {
-	Fields []schema.Field
-}
-
-func (pf *ProcessedField) FindField(name string) (schema.Field, int, error) {
-
-	for i, it := range pf.Fields {
-		if it.Name == name {
-			return it, i, nil
-		}
-	}
-
-	return schema.Field{}, 0, errors.New("Field Not Found")
-}
-
 type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
-	GetFieldProcessed() *ProcessedField
-	SetFieldProcessed(fields []schema.Field)
 	Segment() *storage.Segment
 	Sz() int
 }
@@ -48,7 +29,6 @@ type Context interface {
 type ctx struct {
 	s  *storage.Segment
 	m  map[string]interface{}
-	fp *ProcessedField
 	sz int
 }
 
@@ -75,14 +55,4 @@ func (c *ctx) Get(key string) (interface{}, bool) {
 
 func (c *ctx) Segment() *storage.Segment {
 	return c.s
-}
-
-func (c *ctx) SetFieldProcessed(fields []schema.Field) {
-	c.fp = &ProcessedField{
-		Fields: fields,
-	}
-}
-
-func (c *ctx) GetFieldProcessed() *ProcessedField {
-	return c.fp
 }

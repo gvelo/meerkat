@@ -22,23 +22,23 @@ import (
 
 func TestSortOperator_build_diff_array(t *testing.T) {
 
-	v := vector.NewIntVector([]int{5, 6, 6, 55, 22}, []uint64{4})
+	v := vector.NewInt64Vector([]int64{5, 6, 6, 55, 22}, []uint64{4})
 	v.SetLen(5)
 
-	v1 := vector.NewIntVector([]int{5, 6, 6, 55, 22}, nil)
+	v1 := vector.NewInt64Vector([]int64{5, 6, 6, 55, 22}, nil)
 	v1.SetLen(5)
 
-	v2 := vector.NewIntVector([]int{1, 2, 3, 5, 8}, nil)
+	v2 := vector.NewInt64Vector([]int64{1, 2, 3, 5, 8}, nil)
 	v2.SetLen(5)
 
-	v3 := vector.NewIntVector([]int{1, 3, 2, 8, 5}, nil)
+	v3 := vector.NewInt64Vector([]int64{1, 3, 2, 8, 5}, nil)
 	v3.SetLen(5)
 
 	testCases := []struct {
 		name        string
 		order       []int
 		expFalseIdx []int
-		v           vector.IntVector
+		v           vector.Int64Vector
 	}{
 		{
 			name:        "Test 1 w/nulls",
@@ -91,7 +91,7 @@ func TestSortOperator(t *testing.T) {
 
 	lv := make([]interface{}, 0)
 	timeArr, _ := createTimeArray("17-05-2020 19:18:00 -03:00", 5, "1m")
-	v := vector.NewIntVector(timeArr, nil)
+	v := vector.NewInt64Vector(timeArr, nil)
 	v.SetLen(5)
 	lv = append(lv, v)
 
@@ -99,11 +99,11 @@ func TestSortOperator(t *testing.T) {
 	v1.SetLen(5)
 	lv = append(lv, v1)
 
-	v2 := vector.NewIntVector([]int{1, 2, 1, 2, 8}, nil)
+	v2 := vector.NewInt64Vector([]int64{1, 2, 1, 2, 8}, nil)
 	v2.SetLen(5)
 	lv = append(lv, v2)
 
-	v3 := vector.NewIntVector([]int{10, 1, 5, 1, 8}, nil)
+	v3 := vector.NewInt64Vector([]int64{10, 1, 5, 1, 8}, nil)
 	v3.SetLen(5)
 	lv = append(lv, v3)
 
@@ -124,10 +124,10 @@ func TestSortOperator(t *testing.T) {
 
 	opts := []SortOpt{
 		{
-			"n1",
+			2,
 			true,
 		}, {
-			"n2",
+			3,
 			false,
 		},
 	}
@@ -147,7 +147,7 @@ func TestSortOperator2(t *testing.T) {
 
 	lv := make([]interface{}, 0)
 	timeArr, _ := createTimeArray("17-05-2020 19:18:00 -03:00", 5, "1m")
-	v := vector.NewIntVector(timeArr, nil)
+	v := vector.NewInt64Vector(timeArr, nil)
 	v.SetLen(5)
 	lv = append(lv, v)
 
@@ -155,11 +155,11 @@ func TestSortOperator2(t *testing.T) {
 	v1.SetLen(5)
 	lv = append(lv, v1)
 
-	v2 := vector.NewIntVector([]int{1, 2, 1, 2, 8}, []uint64{6})
+	v2 := vector.NewInt64Vector([]int64{1, 2, 1, 2, 8}, []uint64{6})
 	v2.SetLen(5)
 	lv = append(lv, v2)
 
-	v3 := vector.NewIntVector([]int{10, 1, 5, 1, 8}, []uint64{6})
+	v3 := vector.NewInt64Vector([]int64{10, 1, 5, 1, 8}, []uint64{6})
 	v3.SetLen(5)
 	lv = append(lv, v3)
 
@@ -180,10 +180,10 @@ func TestSortOperator2(t *testing.T) {
 
 	opts := []SortOpt{
 		{
-			"n1",
+			2,
 			true,
 		}, {
-			"n2",
+			3,
 			false,
 		},
 	}

@@ -64,7 +64,7 @@ import (
 //
 type BucketOperator struct {
 	ctx   Context
-	span  int
+	span  int64
 	tspan time.Duration
 	child MultiVectorOperator
 	log   zerolog.Logger
@@ -75,7 +75,7 @@ func (op *BucketOperator) Init() {
 }
 
 // NewBucketOperator creates a new BucketOperator.
-func NewBucketOperator(ctx Context, child MultiVectorOperator, span int) MultiVectorOperator {
+func NewBucketOperator(ctx Context, child MultiVectorOperator, span int64) MultiVectorOperator {
 	return &BucketOperator{
 		ctx,
 		span,
@@ -108,14 +108,10 @@ func (op *BucketOperator) Next() []interface{} {
 
 	n := op.child.Next()
 
-	_, i, err := op.ctx.GetFieldProcessed().FindField("_ts")
-	if err != nil {
-		log.Error().Err(err)
-	}
-
 	if n != nil {
 
-		vv := n[i].(vector.IntVector)
+		// TODO: remove this Magic Number
+		vv := n[0].(vector.Int64Vector)
 		vp := &vv
 		ts := vp.Values()
 
@@ -133,17 +129,17 @@ func (op *BucketOperator) Next() []interface{} {
 			}
 		}
 
-		v := vector.NewIntVector(ts, []uint64{})
+		v := vector.NewInt64Vector(ts, []uint64{})
 		v.SetLen(len(ts))
 
-		n[i] = v
+		n[0] = v
 		return n
 	}
 
 	return nil
 }
 
-func getNextSpan(t, s int, d time.Duration) int {
+func getNextSpan(t, s int64, d time.Duration) int64 {
 	if s != 0 {
 
 		if s <= 0 {
@@ -158,10 +154,10 @@ func getNextSpan(t, s int, d time.Duration) int {
 		return t + (s - r)
 
 	} else {
-		return int(time.Unix(0, int64(t)).Round(d).UnixNano())
+		return time.Unix(0, int64(t)).Round(d).UnixNano()
 	}
 }
 
-func lessThanHalf(x, y int) bool {
+func lessThanHalf(x, y int64) bool {
 	return uint(x)+uint(x) < uint(y)
 }

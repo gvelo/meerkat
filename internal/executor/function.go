@@ -93,11 +93,11 @@ type fStrLen struct {
 
 func (f *fStrLen) process(ctx Context, params ...interface{}) interface{} {
 
-	dst := vector.DefaultVectorPool().GetIntVector()
+	dst := vector.DefaultVectorPool().GetInt32Vector()
 	src := params[0].(vector.ByteSliceVector)
 
 	for i := 0; i < src.Len(); i++ {
-		dst.AppendInt(len(src.Get(i)))
+		dst.AppendInt32(int32(len(src.Get(i))))
 	}
 
 	return dst

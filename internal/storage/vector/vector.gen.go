@@ -25,6 +25,10 @@ type Int64Vector struct {
 	l     int
 }
 
+func (v *Int64Vector) HasNulls() bool {
+	return v.valid != nil
+}
+
 func (v *Int64Vector) Len() int {
 	return v.l
 }
@@ -49,6 +53,23 @@ func (v *Int64Vector) Values() []int64 {
 	return v.buf[:v.l]
 }
 
+func (v *Int64Vector) Get(i int) int64 {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
+func (v *Int64Vector) Append(i []int64) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *Int64Vector) AppendInt64(i int64) {
+	v.buf = append(v.buf[:v.l], i)
+	v.l = len(v.buf)
+}
+
 func (v *Int64Vector) Buf() []int64 {
 	return v.buf
 }
@@ -69,6 +90,7 @@ func NewInt64Vector(buf []int64, valid []uint64) Int64Vector {
 	return Int64Vector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 
@@ -76,6 +98,10 @@ type Int32Vector struct {
 	valid []uint64
 	buf   []int32
 	l     int
+}
+
+func (v *Int32Vector) HasNulls() bool {
+	return v.valid != nil
 }
 
 func (v *Int32Vector) Len() int {
@@ -102,6 +128,23 @@ func (v *Int32Vector) Values() []int32 {
 	return v.buf[:v.l]
 }
 
+func (v *Int32Vector) Get(i int) int32 {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
+func (v *Int32Vector) Append(i []int32) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *Int32Vector) AppendInt32(i int32) {
+	v.buf = append(v.buf[:v.l], i)
+	v.l = len(v.buf)
+}
+
 func (v *Int32Vector) Buf() []int32 {
 	return v.buf
 }
@@ -122,6 +165,7 @@ func NewInt32Vector(buf []int32, valid []uint64) Int32Vector {
 	return Int32Vector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 
@@ -129,6 +173,10 @@ type Float64Vector struct {
 	valid []uint64
 	buf   []float64
 	l     int
+}
+
+func (v *Float64Vector) HasNulls() bool {
+	return v.valid != nil
 }
 
 func (v *Float64Vector) Len() int {
@@ -155,6 +203,23 @@ func (v *Float64Vector) Values() []float64 {
 	return v.buf[:v.l]
 }
 
+func (v *Float64Vector) Get(i int) float64 {
+	if i > v.l {
+		panic("Buffer overflow")
+	}
+	return v.buf[i]
+}
+
+func (v *Float64Vector) Append(i []float64) {
+	v.buf = append(v.buf[:v.l], i...)
+	v.l = len(v.buf)
+}
+
+func (v *Float64Vector) AppendFloat64(i float64) {
+	v.buf = append(v.buf[:v.l], i)
+	v.l = len(v.buf)
+}
+
 func (v *Float64Vector) Buf() []float64 {
 	return v.buf
 }
@@ -175,6 +240,7 @@ func NewFloat64Vector(buf []float64, valid []uint64) Float64Vector {
 	return Float64Vector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }
 
@@ -249,5 +315,6 @@ func NewBoolVector(buf []bool, valid []uint64) BoolVector {
 	return BoolVector{
 		buf:   buf,
 		valid: valid,
+		l:     len(buf),
 	}
 }

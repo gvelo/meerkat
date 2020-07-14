@@ -20,7 +20,6 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"meerkat/internal/schema"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/sliceutil"
@@ -175,19 +174,19 @@ func (op *MaterializeOperator) Next() []interface{} {
 
 		for i := 0; i < len(op.cols); i++ {
 			switch c := op.cols[i].(type) {
-			case storage.IntColumn:
+			case storage.Int64Column:
 				go func(x int) {
 					res[x] = c.Reader().Read(n)
 					wg.Done()
 				}(i)
-			case storage.StringColumn:
+			case storage.ByteSliceColumn:
 				go func(x int) {
 					res[x] = c.Reader().Read(n)
 					wg.Done()
 				}(i)
-			case storage.FloatColumn:
+			case storage.Float64Column:
 				go func(x int) {
-					res[x] = c.Reader().Read(n)
+					res[x] = c.Read(n)
 					wg.Done()
 				}(i)
 			case storage.TimeColumn:
@@ -250,9 +249,7 @@ func (op *ColumnToRowOperator) Next() [][]string {
 		return nil
 	}
 
-	_, i, _ := op.ctx.GetFieldProcessed().FindField("_ts")
-
-	vv := n[i].(vector.IntVector)
+	vv := n[0].(vector.Int64Vector)
 	vp := &vv
 	l := vp.Len()
 
@@ -272,17 +269,17 @@ func (op *ColumnToRowOperator) Next() [][]string {
 
 func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 	switch t := v[x].(type) {
-	case vector.IntVector:
+	case vector.Int64Vector:
 		if t.HasNulls() && !t.IsValid(i) {
 			return "null"
 		}
-		if op.ctx.GetFieldProcessed().Fields[x].FieldType == schema.ColumnType_TIMESTAMP {
+		if x == 0 { // 0 is always ts.
 			time := time.Unix(0, int64(t.Values()[i]))
 			return fmt.Sprintf(time.Format(op.TimeFormat))
 		} else {
 			return fmt.Sprintf(op.IntFormat, t.Values()[i])
 		}
-	case vector.FloatVector:
+	case vector.Float64Vector:
 		if t.HasNulls() && !t.IsValid(i) {
 			return "null"
 		}
@@ -292,11 +289,6 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 			return "null"
 		}
 		return fmt.Sprintf("'%v'", sliceutil.BS2S(t.Get(i)))
-	case vector.UintVector:
-		if t.HasNulls() && !t.IsValid(i) {
-			return "null"
-		}
-		return fmt.Sprintf(op.IntFormat, t.Values()[i])
 	case vector.BoolVector:
 		if t.HasNulls() && !t.IsValid(i) {
 			return "null"
@@ -311,15 +303,13 @@ func (op *ColumnToRowOperator) get(i, x int, v []interface{}) string {
 //TODO: check it
 func getLen(n interface{}) int {
 	switch v := n.(type) {
-	case vector.IntVector:
+	case vector.Int64Vector:
 		return v.Len()
 	case vector.BoolVector:
 		return v.Len()
-	case vector.FloatVector:
+	case vector.Float64Vector:
 		return v.Len()
 	case vector.ByteSliceVector:
-		return v.Len()
-	case vector.UintVector:
 		return v.Len()
 	default:
 		panic(fmt.Errorf("type %v not found", v))

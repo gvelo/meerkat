@@ -24,13 +24,13 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
-	var rv vector.IntVector
+func (op *SortOperator) createIntVector(v vector.Int64Vector) vector.Int64Vector {
+	var rv vector.Int64Vector
 	total := 0
 	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetIntVector()
+		rv = vector.DefaultVectorPool().GetInt64Vector()
 		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendInt(v.Values()[op.order[i]])
+			rv.AppendInt64(v.Values()[op.order[i]])
 			if v.IsValid(op.order[i]) {
 				rv.SetValid(i)
 			} else {
@@ -39,9 +39,9 @@ func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
 			total++
 		}
 	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableIntVector()
+		rv = vector.DefaultVectorPool().GetNotNullableInt64Vector()
 		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendInt(v.Values()[op.order[i]])
+			rv.AppendInt64(v.Values()[op.order[i]])
 			total++
 		}
 	}
@@ -50,7 +50,7 @@ func (op *SortOperator) createIntVector(v vector.IntVector) vector.IntVector {
 
 type IntVectorSorter struct {
 	order []int
-	v     *vector.IntVector
+	v     *vector.Int64Vector
 	asc   bool
 	less  func(i, j int) bool
 }
@@ -94,13 +94,13 @@ func (v *IntVectorSorter) Swap(i, j int) {
 	v.order[i], v.order[j] = v.order[j], v.order[i]
 }
 
-func (op *SortOperator) createUintVector(v vector.UintVector) vector.UintVector {
-	var rv vector.UintVector
+func (op *SortOperator) createFloatVector(v vector.Float64Vector) vector.Float64Vector {
+	var rv vector.Float64Vector
 	total := 0
 	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetUintVector()
+		rv = vector.DefaultVectorPool().GetFloat64Vector()
 		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendUint(v.Values()[op.order[i]])
+			rv.AppendFloat64(v.Values()[op.order[i]])
 			if v.IsValid(op.order[i]) {
 				rv.SetValid(i)
 			} else {
@@ -109,33 +109,9 @@ func (op *SortOperator) createUintVector(v vector.UintVector) vector.UintVector 
 			total++
 		}
 	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableUintVector()
+		rv = vector.DefaultVectorPool().GetNotNullableFloat64Vector()
 		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendUint(v.Values()[op.order[i]])
-			total++
-		}
-	}
-	return rv
-}
-
-func (op *SortOperator) createFloatVector(v vector.FloatVector) vector.FloatVector {
-	var rv vector.FloatVector
-	total := 0
-	if v.HasNulls() {
-		rv = vector.DefaultVectorPool().GetFloatVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendFloat(v.Values()[op.order[i]])
-			if v.IsValid(op.order[i]) {
-				rv.SetValid(i)
-			} else {
-				rv.SetInvalid(i)
-			}
-			total++
-		}
-	} else {
-		rv = vector.DefaultVectorPool().GetNotNullableFloatVector()
-		for i := op.batchProc * op.ctx.Sz(); i < len(op.order); i++ {
-			rv.AppendFloat(v.Values()[op.order[i]])
+			rv.AppendFloat64(v.Values()[op.order[i]])
 			total++
 		}
 	}
@@ -144,7 +120,7 @@ func (op *SortOperator) createFloatVector(v vector.FloatVector) vector.FloatVect
 
 type FloatVectorSorter struct {
 	order []int
-	v     *vector.FloatVector
+	v     *vector.Float64Vector
 	asc   bool
 	less  func(i, j int) bool
 }

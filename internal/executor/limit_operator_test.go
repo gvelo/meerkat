@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func sl(intVector vector.IntVector) vector.IntVector {
+func sl(intVector vector.Int64Vector) vector.Int64Vector {
 	intVector.SetLen(intVector.Cap())
 	return intVector
 }
@@ -37,7 +37,7 @@ func TestLimitOperator(t *testing.T) {
 			v: &fakeMultiVectorOperator{
 				vec: [][]interface{}{
 					{
-						sl(vector.NewIntVector([]int{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
+						sl(vector.NewInt64Vector([]int64{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
 					},
 				},
 				idx: 0,
@@ -50,16 +50,16 @@ func TestLimitOperator(t *testing.T) {
 			v: &fakeMultiVectorOperator{
 				vec: [][]interface{}{
 					{
-						sl(vector.NewIntVector([]int{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
+						sl(vector.NewInt64Vector([]int64{1, 2, 3, 4, 4, 6, 6, 6}, nil)),
 					},
 					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
+						sl(vector.NewInt64Vector([]int64{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
 					},
 					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
+						sl(vector.NewInt64Vector([]int64{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
 					},
 					{
-						sl(vector.NewIntVector([]int{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
+						sl(vector.NewInt64Vector([]int64{8, 8, 8, 8, 8, 9, 10, 10}, nil)),
 					},
 				},
 				idx: 0,

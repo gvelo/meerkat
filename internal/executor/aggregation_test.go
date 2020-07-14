@@ -52,14 +52,6 @@ func (f *fakeVectorOperator) Next() interface{} {
 	return v
 }
 
-type fakeColFinder struct {
-	sMap map[string]storage.Column
-}
-
-func (f *fakeColFinder) Col(id string) interface{} {
-	return f.sMap[id]
-}
-
 type fakeFloatColumn struct {
 }
 
@@ -83,16 +75,16 @@ func (f *fakeFloatColumn) Index() storage.FloatIndex {
 	panic("implement me")
 }
 
-func (f *fakeFloatColumn) Reader() storage.FloatColumnReader {
+func (f *fakeFloatColumn) Reader() storage.Float64ColumnReader {
 	panic("implement me")
 }
 
-func (f *fakeFloatColumn) Iterator() storage.FloatIterator {
+func (f *fakeFloatColumn) Iterator() storage.Float64Iterator {
 	panic("implement me")
 }
 
 type fakeIntIterator struct {
-	v        [][]int
+	v        [][]int64
 	i        int
 	validity [][]uint64
 	length   []int
@@ -102,20 +94,20 @@ func (f *fakeIntIterator) HasNext() bool {
 	return f.i < len(f.v)
 }
 
-func (f *fakeIntIterator) Next() vector.IntVector {
-	var v1 vector.IntVector
+func (f *fakeIntIterator) Next() vector.Int64Vector {
+	var v1 vector.Int64Vector
 	if len(f.validity) > 0 {
-		v1 = vector.NewIntVector(f.v[f.i], f.validity[f.i])
+		v1 = vector.NewInt64Vector(f.v[f.i], f.validity[f.i])
 		v1.SetLen(f.length[f.i])
 	} else {
-		v1 = vector.NewIntVector(f.v[f.i], []uint64{})
+		v1 = vector.NewInt64Vector(f.v[f.i], []uint64{})
 	}
 
 	f.i++
 	return v1
 }
 
-func NewFakeIntIterator(values [][]int, validity [][]uint64, length []int) storage.IntIterator {
+func NewFakeIntIterator(values [][]int64, validity [][]uint64, length []int) storage.Int64Iterator {
 	return &fakeIntIterator{
 		v:        values,
 		validity: validity,
@@ -126,7 +118,7 @@ func NewFakeIntIterator(values [][]int, validity [][]uint64, length []int) stora
 func NewFakeColumn(values interface{}) storage.Column {
 	in := values.(input)
 	switch v := in.values.(type) {
-	case [][]int:
+	case [][]int64:
 		return &fakeIntColumn{
 			v:        v,
 			validity: in.validity,
@@ -144,7 +136,7 @@ func NewFakeColumn(values interface{}) storage.Column {
 }
 
 type fakeIntColumn struct {
-	v        [][]int
+	v        [][]int64
 	validity [][]uint64
 	length   []int
 }
@@ -165,15 +157,15 @@ func (f *fakeIntColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f *fakeIntColumn) Index() storage.IntIndex {
+func (f *fakeIntColumn) Index() storage.Int64Index {
 	panic("implement me")
 }
 
-func (f *fakeIntColumn) Reader() storage.IntColumnReader {
+func (f *fakeIntColumn) Reader() storage.Int64ColumnReader {
 	panic("implement me")
 }
 
-func (f *fakeIntColumn) Iterator() storage.IntIterator {
+func (f *fakeIntColumn) Iterator() storage.Int64Iterator {
 	return NewFakeIntIterator(f.v, f.validity, f.length)
 }
 
@@ -190,28 +182,28 @@ func (f *fakeBinaryIterator) HasNext() bool {
 }
 
 func (f *fakeBinaryIterator) Next() vector.ByteSliceVector {
-	var v1 vector.ByteSliceVector
-	if len(f.validity) > 0 {
-		panic(" FIX !!!!!!")
-		// v1 = vector.NewByteSliceVector( f.v[f.i] , []int{0} , f.validity[f.i])
-	} else {
-		data := make([]byte, 0, 1000)
-		offset := make([]int, 0, 1000)
-		idx := 0
-		for _, y := range f.v[f.i] {
-			data = append(data, []byte(y)...)
-			idx = idx + len(y)
-			offset = append(offset, idx)
+	data := make([]byte, 0, 1000)
+	offset := make([]int, 0, 1000)
+	idx := 0
+	for _, y := range f.v[f.i] {
+		data = append(data, []byte(y)...)
+		idx = idx + len(y)
+		offset = append(offset, idx)
 
-		}
-		v1 = vector.NewByteSliceVector(data, offset, []uint64{})
 	}
+	var val []uint64
+	if len(f.validity) > 0 {
+		val = f.validity[f.i]
+	} else {
+		val = nil
+	}
+	v1 := vector.NewByteSliceVector(data, offset, val)
 	// v1.SetLen(len(f.offset))
 	f.i++
 	return v1
 }
 
-func NewFakeBinaryIterator(values [][]string, validity [][]uint64, length []int) storage.BinaryIterator {
+func NewFakeBinaryIterator(values [][]string, validity [][]uint64, length []int) storage.ByteSliceIterator {
 	return &fakeBinaryIterator{
 		v:        values,
 		i:        0,
@@ -236,7 +228,7 @@ func (f *fakeStringColumn) Validity() *roaring.Bitmap {
 }
 
 func (f *fakeStringColumn) HasNulls() bool {
-	panic("implement me")
+	return len(f.validity) > 0
 }
 
 func (f *fakeStringColumn) Stats() *storage.Stats {
@@ -251,7 +243,7 @@ func (f *fakeStringColumn) Index() storage.ByteSliceIndex {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) DictEncReader() storage.IntColumnReader {
+func (f *fakeStringColumn) DictEncReader() storage.Int64ColumnReader {
 	panic("implement me")
 }
 
@@ -259,11 +251,11 @@ func (f *fakeStringColumn) Reader() storage.ByteSliceReader {
 	panic("implement me")
 }
 
-func (f *fakeStringColumn) Iterator() storage.BinaryIterator {
+func (f *fakeStringColumn) Iterator() storage.ByteSliceIterator {
 	return NewFakeBinaryIterator(f.v, f.validity, f.length)
 }
 
-func (f *fakeStringColumn) DictEncIterator() storage.IntIterator {
+func (f *fakeStringColumn) DictEncIterator() storage.Int64Iterator {
 	panic("implement me")
 }
 

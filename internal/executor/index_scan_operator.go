@@ -49,7 +49,7 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 
 	c := op.ctx.Segment().Col(op.fn)
 	switch col := c.(type) {
-	case storage.StringColumn:
+	case storage.ByteSliceColumn:
 		switch op.op {
 		case Eq:
 			return col.Index().Search(op.value.([]byte))
@@ -71,24 +71,24 @@ func (op *IndexScanOperator) Next() *roaring.Bitmap {
 		}
 		panic("Operator not supported")
 
-	case storage.IntColumn:
+	case storage.Int64Column:
 		switch op.op {
 		case Ne:
-			return col.Index().Ne(op.value.(int))
+			return col.Index().Ne(op.value.(int64))
 		case Eq:
-			return col.Index().Eq(op.value.(int))
+			return col.Index().Eq(op.value.(int64))
 		case Lt:
-			return col.Index().Lt(op.value.(int))
+			return col.Index().Lt(op.value.(int64))
 		case Le:
-			return col.Index().Le(op.value.(int))
+			return col.Index().Le(op.value.(int64))
 		case Ge:
-			return col.Index().Ge(op.value.(int))
+			return col.Index().Ge(op.value.(int64))
 		case Gt:
-			return col.Index().Gt(op.value.(int))
+			return col.Index().Gt(op.value.(int64))
 		}
 		panic("Operator not supported")
 
-	case storage.FloatColumn:
+	case storage.Float64Column:
 		switch op.op {
 		case Ne:
 			return col.Index().Ne(op.value.(float64))
