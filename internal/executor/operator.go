@@ -30,11 +30,16 @@ import (
 // BinaryOperation represents an operation between two expressions
 type BinaryOperation int
 
+const TsIndex = 0
+
 const (
 	And BinaryOperation = iota
 	Or
 	Xor
 )
+
+// Operation represents an operation between two expressions
+type Operation int
 
 // ComparisonOperation represents an comparison Between two expressions
 type ComparisonOperation int
@@ -249,7 +254,7 @@ func (op *ColumnToRowOperator) Next() [][]string {
 		return nil
 	}
 
-	vv := n[0].(vector.Int64Vector)
+	vv := n[TsIndex].(vector.Int64Vector)
 	vp := &vv
 	l := vp.Len()
 
