@@ -9,15 +9,18 @@ require (
 	github.com/benbjohnson/tmpl v1.0.0 // indirect
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/davecgh/go-spew v1.1.1
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/serf v0.8.3
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1
 	github.com/rs/zerolog v1.14.3
@@ -34,7 +37,7 @@ require (
 	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.3.2
 	google.golang.org/grpc v1.22.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

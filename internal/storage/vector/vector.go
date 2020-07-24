@@ -23,11 +23,22 @@ const (
 type Vector interface {
 	Len() int
 	Cap() int
+	HasNulls() bool
 }
 
 type Pool interface {
 	GetInt64Vector() Int64Vector
+	GetInt32Vector() Int32Vector
+	GetFloat64Vector() Float64Vector
 	GetByteSliceVector() ByteSliceVector
+	GetBoolVector() BoolVector
+
+	GetNotNullableBoolVector() BoolVector
+	GetNotNullableFloat64Vector() Float64Vector
+	GetNotNullableByteSliceVector() ByteSliceVector
+	GetNotNullableInt64Vector() Int64Vector
+	GetNotNullableInt32Vector() Int32Vector
+
 	PutInt64Vector(vector Int64Vector)
 }
 
@@ -37,6 +48,10 @@ type ByteSliceVector struct {
 	offsets []int
 	l       int
 	c       int
+}
+
+func (v *ByteSliceVector) HasNulls() bool {
+	return v.valid != nil
 }
 
 func (v *ByteSliceVector) Len() int {
@@ -77,13 +92,17 @@ func (v *ByteSliceVector) SetInvalid(i int) {
 
 func (v *ByteSliceVector) AppendSlice(slice []byte) {
 
-	if v.l == v.c {
-		panic("vector out of bounds")
-	}
+	// Remove when we use fixed vectors
+	//if v.l == v.c {
+	//	panic("vector out of bounds")
+	//}
 
 	v.buf = append(v.buf, slice...)
 	v.offsets = append(v.offsets, len(v.buf))
-	v.SetValid(v.l)
+	if v.HasNulls() {
+		v.SetValid(v.l)
+	}
+
 	v.l++
 
 }
@@ -94,11 +113,10 @@ func (v *ByteSliceVector) AppendNull() {
 		panic("vector out of bounds")
 	}
 
-	v.offsets = append(v.offsets, len(v.buf))
+	v.offsets[v.l] = len(v.buf)
 
 	// TODO(gvelo) memset
 	v.SetInvalid(v.l)
-
 	v.l++
 }
 
@@ -126,6 +144,21 @@ func NewByteSliceVector(data []byte, offsets []int, valid []uint64) ByteSliceVec
 	}
 }
 
+func NewByteSliceVectorFromByteArray(data [][]byte, valid []uint64) ByteSliceVector {
+
+	buff := make([]byte, 0)
+	offsets := make([]int, 0)
+
+	offset := 0
+	for _, it := range data {
+		offset = offset + len(it)
+		offsets = append(offsets, offset)
+		buff = append(buff, it...)
+	}
+	return NewByteSliceVector(buff, offsets, valid)
+
+}
+
 func DefaultVectorPool() Pool {
 	return &defaultPool{}
 }
@@ -133,23 +166,88 @@ func DefaultVectorPool() Pool {
 type defaultPool struct {
 }
 
+func (p *defaultPool) GetNotNullableInt32Vector() Int32Vector {
+	return Int32Vector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]int32, 8192*2),
+	}
+}
+
+func (p *defaultPool) GetNotNullableBoolVector() BoolVector {
+	return BoolVector{
+		valid: nil,
+		buf:   make([]bool, 8192*2),
+	}
+}
+
+func (p *defaultPool) GetNotNullableFloat64Vector() Float64Vector {
+	return Float64Vector{
+		valid: nil,
+		buf:   make([]float64, 8192*2),
+	}
+}
+
+func (p *defaultPool) GetNotNullableByteSliceVector() ByteSliceVector {
+	//TODO: Check this, we should use a fixed segment to make faster the loading from disk,
+	// the issue with this approach would be, that we need to manage different batch sizes
+	// in numeric and byteslices vectors.
+	return ByteSliceVector{
+		valid:   nil,
+		buf:     make([]byte, 0), // we do the appends
+		offsets: make([]int, 0),  // we do the appends
+		c:       0,
+	}
+}
+
+func (p *defaultPool) GetNotNullableInt64Vector() Int64Vector {
+	// TODO: parametrize vector capacity.
+	return Int64Vector{
+		valid: nil,
+		buf:   make([]int64, 8192*2),
+	}
+}
+
+func (p *defaultPool) GetBoolVector() BoolVector {
+	// TODO: parametrize vector capacity.
+	return BoolVector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]bool, 8192*2),
+	}
+}
+
+func (p *defaultPool) GetFloat64Vector() Float64Vector {
+	// TODO: parametrize vector capacity.
+	return Float64Vector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]float64, 8192*2),
+	}
+}
+
 func (*defaultPool) GetInt64Vector() Int64Vector {
 
 	// TODO: parametrize vector capacity.
-
 	return Int64Vector{
 		valid: make([]uint64, 8192*2),
 		buf:   make([]int64, 8192*2),
 	}
 }
 
+func (*defaultPool) GetInt32Vector() Int32Vector {
+
+	// TODO: parametrize vector capacity.
+	return Int32Vector{
+		valid: make([]uint64, 8192*2),
+		buf:   make([]int32, 8192*4),
+	}
+}
 func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 	// TODO: parametrize vector capacity.
-
 	return ByteSliceVector{
-		valid: make([]uint64, 8192*2),
-		c:     8192 * 2,
+		valid:   make([]uint64, 8192*2),
+		buf:     make([]byte, 0), // we do the appends
+		offsets: make([]int, 0),  // we do the appends
+		c:       0,
 	}
 
 }

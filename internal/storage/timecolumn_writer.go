@@ -11,4 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bitutil
+package storage
+
+import "meerkat/internal/storage/io"
+
+func NewTimeColumnWriter(values []int, bw *io.BinaryWriter) *TimeColumnWriter {
+	return &TimeColumnWriter{
+		values: values,
+		bw:     bw,
+	}
+}
+
+type TimeColumnWriter struct {
+	bw     *io.BinaryWriter
+	values []int
+}
+
+func (w *TimeColumnWriter) Write() error {
+
+	//err := w.bw.WriteByte(byte(Plain))
+	return nil
+
+}
