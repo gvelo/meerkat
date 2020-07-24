@@ -110,8 +110,7 @@ func (op *BucketOperator) Next() []interface{} {
 
 	if n != nil {
 
-		// TODO: remove this Magic Number
-		vv := n[0].(vector.Int64Vector)
+		vv := n[TsIndex].(vector.Int64Vector)
 		vp := &vv
 		ts := vp.Values()
 
@@ -132,7 +131,7 @@ func (op *BucketOperator) Next() []interface{} {
 		v := vector.NewInt64Vector(ts, []uint64{})
 		v.SetLen(len(ts))
 
-		n[0] = v
+		n[TsIndex] = v
 		return n
 	}
 

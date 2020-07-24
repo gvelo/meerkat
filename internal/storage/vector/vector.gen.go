@@ -128,10 +128,6 @@ func (v *Int32Vector) Values() []int32 {
 	return v.buf[:v.l]
 }
 
-func (v *Int32Vector) Buf() []int32 {
-	return v.buf
-}
-
 func (v *Int32Vector) Get(i int) int32 {
 	if i > v.l {
 		panic("Buffer overflow")

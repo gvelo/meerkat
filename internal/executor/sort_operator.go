@@ -62,7 +62,7 @@ func (op *SortOperator) Init() {
 	op.order = make([]int, 0)
 	i := 0
 
-	l1 := getLen(n[0])
+	l1 := getLen(n[TsIndex])
 	for ; i < l1; i++ {
 		op.order = append(op.order, i)
 	}
@@ -70,7 +70,7 @@ func (op *SortOperator) Init() {
 	// second batch.
 	n = op.child.Next()
 	for ; n != nil; n = op.child.Next() {
-		l1 := getLen(n[0])
+		l1 := getLen(n[TsIndex])
 		for ; i < l1; i++ {
 			op.order = append(op.order, i)
 		}
