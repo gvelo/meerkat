@@ -140,9 +140,8 @@ func TestMinHeap(t *testing.T) {
 
 	i := 0
 	for h.Len() > 0 {
-		it := h.Peek().(*Item)
+		it := h.Pop().(*Item)
 		assert.Equal(t, int64(i), it.value)
-		heap.Pop(h)
 		i++
 	}
 

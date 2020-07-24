@@ -149,27 +149,6 @@ func (v *Int32Vector) Buf() []int32 {
 	return v.buf
 }
 
-func (v *Int32Vector) Get(i int) int32 {
-	if i > v.l {
-		panic("Buffer overflow")
-	}
-	return v.buf[i]
-}
-
-func (v *Int32Vector) Append(i []int32) {
-	v.buf = append(v.buf[:v.l], i...)
-	v.l = len(v.buf)
-}
-
-func (v *Int32Vector) AppendInt32(i int32) {
-	v.buf = append(v.buf[:v.l], i)
-	v.l = len(v.buf)
-}
-
-func (v *Int32Vector) Buf() []int32 {
-	return v.buf
-}
-
 func (v *Int32Vector) IsValid(i int) bool {
 	return v.valid[uint(i)>>log2WordSize]&(1<<(uint(i)&(wordSize-1))) != 0
 }

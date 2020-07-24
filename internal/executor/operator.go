@@ -41,6 +41,9 @@ const (
 // Operation represents an operation between two expressions
 type Operation int
 
+// ComparisonOperation represents an comparison Between two expressions
+type ComparisonOperation int
+
 const (
 	Eq ComparisonOperation = iota
 	Lt
