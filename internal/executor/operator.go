@@ -38,8 +38,8 @@ const (
 	Xor
 )
 
-// ComparisonOperation represents an comparison Between two expressions
-type ComparisonOperation int
+// Operation represents an operation between two expressions
+type Operation int
 
 const (
 	Eq ComparisonOperation = iota
