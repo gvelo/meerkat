@@ -30,7 +30,7 @@ func TestMergeOperator(t *testing.T) {
 		result []interface{}
 	}{
 		{
-			name: "Limit for 1 Vectors",
+			name: "k3_2_Batch",
 			sz:   20,
 			exp: [][]interface{}{{
 				vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 150, 200, 250, 300, 350}, nil),
@@ -71,6 +71,96 @@ func TestMergeOperator(t *testing.T) {
 							vector.NewInt64Vector([]int64{150, 200, 250, 300, 350, 400, 450, 500}, nil),
 							vector.NewFloat64Vector([]float64{150, 200, 250, 300, 350, 400, 450, 500}, nil),
 							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8}, nil),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "k3_2_Batch_shorter",
+			sz:   10,
+			exp: [][]interface{}{{
+				vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, nil),
+				vector.NewFloat64Vector([]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, nil),
+				vector.NewInt64Vector([]int64{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6}, nil),
+			}, {
+				vector.NewInt64Vector([]int64{12, 13, 14, 15, 150, 200, 250, 300, 350}, nil),
+				vector.NewFloat64Vector([]float64{12, 13, 14, 15, 150, 200, 250, 300, 350}, nil),
+				vector.NewInt64Vector([]int64{6, 7, 7, 8, 8, 1, 2, 3, 4, 5, 6, 7, 8}, nil),
+			}},
+			result: []interface{}{
+				vector.NewInt64Vector([]int64{}, nil),
+				vector.NewFloat64Vector([]float64{}, nil),
+				vector.NewInt64Vector([]int64{}, nil),
+			},
+			input: []MultiVectorOperator{
+				&fakeMultiVectorOperator{
+					vec: [][]interface{}{
+						{
+							vector.NewInt64Vector([]int64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewFloat64Vector([]float64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8}, nil),
+						},
+					},
+				},
+				&fakeMultiVectorOperator{
+					vec: [][]interface{}{
+						{
+							vector.NewInt64Vector([]int64{1, 3, 5, 7, 9, 11, 13, 15}, nil),
+							vector.NewFloat64Vector([]float64{1, 3, 5, 7, 9, 11, 13, 15}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8}, nil),
+						},
+					},
+				},
+				&fakeMultiVectorOperator{
+					vec: [][]interface{}{
+						{
+							vector.NewInt64Vector([]int64{150, 200, 250}, nil),
+							vector.NewFloat64Vector([]float64{150, 200, 250}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5}, nil),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "k2_1-2Batches",
+			sz:   10,
+			exp: [][]interface{}{{
+				vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, nil),
+				vector.NewFloat64Vector([]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, nil),
+				vector.NewInt64Vector([]int64{1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6}, nil),
+			}, {
+				vector.NewInt64Vector([]int64{12, 13, 14, 15, 150, 200, 250, 300, 350}, nil),
+				vector.NewFloat64Vector([]float64{12, 13, 14, 15, 150, 200, 250, 300, 350}, nil),
+				vector.NewInt64Vector([]int64{6, 7, 7, 8, 8, 1, 2, 3, 4, 5, 6, 7, 8}, nil),
+			}},
+			result: []interface{}{
+				vector.NewInt64Vector([]int64{}, nil),
+				vector.NewFloat64Vector([]float64{}, nil),
+				vector.NewInt64Vector([]int64{}, nil),
+			},
+			input: []MultiVectorOperator{
+				&fakeMultiVectorOperator{
+					vec: [][]interface{}{
+						{
+							vector.NewInt64Vector([]int64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewFloat64Vector([]float64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8}, nil),
+						},
+						{
+							vector.NewInt64Vector([]int64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewFloat64Vector([]float64{0, 2, 4, 6, 8, 10, 12, 14}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5, 6, 7, 8}, nil),
+						},
+					},
+				},
+				&fakeMultiVectorOperator{
+					vec: [][]interface{}{
+						{
+							vector.NewInt64Vector([]int64{150, 200, 250}, nil),
+							vector.NewFloat64Vector([]float64{150, 200, 250}, nil),
+							vector.NewInt64Vector([]int64{1, 2, 3, 4, 5}, nil),
 						},
 					},
 				},
