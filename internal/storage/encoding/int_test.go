@@ -42,7 +42,7 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d Int64Decoder) {
 
 	e.Encode(v)
 
-	data := make([]int, len(v.Values())*8*2)
+	data := make([]int64, len(v.Values())*8*2)
 
 	data = d.Decode(bw.block, data)
 
@@ -50,16 +50,16 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d Int64Decoder) {
 
 }
 
-func createRandomIntColVal(size int) colval.IntColValues {
+func createRandomIntColVal(size int) colval.Int64ColValues {
 
-	var data []int
+	var data []int64
 	var rid []uint32
 
 	for i := 0; i < size; i++ {
-		data = append(data, rand.Int())
+		data = append(data, rand.Int63())
 		rid = append(rid, uint32(i))
 	}
 
-	return colval.NewIntColValues(data, rid)
+	return colval.NewInt64ColValues(data, rid)
 
 }

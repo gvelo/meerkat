@@ -26,7 +26,7 @@ type ByteSliceSnappyEncoder struct {
 	offsetBuf []int
 }
 
-func NewByteSliceSnappyEncodeer(bw BlockWriter) *ByteSliceSnappyEncoder {
+func NewByteSliceSnappyEncoder(bw BlockWriter) *ByteSliceSnappyEncoder {
 	return &ByteSliceSnappyEncoder{
 		bw:        bw,
 		buf:       io.NewBuffer(64 * 1024),
@@ -51,7 +51,6 @@ func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 	// allocation inside the snappy encoder.
 	// ( header size + offset slice size ) * MaxVarintLen64 + enc data size
 	size := binary.MaxVarintLen64*(v.Len()+2) + snappy.MaxEncodedLen(len(v.Data()))
-
 
 	if size > e.buf.Cap() {
 		// TODO(gvelo) check this grow policy.
@@ -85,7 +84,7 @@ func (e *ByteSliceSnappyEncoder) Encode(v colval.ByteSliceColValues) {
 
 	headerOffset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
 
-	e.buf.PutIntAsUVarInt(headerOffset,blockSize)
+	e.buf.PutIntAsUVarInt(headerOffset, blockSize)
 
 	block := e.buf.Buf()[headerOffset:blockEnd]
 

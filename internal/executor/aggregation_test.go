@@ -391,8 +391,8 @@ func TestHAggScenario1(t *testing.T) {
 	a.NotNil(r, "This should not be nil")
 
 	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.Equal(6.9, r[1].(*vector.FloatVector).Values()[0])
-	a.Equal(1.6, r[2].(*vector.FloatVector).Values()[0])
+	a.Equal(6.9, r[1].(*vector.FloatVector).Value()[0])
+	a.Equal(1.6, r[2].(*vector.FloatVector).Value()[0])
 
 }
 
@@ -447,8 +447,8 @@ func TestHAggScenario2(t *testing.T) {
 	a.NotNil(r, "This should not be nil")
 
 	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.InDelta(6900000, r[1].(*vector.FloatVector).Values()[0], 0.1)
-	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[0], 0.1)
+	a.InDelta(6900000, r[1].(*vector.FloatVector).Value()[0], 0.1)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Value()[0], 0.1)
 
 }
 
@@ -499,12 +499,12 @@ func TestSortScenario(t *testing.T) {
 	a.NotNil(r, "This should not be nil")
 
 	a.Equal("1", string(r[0].(*vector.ByteSliceVector).Get(0)))
-	a.InDelta(1.2, r[1].(*vector.FloatVector).Values()[0], 0.1)
-	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.1)
+	a.InDelta(1.2, r[1].(*vector.FloatVector).Value()[0], 0.1)
+	a.InDelta(1.2, r[2].(*vector.FloatVector).Value()[0], 0.1)
 
 	a.Equal("123", string(r[0].(*vector.ByteSliceVector).Get(1)))
-	a.InDelta(5.7, r[1].(*vector.FloatVector).Values()[1], 0.1)
-	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[1], 0.1)
+	a.InDelta(5.7, r[1].(*vector.FloatVector).Value()[1], 0.1)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Value()[1], 0.1)
 
 }
 
@@ -553,11 +553,11 @@ func TestSortScenario2(t *testing.T) {
 	a.NotNil(r, "This should not be nil")
 
 	// k1
-	a.Equal(2, r[0].(*vector.IntVector).Values()[0])
-	a.Equal(2, r[0].(*vector.IntVector).Values()[1])
-	a.Equal(4, r[0].(*vector.IntVector).Values()[2])
-	a.Equal(5, r[0].(*vector.IntVector).Values()[3])
-	a.Equal(6, r[0].(*vector.IntVector).Values()[4])
+	a.Equal(2, r[0].(*vector.IntVector).Value()[0])
+	a.Equal(2, r[0].(*vector.IntVector).Value()[1])
+	a.Equal(4, r[0].(*vector.IntVector).Value()[2])
+	a.Equal(5, r[0].(*vector.IntVector).Value()[3])
+	a.Equal(6, r[0].(*vector.IntVector).Value()[4])
 
 	// k2
 	a.Equal("1", string(r[1].(*vector.ByteSliceVector).Get(0)))
@@ -566,17 +566,17 @@ func TestSortScenario2(t *testing.T) {
 	a.Equal("123", string(r[1].(*vector.ByteSliceVector).Get(3)))
 	a.Equal("123", string(r[1].(*vector.ByteSliceVector).Get(4)))
 
-	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[0], 0.1)
-	a.InDelta(1.2, r[2].(*vector.FloatVector).Values()[1], 0.1)
-	a.InDelta(1.4, r[2].(*vector.FloatVector).Values()[2], 0.1)
-	a.InDelta(1.5, r[2].(*vector.FloatVector).Values()[3], 0.1)
-	a.InDelta(1.6, r[2].(*vector.FloatVector).Values()[4], 0.1)
+	a.InDelta(1.2, r[2].(*vector.FloatVector).Value()[0], 0.1)
+	a.InDelta(1.2, r[2].(*vector.FloatVector).Value()[1], 0.1)
+	a.InDelta(1.4, r[2].(*vector.FloatVector).Value()[2], 0.1)
+	a.InDelta(1.5, r[2].(*vector.FloatVector).Value()[3], 0.1)
+	a.InDelta(1.6, r[2].(*vector.FloatVector).Value()[4], 0.1)
 
-	a.InDelta(1.2, r[3].(*vector.FloatVector).Values()[0], 0.1)
-	a.InDelta(1.2, r[3].(*vector.FloatVector).Values()[1], 0.1)
-	a.InDelta(1.4, r[3].(*vector.FloatVector).Values()[2], 0.1)
-	a.InDelta(1.5, r[3].(*vector.FloatVector).Values()[3], 0.1)
-	a.InDelta(1.6, r[3].(*vector.FloatVector).Values()[4], 0.1)
+	a.InDelta(1.2, r[3].(*vector.FloatVector).Value()[0], 0.1)
+	a.InDelta(1.2, r[3].(*vector.FloatVector).Value()[1], 0.1)
+	a.InDelta(1.4, r[3].(*vector.FloatVector).Value()[2], 0.1)
+	a.InDelta(1.5, r[3].(*vector.FloatVector).Value()[3], 0.1)
+	a.InDelta(1.6, r[3].(*vector.FloatVector).Value()[4], 0.1)
 
 }
 */

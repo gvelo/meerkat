@@ -54,7 +54,7 @@ type ColumnWriter interface {
 //
 //	case ColumnType_STRING:
 //		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
-//		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+//		enc := encoding.NewByteSliceSnappyEncoder(blkWriter)
 //		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
 //
 //	default:
@@ -128,7 +128,7 @@ func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.Bin
 		blkIdx := index.NewBlockIndexWriter(bw)
 		blkWriter := NewBlockWriter(bw, blkIdx)
 		src := segmentSrc.ColumnSource(info.Name, txtBlockSize).(ByteSliceColumnSource)
-		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+		enc := encoding.NewByteSliceSnappyEncoder(blkWriter)
 		var validity index.ValidityIndexWriter
 
 		if info.Nullable {

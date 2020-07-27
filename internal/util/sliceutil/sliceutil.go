@@ -19,8 +19,10 @@ import (
 )
 
 const (
-	Int64SizeBytes = int(unsafe.Sizeof(int64(0)))
-	Int32SizeBytes = int(unsafe.Sizeof(int32(0)))
+	Int64SizeBytes   = int(unsafe.Sizeof(int64(0)))
+	Int32SizeBytes   = int(unsafe.Sizeof(int32(0)))
+	float32SizeBytes = int(unsafe.Sizeof(float32(0)))
+	float64SizeBytes = int(unsafe.Sizeof(float64(0)))
 )
 
 func asByteSlice(size int, p unsafe.Pointer) []byte {
@@ -57,6 +59,16 @@ func F2B(s []float64) []byte {
 	return asByteSlice(Int64SizeBytes, unsafe.Pointer(&s))
 }
 
+func B2F(b []byte) []float64 {
+	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	var res []float64
+	s := (*reflect.SliceHeader)(unsafe.Pointer(&res))
+	s.Data = h.Data
+	s.Len = h.Len / float64SizeBytes
+	s.Cap = h.Cap / float64SizeBytes
+	return res
+}
+
 func B2I(b []byte) []int {
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	var res []int
@@ -76,7 +88,6 @@ func B2I64(b []byte) []int64 {
 	s.Cap = h.Cap / Int64SizeBytes
 	return res
 }
-
 
 func B2U32(b []byte) []uint32 {
 	h := (*reflect.SliceHeader)(unsafe.Pointer(&b))

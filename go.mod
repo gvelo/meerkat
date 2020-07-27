@@ -4,16 +4,18 @@ go 1.14
 
 require (
 	github.com/RoaringBitmap/roaring v0.4.21
-	github.com/antlr/antlr4 v0.0.0-20200326173327-a4c66dc863bb
-	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
+	github.com/antlr/antlr4 v0.0.0-20200326173327-a4c66dc863bb // indirect
+	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40 // indirect
 	github.com/benbjohnson/tmpl v1.0.0 // indirect
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
+	github.com/coreos/etcd v3.3.10+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
-	github.com/coreos/etcd v3.3.10+incompatible
+	github.com/dgryski/go-bitstream v0.0.0-20180413035011-3522498ce2c8
+	github.com/dgryski/go-tsz v0.0.0-20180227144327-03b7d791f4fe // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/mock v1.3.1
+	github.com/golang/mock v1.3.1 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
@@ -37,7 +39,7 @@ require (
 	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/text v0.3.2
+	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/grpc v1.22.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
