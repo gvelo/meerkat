@@ -8,8 +8,9 @@ require (
 	github.com/apache/arrow/go/arrow v0.0.0-20191018175826-0ac4294a2a40
 	github.com/benbjohnson/tmpl v1.0.0 // indirect
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
-	github.com/davecgh/go-spew v1.1.1
 	github.com/coreos/etcd v3.3.10+incompatible
+	github.com/davecgh/go-spew v1.1.1
+	github.com/disiqueira/gotree v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gogo/protobuf v1.2.1
@@ -32,6 +33,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/twmb/murmur3 v1.0.0
 	github.com/ugorji/go v1.1.7 // indirect
+	github.com/xlab/treeprint v1.0.0 // indirect
 	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect

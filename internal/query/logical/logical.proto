@@ -11,34 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+syntax = "proto3";
+package meerkat.logical;
+option go_package = "meerkat/internal/query/logical";
 
-//func PrintAST(ast Node) {
-//	spew.Config.Indent = "    "
-//	spew.Config.DisablePointerAddresses = true
-//	spew.Dump(ast)
-//}
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
 
-//type printVisitor struct {
-//	level int
-//}
-//
-//func (p *printVisitor) VisitPre(n Node) Node {
-//
-//	p.level++
-//
-//	switch node := n.(type) {
-//
-//	case *TabularStmt:
-//		node.TabularExpr.jdddd
-//	}
-//
-//}
-//
-//func (p *printVisitor) VisitPost(n Node) Node {
-//	p.level--
-//}
-//
-//func PrintAST(ast Node) {
-//
-//}
+message Plan {
+  repeated Stage stages = 1;
+}
+
