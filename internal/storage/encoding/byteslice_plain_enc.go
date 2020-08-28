@@ -26,7 +26,7 @@ type ByteSlicePlainEncoder struct {
 	offsetBuf []int
 }
 
-func NewByteSlicePlainEncodeer(bw BlockWriter) *ByteSlicePlainEncoder {
+func NewByteSlicePlainEncoder(bw BlockWriter) *ByteSlicePlainEncoder {
 	return &ByteSlicePlainEncoder{
 		bw:        bw,
 		buf:       io.NewBuffer(64 * 1024),
@@ -40,7 +40,7 @@ func (e *ByteSlicePlainEncoder) Flush() {
 func (e *ByteSlicePlainEncoder) FlushBlocks() {
 }
 
-func (e *ByteSlicePlainEncoder) Type() EncodingType {
+func (e *ByteSlicePlainEncoder) Type() Type {
 	return Plain
 }
 
@@ -76,11 +76,10 @@ func (e *ByteSlicePlainEncoder) Encode(v colval.ByteSliceColValues) {
 	blockSize := e.buf.GetPos() - binary.MaxVarintLen64
 
 	headerOffset := binary.MaxVarintLen64 - io.SizeUVarint(uint64(blockSize))
-	e.buf.PutIntAsUVarInt(headerOffset,blockSize)
+	e.buf.PutIntAsUVarInt(headerOffset, blockSize)
 
 	block := e.buf.Data()[headerOffset:]
 
 	e.bw.WriteBlock(block, v.Rid()[0])
-
 
 }

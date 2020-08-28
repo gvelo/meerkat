@@ -131,6 +131,8 @@ func (s *Segment) readColumns(cd []colData) {
 			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
 		case ColumnType_INT64:
 			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
+		case ColumnType_FLOAT64:
+			col = NewFloat64Column(s.f.Bytes, cData.bounds, s.numOfRows)
 		case ColumnType_STRING:
 			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:

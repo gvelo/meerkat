@@ -1,0 +1,14 @@
+[
+  {
+    "Type": "Int64",
+    "type": "int64",
+    "Family": "Int",
+    "family": "int"
+  },
+  {
+    "Type": "Float64",
+    "type": "float64",
+    "Family": "Float",
+    "family": "float"
+  }
+]

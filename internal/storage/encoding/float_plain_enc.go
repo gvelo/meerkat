@@ -43,7 +43,7 @@ func (e *Float64PlainEncoder) Flush() {
 func (e *Float64PlainEncoder) FlushBlocks() {
 }
 
-func (e *Float64PlainEncoder) Type() EncodingType {
+func (e *Float64PlainEncoder) Type() Type {
 	return Plain
 }
 

@@ -40,7 +40,7 @@ func (e *ByteSliceSnappyEncoder) Flush() {
 func (e *ByteSliceSnappyEncoder) FlushBlocks() {
 }
 
-func (e *ByteSliceSnappyEncoder) Type() EncodingType {
+func (e *ByteSliceSnappyEncoder) Type() Type {
 	return Snappy
 }
 

@@ -22,7 +22,7 @@ import (
 	"meerkat/internal/storage/colval"
 )
 
-type Float64TszEncoder struct {
+type Float64XorEncoder struct {
 	bw  BlockWriter
 	val float64
 	err error
@@ -37,8 +37,8 @@ type Float64TszEncoder struct {
 	finished bool
 }
 
-func NewFloat64TszEncoder(bw BlockWriter) *Float64TszEncoder {
-	s := Float64TszEncoder{
+func NewFloat64XorEncoder(bw BlockWriter) *Float64XorEncoder {
+	s := Float64XorEncoder{
 		first:   true,
 		leading: ^uint64(0),
 		bw:      bw,
@@ -49,7 +49,7 @@ func NewFloat64TszEncoder(bw BlockWriter) *Float64TszEncoder {
 	return &s
 }
 
-func (e *Float64TszEncoder) Flush() {
+func (e *Float64XorEncoder) Flush() {
 	// Flush indicates there are no more values to encode.
 	if !e.finished {
 		// write an end-of-stream record
@@ -59,14 +59,14 @@ func (e *Float64TszEncoder) Flush() {
 	}
 }
 
-func (e *Float64TszEncoder) FlushBlocks() {
+func (e *Float64XorEncoder) FlushBlocks() {
 }
 
-func (e *Float64TszEncoder) Type() EncodingType {
-	return Plain
+func (e *Float64XorEncoder) Type() Type {
+	return Xor
 }
 
-func (e *Float64TszEncoder) Encode(v colval.Float64ColValues) {
+func (e *Float64XorEncoder) Encode(v colval.Float64ColValues) {
 
 	for _, f := range v.Values() {
 		e.Write(f)
@@ -76,7 +76,7 @@ func (e *Float64TszEncoder) Encode(v colval.Float64ColValues) {
 }
 
 // Write encodes v to the underlying buffer.
-func (e *Float64TszEncoder) Write(v float64) {
+func (e *Float64XorEncoder) Write(v float64) {
 	// Only allow NaN as a sentinel value
 	if math.IsNaN(v) && !e.finished {
 		e.err = fmt.Errorf("unsupported value: NaN")

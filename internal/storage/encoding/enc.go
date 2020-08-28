@@ -18,18 +18,20 @@ import (
 	"meerkat/internal/storage/io"
 )
 
-type EncodingType int
+type Type int
 
 const (
-	Plain EncodingType = iota
+	Plain Type = iota
+	Snappy
 	Dict
 	DictRleBitPacked
-	DeltaBitPacked
-	Snappy
+	Xor
+	DoubleDelta
 )
 
 type BlockWriter interface {
 	WriteBlock(block []byte, baseRid uint32)
+	Write(block []byte)
 }
 
 type Encoder interface {
@@ -38,7 +40,7 @@ type Encoder interface {
 	//  is block oriented and do not buffer blocks.
 	//  roaringbitmap ?????
 	FlushBlocks()
-	Type() EncodingType
+	Type() Type
 }
 
 type Int64Encoder interface {
@@ -104,7 +106,7 @@ func DeltaDecode(data []int) {
 
 }
 
-func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (Int64Decoder, BlockReader) {
+func GetIntDecoder(d Type, b []byte, bounds io.Bounds, blockLen int) (Int64Decoder, BlockReader) {
 
 	var dec Int64Decoder
 	var br BlockReader
@@ -113,6 +115,9 @@ func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (In
 	case Plain:
 		dec = NewInt64PlainDecoder()
 		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	case DoubleDelta:
+		dec = NewInt64DdDecoder()
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
 	default:
 		panic("unknown encoding type")
 	}
@@ -120,7 +125,26 @@ func GetIntDecoder(d EncodingType, b []byte, bounds io.Bounds, blockLen int) (In
 	return dec, br
 }
 
-func GetBinaryDecoder(d EncodingType, b []byte, bounds io.Bounds) (ByteSliceDecoder, BlockReader) {
+func GetFloatDecoder(d Type, b []byte, bounds io.Bounds, blockLen int) (Float64Decoder, BlockReader) {
+
+	var dec Float64Decoder
+	var br BlockReader
+
+	switch d {
+	case Plain:
+		dec = NewFloat64PlainDecoder()
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	case Xor:
+		dec = NewFloat64XorDecoder()
+		br = NewScalarPlainBlockReader(b, bounds, blockLen)
+	default:
+		panic("unknown encoding type")
+	}
+
+	return dec, br
+}
+
+func GetBinaryDecoder(d Type, b []byte, bounds io.Bounds, encBounds io.Bounds) (ByteSliceDecoder, BlockReader) {
 
 	var dec ByteSliceDecoder
 	var br BlockReader
@@ -132,9 +156,61 @@ func GetBinaryDecoder(d EncodingType, b []byte, bounds io.Bounds) (ByteSliceDeco
 	case Snappy:
 		dec = NewByteSliceSnappyDecoder()
 		br = NewByteSliceBlockReader(b, bounds)
+	case Dict:
+
+		dec = NewByteSliceDictDecoder(b, encBounds)
+		// Must create a new one to read the encoding Bounds
+		br = NewByteSlicePlainBlockReader(b, bounds)
 	default:
 		panic("unknown encoding type")
 	}
 
 	return dec, br
+}
+
+func GetIntEncoder(d Type, bw BlockWriter) Int64Encoder {
+
+	var enc Int64Encoder
+
+	switch d {
+	case Plain:
+		enc = NewInt64PlainEncoder(bw)
+	case DoubleDelta:
+		enc = NewInt64DdEncoder(bw)
+	default:
+		panic("unknown encoding type")
+	}
+	return enc
+}
+
+func GetFloatEncoder(d Type, bw BlockWriter) Float64Encoder {
+
+	var enc Float64Encoder
+
+	switch d {
+	case Plain:
+		enc = NewFloat64PlainEncoder(bw)
+	case Xor:
+		enc = NewFloat64XorEncoder(bw)
+	default:
+		panic("unknown encoding type")
+	}
+	return enc
+}
+
+func GetBinaryEncoder(d Type, bw BlockWriter, w *io.BinaryWriter) ByteSliceEncoder {
+
+	var enc ByteSliceEncoder
+
+	switch d {
+	case Plain:
+		enc = NewByteSlicePlainEncoder(bw)
+	case Dict:
+		enc = NewByteSliceDictEncoder(bw, w)
+	case Snappy:
+		enc = NewByteSliceSnappyEncoder(bw)
+	default:
+		panic("unknown encoding type")
+	}
+	return enc
 }

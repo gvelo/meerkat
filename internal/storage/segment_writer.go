@@ -34,6 +34,7 @@ type segmentWriter struct {
 	path    string
 	src     SegmentSource
 	bw      *io.BinaryWriter
+	ef      EncodingFactory
 	offsets map[string]int
 }
 

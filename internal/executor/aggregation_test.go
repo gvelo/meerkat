@@ -3,7 +3,7 @@ package executor
 import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage"
-	encoding2 "meerkat/internal/storage/encoding"
+	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
 )
 
@@ -55,7 +55,7 @@ func (f *fakeVectorOperator) Next() interface{} {
 type fakeFloatColumn struct {
 }
 
-func (f *fakeFloatColumn) Encoding() encoding2.EncodingType {
+func (f *fakeFloatColumn) Encoding() encoding.Type {
 	panic("implement me")
 }
 
@@ -141,7 +141,7 @@ type fakeIntColumn struct {
 	length   []int
 }
 
-func (f *fakeIntColumn) Encoding() encoding2.EncodingType {
+func (f *fakeIntColumn) Encoding() encoding.Type {
 	panic("implement me")
 }
 
@@ -219,7 +219,7 @@ type fakeStringColumn struct {
 	length   []int
 }
 
-func (f *fakeStringColumn) Encoding() encoding2.EncodingType {
+func (f *fakeStringColumn) Encoding() encoding.Type {
 	panic("implement me")
 }
 

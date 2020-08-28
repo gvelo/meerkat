@@ -25,22 +25,20 @@ import (
 const uvnan = 0x7FF8000000000001
 
 // TODO: check pools.
-type Float64TszDecoder struct {
+type Float64XorDecoder struct {
 }
 
-func NewFloat64TszDecoder() *Float64TszDecoder {
-	return &Float64TszDecoder{}
+func NewFloat64XorDecoder() *Float64XorDecoder {
+	return &Float64XorDecoder{}
 }
 
-func (d *Float64TszDecoder) Decode(block []byte, buf []float64) []float64 {
+func (d *Float64XorDecoder) Decode(block []byte, buf []float64) []float64 {
 
 	dec := &floatDecoderIter{}
-	dec.SetBytes(block)
 
-	// TODO: FIX. this should explode
-	//if len(buf) < len(data) {
-	//	panic("there isn't enough space to decode integer values")
-	//}
+	if err := dec.SetBytes(block); err != nil {
+		panic(err)
+	}
 
 	n := 0
 	for dec.Error() == nil && dec.Next() {

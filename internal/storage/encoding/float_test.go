@@ -22,43 +22,39 @@ import (
 
 type FloatEncFactory func(bw BlockWriter) Float64Encoder
 
-func TestPlainFloatEncoding(t *testing.T) {
+func TestFloatEncoding(t *testing.T) {
 
-	testPlainFloatEncoding(t, func(bw BlockWriter) Float64Encoder {
-		return NewFloat64PlainEncoder(bw)
-	}, NewFloat64PlainDecoder())
+	testCases := []struct {
+		name    string
+		factory FloatEncFactory
+		decoder Float64Decoder
+	}{
+		{
+			name: "plain_float_encoding",
+			factory: func(bw BlockWriter) Float64Encoder {
+				return NewFloat64PlainEncoder(bw)
+			},
+			decoder: NewFloat64PlainDecoder(),
+		},
+		{
+			name: "xor_float_encoding",
+			factory: func(bw BlockWriter) Float64Encoder {
+				return NewFloat64XorEncoder(bw)
+			},
+			decoder: NewFloat64XorDecoder(),
+		},
+	}
 
-}
-
-func testPlainFloatEncoding(t *testing.T, f FloatEncFactory, d Float64Decoder) {
-
-	s := 1024
-
-	bw := &blockWriterMock{}
-
-	v := createRandomFloatColVal(s)
-
-	e := f(bw)
-
-	e.Encode(v)
-
-	data := make([]float64, len(v.Values())*8*2)
-
-	data = d.Decode(bw.block, data)
-
-	assert.Equal(t, v.Values(), data, "decoded data doesn't match")
-
-}
-
-func TestTszFloatEncoding(t *testing.T) {
-
-	testTszFloatEncoding(t, func(bw BlockWriter) Float64Encoder {
-		return NewFloat64TszEncoder(bw)
-	}, NewFloat64TszDecoder())
+	// RUN TC
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testFloatEncoding(t, tc.factory, tc.decoder)
+		})
+	}
 
 }
 
-func testTszFloatEncoding(t *testing.T, f FloatEncFactory, d Float64Decoder) {
+func testFloatEncoding(t *testing.T, f FloatEncFactory, d Float64Decoder) {
 
 	s := 1024
 

@@ -171,35 +171,33 @@ func TestMergeOperator(t *testing.T) {
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Run(tc.name, func(t *testing.T) {
 
-				ctx := NewContext(nil, tc.sz)
-				op1 := NewMergeOperator(ctx, tc.input, tc.result)
-				op1.Init()
-				n := op1.Next()
-				total := 0
-				idx := 0
-				for ; n != nil; n = op1.Next() {
+			ctx := NewContext(nil, tc.sz)
+			op1 := NewMergeOperator(ctx, tc.input, tc.result)
+			op1.Init()
+			n := op1.Next()
+			total := 0
+			idx := 0
+			for ; n != nil; n = op1.Next() {
 
-					l := getLen(n[0].(interface{}))
+				l := getLen(n[0].(interface{}))
 
-					for i := 0; i < l; i++ {
-						// TODO check other values.
-						vv := tc.exp[idx][0].(vector.Int64Vector)
-						vp := &vv
-						ts := vp.Get(i)
+				for i := 0; i < l; i++ {
+					// TODO check other values.
+					vv := tc.exp[idx][0].(vector.Int64Vector)
+					vp := &vv
+					ts := vp.Get(i)
 
-						vv1 := tc.exp[idx][0].(vector.Int64Vector)
-						vp1 := &vv1
-						ts1 := vp1.Get(i)
+					vv1 := tc.exp[idx][0].(vector.Int64Vector)
+					vp1 := &vv1
+					ts1 := vp1.Get(i)
 
-						assert.Equal(t, ts, ts1, "Not the same values")
+					assert.Equal(t, ts, ts1, "Not the same values")
 
-					}
-					idx++
-					total = total + l
 				}
-			})
+				idx++
+				total = total + l
+			}
 		})
 	}
 

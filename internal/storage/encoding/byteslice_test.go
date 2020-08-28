@@ -42,6 +42,11 @@ func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) {
 	w.rid = baseRid
 }
 
+func (w *blockWriterMock) Write(block []byte) {
+	// TODO: make tests for Dict. we'll need an interfacer for io.Readers & writers to mock.
+	// Nothig to do.
+}
+
 func TestByteSliceSnappyEnc(t *testing.T) {
 	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
 		return NewByteSliceSnappyEncoder(bw)
@@ -50,7 +55,7 @@ func TestByteSliceSnappyEnc(t *testing.T) {
 
 func TestByteSlicePlainEnc(t *testing.T) {
 	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
-		return NewByteSlicePlainEncodeer(bw)
+		return NewByteSlicePlainEncoder(bw)
 	}, NewByteSlicePlainDecoder())
 }
 

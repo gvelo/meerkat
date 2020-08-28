@@ -25,7 +25,7 @@ type SegmentRegistry interface {
 }
 
 type Column interface {
-	Encoding() encoding.EncodingType
+	Encoding() encoding.Type
 	Validity() *roaring.Bitmap
 	HasNulls() bool
 	Stats() *Stats
