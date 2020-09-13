@@ -255,8 +255,7 @@ func (op *ColumnToRowOperator) Next() [][]string {
 	}
 
 	vv := n[TsIndex].(vector.Int64Vector)
-	vp := &vv
-	l := vp.Len()
+	l := vv.Len()
 
 	res := make([][]string, 0, l)
 	for i := 0; i < l; i++ {

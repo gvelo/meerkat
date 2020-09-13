@@ -256,11 +256,6 @@ type OutputOp struct {
 
 func (n *OutputOp) Accept(v Visitor) { n.Child = Walk(n.Child, v) }
 
-type Fragment struct {
-	IsParallel bool
-	Roots      []Node
-}
-
 type DistSummaryOp struct {
 	Child Node
 }

@@ -1,28 +1,70 @@
 package logical
 
-func Parallelize(roots []Node) []*Fragment {
+type Fragment struct {
+	IsParallel bool
+	Outputs    []Node
+}
+
+// Fragments is the set of parallel execution fragments created by the
+// parallelizer. Nodes execute a subset of these fragments whereas the
+// coordinator executes the whole set ( output fragments + node fragments )
+type Fragments struct {
+	fragments []*Fragment
+}
+
+// AllFragments return the whole fragment set.
+func (f *Fragments) AllFragments() []*Fragment {
+	return f.fragments
+}
+
+// NodeFragments return the subset of fragments that should
+// be executed on nodes.
+func (f *Fragments) NodeFragments() []*Fragment {
+	return f.fragments[:len(f.fragments)-1]
+}
+
+func (f *Fragments) append(fragment *Fragment) {
+	f.fragments = append(f.fragments, fragment)
+}
+
+// Parallelize build the plan fragments or subtrees ( actually subgraphs )
+// that will be executed in the cluster nodes. Each fragment is a
+// subgraph of the logical plan with the addition of the exchange operators
+// needed to transfer the vectors between nodes. Fragment will be evaluated
+// on the cluster nodes and transformed into physical operators.
+// Currently the strategy used to parallelize the graph is quite naive, we
+// planto evolved it over time. The graph is traversed in post-order and a
+// fragment is created every time a distributed operator is found ( ie.
+// Summary or  Join ).
+// The last fragment in the slice  always executed in the query coordinator
+// node.
+func Parallelize(outputNodes []Node) *Fragments {
 
 	parallelizer := NewNaiveParallelizer()
 
-	if len(roots) > 1 {
-		panic("multiple roots not supported yet")
+	if len(outputNodes) > 1 {
+		panic("multiple outputNodes not supported yet")
 	}
 
-	output := &OutputOp{Child: roots[0]}
+	// add a logical output to the plan
+	output := &OutputOp{Child: outputNodes[0]}
 
 	_ = Walk(output, parallelizer)
 
-	return parallelizer.fagments
+	return parallelizer.fragments
 
 }
 
 func NewNaiveParallelizer() *NaiveParallelizer {
-	return &NaiveParallelizer{isParallel: true}
+	return &NaiveParallelizer{
+		fragments:      &Fragments{},
+		inParallelFlow: true,
+	}
 }
 
 type NaiveParallelizer struct {
-	isParallel bool
-	fagments   []*Fragment
+	inParallelFlow bool
+	fragments      *Fragments
 }
 
 func (p *NaiveParallelizer) VisitPre(n Node) Node { return n }
@@ -31,8 +73,8 @@ func (p *NaiveParallelizer) VisitPost(n Node) Node {
 
 	switch n := n.(type) {
 	case *SummarizeOp:
-		if p.isParallel {
-			p.isParallel = false
+		if p.inParallelFlow {
+			p.inParallelFlow = false
 			return p.buildDistSummary(n)
 		}
 		return buildLocalSummary(n)
@@ -46,31 +88,31 @@ func (p *NaiveParallelizer) VisitPost(n Node) Node {
 
 func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
-	if !p.isParallel {
+	if !p.inParallelFlow {
 		fragment := &Fragment{
 			IsParallel: false,
-			Roots:      []Node{op},
+			Outputs:    []Node{op},
 		}
-		p.addFragment(fragment)
+		p.fragments.append(fragment)
 		return op
 	}
 
 	exchange := &ExchangeOutOp{Child: op.Child}
 	fragment := &Fragment{
 		IsParallel: true,
-		Roots:      []Node{exchange},
+		Outputs:    []Node{exchange},
 	}
-	p.addFragment(fragment)
+	p.fragments.append(fragment)
 
 	merge := &MergeOp{}
 	op.Child = merge
 
-	rootFragment := &Fragment{
+	outputFragment := &Fragment{
 		IsParallel: false,
-		Roots:      []Node{op},
+		Outputs:    []Node{op},
 	}
 
-	p.addFragment(rootFragment)
+	p.fragments.append(outputFragment)
 
 	return op
 
@@ -81,9 +123,9 @@ func (p *NaiveParallelizer) buildDistSummary(summaryOp *SummarizeOp) Node {
 	exchangeOut := &ExchangeOutOp{Child: distSummary}
 	fragment := &Fragment{
 		IsParallel: true,
-		Roots:      []Node{exchangeOut},
+		Outputs:    []Node{exchangeOut},
 	}
-	p.addFragment(fragment)
+	p.fragments.append(fragment)
 	exchangeIn := &ExchangeInOp{}
 	summCollector := &SummaryCollector{Child: exchangeIn}
 	return summCollector
@@ -92,8 +134,4 @@ func (p *NaiveParallelizer) buildDistSummary(summaryOp *SummarizeOp) Node {
 func buildLocalSummary(summaryOp *SummarizeOp) Node {
 	localSummary := &LocalSummaryOp{Child: summaryOp.Child}
 	return localSummary
-}
-
-func (p *NaiveParallelizer) addFragment(f *Fragment) {
-	p.fagments = append(p.fagments, f)
 }

@@ -9,12 +9,12 @@ import (
 func ToLogical(query *parser.TabularStmt) []Node {
 	t := &transform{}
 	t.transform(query)
-	return t.roots
+	return t.outputNodes
 }
 
 type transform struct {
-	child Node
-	roots []Node
+	child       Node
+	outputNodes []Node
 }
 
 func (t *transform) transform(n parser.Node) {
@@ -36,7 +36,7 @@ func (t *transform) transform(n parser.Node) {
 				panic("unknown operator")
 			}
 		}
-		t.roots = append(t.roots, t.child)
+		t.outputNodes = append(t.outputNodes, t.child)
 	}
 
 }
