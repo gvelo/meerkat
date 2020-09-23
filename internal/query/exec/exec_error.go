@@ -13,9 +13,36 @@
 
 package exec
 
-type StreamRegistry interface {
+import "github.com/google/uuid"
 
-	GetStream()
-	RegisterStream()
+// extractExecError extract an ExecError from an error returned from the
+// grpc api. Return nil the error doesn't carry an ExecError.
+func extractExecError(err error) *ExecError {
 
+	if se, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
+
+		st := se.GRPCStatus()
+
+		if len(st.Details()) == 0 {
+			return nil
+		}
+
+		if execError, ok := st.Details()[0].(*ExecError); ok {
+			return execError
+		}
+
+		return nil
+
+	}
+
+	return nil
+
+}
+
+func newExecError(detail string) *ExecError {
+	id := uuid.New()
+	return &ExecError{
+		Id:     id[:],
+		Detail: detail,
+	}
 }

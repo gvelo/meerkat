@@ -11,8 +11,11 @@ import (
 	_ "github.com/golang/protobuf/ptypes/any"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	storage "meerkat/internal/storage"
 )
 
@@ -25,32 +28,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
-
-type ErrorCode int32
-
-const (
-	ErrorCode_EOF            ErrorCode = 0
-	ErrorCode_CANCEL_BY_USER ErrorCode = 1
-)
-
-var ErrorCode_name = map[int32]string{
-	0: "EOF",
-	1: "CANCEL_BY_USER",
-}
-
-var ErrorCode_value = map[string]int32{
-	"EOF":            0,
-	"CANCEL_BY_USER": 1,
-}
-
-func (x ErrorCode) String() string {
-	return proto.EnumName(ErrorCode_name, int32(x))
-}
-
-func (ErrorCode) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_4d737c7315c25422, []int{0}
-}
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // ExecQuery setup que execution machinery in a node.
 type ExecQuery struct {
@@ -75,7 +53,7 @@ func (m *ExecQuery) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_ExecQuery.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +89,7 @@ func (m *ExecQuery) GetPlan() []byte {
 // ExecCancel signal a execution cancellation.
 type ExecCancel struct {
 	// The error detail.
-	Error *Error `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	Error *ExecError `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
 }
 
 func (m *ExecCancel) Reset()         { *m = ExecCancel{} }
@@ -128,7 +106,7 @@ func (m *ExecCancel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_ExecCancel.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +125,7 @@ func (m *ExecCancel) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ExecCancel proto.InternalMessageInfo
 
-func (m *ExecCancel) GetError() *Error {
+func (m *ExecCancel) GetError() *ExecError {
 	if m != nil {
 		return m.Error
 	}
@@ -176,7 +154,7 @@ func (m *ExecCmd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_ExecCmd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -202,10 +180,10 @@ type isExecCmd_Cmd interface {
 }
 
 type ExecCmd_ExecQuery struct {
-	ExecQuery *ExecQuery `protobuf:"bytes,1,opt,name=execQuery,proto3,oneof"`
+	ExecQuery *ExecQuery `protobuf:"bytes,1,opt,name=execQuery,proto3,oneof" json:"execQuery,omitempty"`
 }
 type ExecCmd_ExecCancel struct {
-	ExecCancel *ExecCancel `protobuf:"bytes,2,opt,name=execCancel,proto3,oneof"`
+	ExecCancel *ExecCancel `protobuf:"bytes,2,opt,name=execCancel,proto3,oneof" json:"execCancel,omitempty"`
 }
 
 func (*ExecCmd_ExecQuery) isExecCmd_Cmd()  {}
@@ -232,81 +210,16 @@ func (m *ExecCmd) GetExecCancel() *ExecCancel {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*ExecCmd) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _ExecCmd_OneofMarshaler, _ExecCmd_OneofUnmarshaler, _ExecCmd_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*ExecCmd) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*ExecCmd_ExecQuery)(nil),
 		(*ExecCmd_ExecCancel)(nil),
 	}
 }
 
-func _ExecCmd_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*ExecCmd)
-	// cmd
-	switch x := m.Cmd.(type) {
-	case *ExecCmd_ExecQuery:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ExecQuery); err != nil {
-			return err
-		}
-	case *ExecCmd_ExecCancel:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ExecCancel); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("ExecCmd.Cmd has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _ExecCmd_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*ExecCmd)
-	switch tag {
-	case 1: // cmd.execQuery
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(ExecQuery)
-		err := b.DecodeMessage(msg)
-		m.Cmd = &ExecCmd_ExecQuery{msg}
-		return true, err
-	case 2: // cmd.execCancel
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(ExecCancel)
-		err := b.DecodeMessage(msg)
-		m.Cmd = &ExecCmd_ExecCancel{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _ExecCmd_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*ExecCmd)
-	// cmd
-	switch x := m.Cmd.(type) {
-	case *ExecCmd_ExecQuery:
-		s := proto.Size(x.ExecQuery)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *ExecCmd_ExecCancel:
-		s := proto.Size(x.ExecCancel)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-// ExecOKEvent signal that the  NodeExecutor was successfully created and started.
+// ExecOKEvent signal that the  NodeExecutor was successfully created
+// and started.
 type ExecOKEvent struct {
 }
 
@@ -324,7 +237,7 @@ func (m *ExecOKEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_ExecOKEvent.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +274,7 @@ func (m *ExecStatsEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_ExecStatsEvent.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -385,7 +298,6 @@ type ExecEvent struct {
 	// Types that are valid to be assigned to Event:
 	//	*ExecEvent_ExecOk
 	//	*ExecEvent_ExecStats
-	//	*ExecEvent_Error
 	Event isExecEvent_Event `protobuf_oneof:"event"`
 }
 
@@ -403,7 +315,7 @@ func (m *ExecEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_ExecEvent.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -429,18 +341,14 @@ type isExecEvent_Event interface {
 }
 
 type ExecEvent_ExecOk struct {
-	ExecOk *ExecOKEvent `protobuf:"bytes,1,opt,name=execOk,proto3,oneof"`
+	ExecOk *ExecOKEvent `protobuf:"bytes,1,opt,name=execOk,proto3,oneof" json:"execOk,omitempty"`
 }
 type ExecEvent_ExecStats struct {
-	ExecStats *ExecStatsEvent `protobuf:"bytes,2,opt,name=execStats,proto3,oneof"`
-}
-type ExecEvent_Error struct {
-	Error *Error `protobuf:"bytes,3,opt,name=error,proto3,oneof"`
+	ExecStats *ExecStatsEvent `protobuf:"bytes,2,opt,name=execStats,proto3,oneof" json:"execStats,omitempty"`
 }
 
 func (*ExecEvent_ExecOk) isExecEvent_Event()    {}
 func (*ExecEvent_ExecStats) isExecEvent_Event() {}
-func (*ExecEvent_Error) isExecEvent_Event()     {}
 
 func (m *ExecEvent) GetEvent() isExecEvent_Event {
 	if m != nil {
@@ -463,104 +371,12 @@ func (m *ExecEvent) GetExecStats() *ExecStatsEvent {
 	return nil
 }
 
-func (m *ExecEvent) GetError() *Error {
-	if x, ok := m.GetEvent().(*ExecEvent_Error); ok {
-		return x.Error
-	}
-	return nil
-}
-
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*ExecEvent) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _ExecEvent_OneofMarshaler, _ExecEvent_OneofUnmarshaler, _ExecEvent_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*ExecEvent) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*ExecEvent_ExecOk)(nil),
 		(*ExecEvent_ExecStats)(nil),
-		(*ExecEvent_Error)(nil),
 	}
-}
-
-func _ExecEvent_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*ExecEvent)
-	// event
-	switch x := m.Event.(type) {
-	case *ExecEvent_ExecOk:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ExecOk); err != nil {
-			return err
-		}
-	case *ExecEvent_ExecStats:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ExecStats); err != nil {
-			return err
-		}
-	case *ExecEvent_Error:
-		_ = b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Error); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("ExecEvent.Event has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _ExecEvent_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*ExecEvent)
-	switch tag {
-	case 1: // event.execOk
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(ExecOKEvent)
-		err := b.DecodeMessage(msg)
-		m.Event = &ExecEvent_ExecOk{msg}
-		return true, err
-	case 2: // event.execStats
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(ExecStatsEvent)
-		err := b.DecodeMessage(msg)
-		m.Event = &ExecEvent_ExecStats{msg}
-		return true, err
-	case 3: // event.error
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Error)
-		err := b.DecodeMessage(msg)
-		m.Event = &ExecEvent_Error{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _ExecEvent_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*ExecEvent)
-	// event
-	switch x := m.Event.(type) {
-	case *ExecEvent_ExecOk:
-		s := proto.Size(x.ExecOk)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *ExecEvent_ExecStats:
-		s := proto.Size(x.ExecStats)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *ExecEvent_Error:
-		s := proto.Size(x.Error)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 // Column represent a column in the vector batch
@@ -586,7 +402,7 @@ func (m *Column) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Column.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -660,7 +476,7 @@ func (m *VectorBatch) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_VectorBatch.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -716,7 +532,7 @@ func (m *StreamHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_StreamHeader.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -764,66 +580,66 @@ func (m *StreamHeader) GetSrcFragmentId() int64 {
 }
 
 // Error message used to signal errors on streams
-type Error struct {
-	// id is used to trace errors across nodes. ie to identify
+type ExecError struct {
+	// id is an uuid used to trace errors across nodes. ie to identify
 	// root causes of cancellations.
-	Id   []byte    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Code ErrorCode `protobuf:"varint,2,opt,name=code,proto3,enum=meerkat.exec.ErrorCode" json:"code,omitempty"`
+	Id     []byte `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Detail string `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
 }
 
-func (m *Error) Reset()         { *m = Error{} }
-func (m *Error) String() string { return proto.CompactTextString(m) }
-func (*Error) ProtoMessage()    {}
-func (*Error) Descriptor() ([]byte, []int) {
+func (m *ExecError) Reset()         { *m = ExecError{} }
+func (m *ExecError) String() string { return proto.CompactTextString(m) }
+func (*ExecError) ProtoMessage()    {}
+func (*ExecError) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4d737c7315c25422, []int{9}
 }
-func (m *Error) XXX_Unmarshal(b []byte) error {
+func (m *ExecError) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ExecError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Error.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ExecError.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
 		return b[:n], nil
 	}
 }
-func (m *Error) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Error.Merge(m, src)
+func (m *ExecError) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecError.Merge(m, src)
 }
-func (m *Error) XXX_Size() int {
+func (m *ExecError) XXX_Size() int {
 	return m.Size()
 }
-func (m *Error) XXX_DiscardUnknown() {
-	xxx_messageInfo_Error.DiscardUnknown(m)
+func (m *ExecError) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecError.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Error proto.InternalMessageInfo
+var xxx_messageInfo_ExecError proto.InternalMessageInfo
 
-func (m *Error) GetId() []byte {
+func (m *ExecError) GetId() []byte {
 	if m != nil {
 		return m.Id
 	}
 	return nil
 }
 
-func (m *Error) GetCode() ErrorCode {
+func (m *ExecError) GetDetail() string {
 	if m != nil {
-		return m.Code
+		return m.Detail
 	}
-	return ErrorCode_EOF
+	return ""
 }
 
 // VectorExchangeMsg are the type of messages flowing through
 // VectorExchange streams.
 type VectorExchangeMsg struct {
 	// Types that are valid to be assigned to Msg:
-	//	*VectorExchangeMsg_Vector
 	//	*VectorExchangeMsg_Header
+	//	*VectorExchangeMsg_Vector
 	//	*VectorExchangeMsg_Error
 	Msg isVectorExchangeMsg_Msg `protobuf_oneof:"msg"`
 }
@@ -842,7 +658,7 @@ func (m *VectorExchangeMsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_VectorExchangeMsg.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -867,30 +683,23 @@ type isVectorExchangeMsg_Msg interface {
 	Size() int
 }
 
-type VectorExchangeMsg_Vector struct {
-	Vector *VectorBatch `protobuf:"bytes,1,opt,name=vector,proto3,oneof"`
-}
 type VectorExchangeMsg_Header struct {
-	Header *StreamHeader `protobuf:"bytes,2,opt,name=header,proto3,oneof"`
+	Header *StreamHeader `protobuf:"bytes,1,opt,name=header,proto3,oneof" json:"header,omitempty"`
+}
+type VectorExchangeMsg_Vector struct {
+	Vector *VectorBatch `protobuf:"bytes,2,opt,name=vector,proto3,oneof" json:"vector,omitempty"`
 }
 type VectorExchangeMsg_Error struct {
-	Error *Error `protobuf:"bytes,3,opt,name=error,proto3,oneof"`
+	Error *ExecError `protobuf:"bytes,3,opt,name=error,proto3,oneof" json:"error,omitempty"`
 }
 
-func (*VectorExchangeMsg_Vector) isVectorExchangeMsg_Msg() {}
 func (*VectorExchangeMsg_Header) isVectorExchangeMsg_Msg() {}
+func (*VectorExchangeMsg_Vector) isVectorExchangeMsg_Msg() {}
 func (*VectorExchangeMsg_Error) isVectorExchangeMsg_Msg()  {}
 
 func (m *VectorExchangeMsg) GetMsg() isVectorExchangeMsg_Msg {
 	if m != nil {
 		return m.Msg
-	}
-	return nil
-}
-
-func (m *VectorExchangeMsg) GetVector() *VectorBatch {
-	if x, ok := m.GetMsg().(*VectorExchangeMsg_Vector); ok {
-		return x.Vector
 	}
 	return nil
 }
@@ -902,108 +711,66 @@ func (m *VectorExchangeMsg) GetHeader() *StreamHeader {
 	return nil
 }
 
-func (m *VectorExchangeMsg) GetError() *Error {
+func (m *VectorExchangeMsg) GetVector() *VectorBatch {
+	if x, ok := m.GetMsg().(*VectorExchangeMsg_Vector); ok {
+		return x.Vector
+	}
+	return nil
+}
+
+func (m *VectorExchangeMsg) GetError() *ExecError {
 	if x, ok := m.GetMsg().(*VectorExchangeMsg_Error); ok {
 		return x.Error
 	}
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*VectorExchangeMsg) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _VectorExchangeMsg_OneofMarshaler, _VectorExchangeMsg_OneofUnmarshaler, _VectorExchangeMsg_OneofSizer, []interface{}{
-		(*VectorExchangeMsg_Vector)(nil),
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*VectorExchangeMsg) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*VectorExchangeMsg_Header)(nil),
+		(*VectorExchangeMsg_Vector)(nil),
 		(*VectorExchangeMsg_Error)(nil),
 	}
 }
 
-func _VectorExchangeMsg_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*VectorExchangeMsg)
-	// msg
-	switch x := m.Msg.(type) {
-	case *VectorExchangeMsg_Vector:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Vector); err != nil {
-			return err
-		}
-	case *VectorExchangeMsg_Header:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Header); err != nil {
-			return err
-		}
-	case *VectorExchangeMsg_Error:
-		_ = b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Error); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("VectorExchangeMsg.Msg has unexpected type %T", x)
-	}
-	return nil
+type VectorExchangeResponse struct {
 }
 
-func _VectorExchangeMsg_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*VectorExchangeMsg)
-	switch tag {
-	case 1: // msg.vector
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
+func (m *VectorExchangeResponse) Reset()         { *m = VectorExchangeResponse{} }
+func (m *VectorExchangeResponse) String() string { return proto.CompactTextString(m) }
+func (*VectorExchangeResponse) ProtoMessage()    {}
+func (*VectorExchangeResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4d737c7315c25422, []int{11}
+}
+func (m *VectorExchangeResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VectorExchangeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VectorExchangeResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
 		}
-		msg := new(VectorBatch)
-		err := b.DecodeMessage(msg)
-		m.Msg = &VectorExchangeMsg_Vector{msg}
-		return true, err
-	case 2: // msg.header
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(StreamHeader)
-		err := b.DecodeMessage(msg)
-		m.Msg = &VectorExchangeMsg_Header{msg}
-		return true, err
-	case 3: // msg.error
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Error)
-		err := b.DecodeMessage(msg)
-		m.Msg = &VectorExchangeMsg_Error{msg}
-		return true, err
-	default:
-		return false, nil
+		return b[:n], nil
 	}
+}
+func (m *VectorExchangeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VectorExchangeResponse.Merge(m, src)
+}
+func (m *VectorExchangeResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *VectorExchangeResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_VectorExchangeResponse.DiscardUnknown(m)
 }
 
-func _VectorExchangeMsg_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*VectorExchangeMsg)
-	// msg
-	switch x := m.Msg.(type) {
-	case *VectorExchangeMsg_Vector:
-		s := proto.Size(x.Vector)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *VectorExchangeMsg_Header:
-		s := proto.Size(x.Header)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *VectorExchangeMsg_Error:
-		s := proto.Size(x.Error)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
+var xxx_messageInfo_VectorExchangeResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterEnum("meerkat.exec.ErrorCode", ErrorCode_name, ErrorCode_value)
 	proto.RegisterType((*ExecQuery)(nil), "meerkat.exec.ExecQuery")
 	proto.RegisterType((*ExecCancel)(nil), "meerkat.exec.ExecCancel")
 	proto.RegisterType((*ExecCmd)(nil), "meerkat.exec.ExecCmd")
@@ -1013,60 +780,59 @@ func init() {
 	proto.RegisterType((*Column)(nil), "meerkat.exec.Column")
 	proto.RegisterType((*VectorBatch)(nil), "meerkat.exec.VectorBatch")
 	proto.RegisterType((*StreamHeader)(nil), "meerkat.exec.StreamHeader")
-	proto.RegisterType((*Error)(nil), "meerkat.exec.Error")
+	proto.RegisterType((*ExecError)(nil), "meerkat.exec.ExecError")
 	proto.RegisterType((*VectorExchangeMsg)(nil), "meerkat.exec.VectorExchangeMsg")
+	proto.RegisterType((*VectorExchangeResponse)(nil), "meerkat.exec.VectorExchangeResponse")
 }
 
 func init() { proto.RegisterFile("exec.proto", fileDescriptor_4d737c7315c25422) }
 
 var fileDescriptor_4d737c7315c25422 = []byte{
-	// 722 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcd, 0x6e, 0x13, 0x3b,
-	0x18, 0x1d, 0x67, 0xf2, 0x73, 0xf3, 0xa5, 0x8d, 0x72, 0x7d, 0x7b, 0x69, 0x9a, 0xa2, 0xb4, 0x1a,
-	0xb1, 0x08, 0x54, 0x4a, 0x50, 0x4a, 0x55, 0x09, 0xc1, 0x82, 0x84, 0x54, 0xa9, 0x80, 0x46, 0xb8,
-	0x80, 0x04, 0x9b, 0xca, 0x9d, 0x31, 0xd3, 0xa8, 0x33, 0xe3, 0xe0, 0x71, 0xaa, 0xf6, 0x01, 0xd8,
-	0x22, 0x24, 0x16, 0xbc, 0x07, 0xe2, 0x21, 0x58, 0x76, 0xc9, 0x12, 0xb5, 0x2f, 0x82, 0x6c, 0xcf,
-	0xb4, 0x49, 0x13, 0x16, 0xec, 0xfc, 0x7d, 0x3e, 0xc7, 0xdf, 0xf1, 0x99, 0xe3, 0x01, 0x60, 0xa7,
-	0xcc, 0x6d, 0x8e, 0x04, 0x97, 0x1c, 0x2f, 0x84, 0x8c, 0x89, 0x63, 0x2a, 0x9b, 0xaa, 0x57, 0x5b,
-	0xf2, 0xb9, 0xcf, 0xf5, 0x46, 0x4b, 0xad, 0x0c, 0xa6, 0xb6, 0xe6, 0x73, 0xee, 0x07, 0xac, 0xa5,
-	0xab, 0xc3, 0xf1, 0xfb, 0x96, 0x1c, 0x86, 0x2c, 0x96, 0x34, 0x1c, 0x25, 0x80, 0x95, 0x9b, 0x00,
-	0x1a, 0x9d, 0x25, 0x5b, 0x8b, 0xb1, 0xe4, 0x82, 0xfa, 0xcc, 0x94, 0x4e, 0x0b, 0x8a, 0xbd, 0x53,
-	0xe6, 0xbe, 0x1c, 0x33, 0x71, 0x86, 0xcb, 0x90, 0x19, 0x7a, 0x55, 0xb4, 0x8e, 0x1a, 0x0b, 0x24,
-	0x33, 0xf4, 0x30, 0x86, 0xec, 0x28, 0xa0, 0x51, 0x35, 0xa3, 0x3b, 0x7a, 0xed, 0x6c, 0x03, 0x28,
-	0x42, 0x97, 0x46, 0x2e, 0x0b, 0xf0, 0x5d, 0xc8, 0x31, 0x21, 0xb8, 0xd0, 0xa4, 0x52, 0xfb, 0xbf,
-	0xe6, 0xa4, 0xfa, 0x66, 0x4f, 0x6d, 0x11, 0x83, 0x70, 0x3e, 0x22, 0x28, 0x68, 0x66, 0xe8, 0xe1,
-	0x6d, 0x28, 0xb2, 0x74, 0x6a, 0x42, 0x5d, 0xbe, 0x41, 0x4d, 0xb7, 0xfb, 0x16, 0xb9, 0xc6, 0xe2,
-	0x87, 0xc6, 0x2b, 0x33, 0x5d, 0xeb, 0x2a, 0xb5, 0xab, 0xb3, 0x4c, 0xb3, 0xdf, 0xb7, 0xc8, 0x04,
-	0xba, 0x93, 0x03, 0xdb, 0x0d, 0x3d, 0x67, 0x11, 0x4a, 0x0a, 0x32, 0x78, 0xd6, 0x3b, 0x61, 0x91,
-	0x74, 0x2a, 0x50, 0x56, 0xe5, 0xbe, 0xa4, 0x32, 0x36, 0x9d, 0xef, 0xc8, 0x78, 0xa2, 0x2b, 0xbc,
-	0x09, 0x79, 0x75, 0xc6, 0xe0, 0x38, 0xd1, 0xb9, 0x32, 0x3b, 0x2d, 0x39, 0xaa, 0x6f, 0x91, 0x04,
-	0x8a, 0x1f, 0x99, 0xfb, 0xe9, 0x43, 0x13, 0x95, 0xb7, 0x67, 0x79, 0xd7, 0x33, 0xd3, 0x4b, 0xea,
-	0x0e, 0xde, 0x48, 0x4d, 0xb5, 0xff, 0x68, 0x6a, 0xdf, 0x4a, 0x6c, 0xed, 0x14, 0x20, 0xc7, 0xb4,
-	0xec, 0xaf, 0x08, 0xf2, 0x5d, 0x1e, 0x8c, 0xc3, 0x48, 0x7d, 0xb7, 0x88, 0x86, 0x4c, 0x2b, 0x2e,
-	0x12, 0xbd, 0xc6, 0x4b, 0x90, 0xf3, 0x05, 0x1f, 0x8f, 0xb4, 0x1c, 0x9b, 0x98, 0x42, 0x75, 0xb9,
-	0xf0, 0x98, 0x19, 0x65, 0x13, 0x53, 0xe0, 0x2d, 0x28, 0xb8, 0x3c, 0x78, 0x75, 0x36, 0x62, 0xd5,
-	0xec, 0x3a, 0x6a, 0x94, 0xdb, 0xab, 0x57, 0x12, 0xd2, 0xf4, 0x98, 0x49, 0x0a, 0x42, 0x52, 0x2c,
-	0xbe, 0x05, 0xf9, 0x13, 0xe6, 0x4a, 0x2e, 0xaa, 0x39, 0x1d, 0x98, 0xa4, 0x72, 0x06, 0x50, 0x7a,
-	0xa3, 0x57, 0x1d, 0x2a, 0xdd, 0x23, 0x5c, 0x01, 0x3b, 0x60, 0x91, 0x16, 0x67, 0x13, 0xb5, 0xc4,
-	0x4d, 0x3d, 0x6f, 0x1c, 0x46, 0xca, 0x2c, 0xbb, 0x51, 0x6a, 0x2f, 0x4d, 0x5f, 0xd9, 0x0c, 0x23,
-	0x29, 0xc8, 0xf9, 0x84, 0x60, 0x61, 0x5f, 0x0a, 0x46, 0xc3, 0x3e, 0xa3, 0x4a, 0x70, 0x15, 0x0a,
-	0x1f, 0x54, 0x3e, 0x76, 0xd3, 0xf4, 0xa6, 0x25, 0xbe, 0x03, 0x8b, 0x5e, 0x2c, 0x77, 0x04, 0xf5,
-	0x43, 0x16, 0xc9, 0x5d, 0x2f, 0xb9, 0xfe, 0x74, 0x53, 0xf1, 0x63, 0xe1, 0xee, 0x71, 0x8f, 0x69,
-	0x23, 0x8a, 0x24, 0x2d, 0x15, 0x3f, 0x16, 0xee, 0x04, 0x3f, 0x6b, 0xf8, 0x53, 0x4d, 0xe7, 0x29,
-	0xe4, 0xf4, 0x67, 0x99, 0x79, 0x41, 0x1b, 0x90, 0x75, 0xd5, 0xa9, 0x19, 0x6d, 0xe3, 0xf2, 0x9c,
-	0x2f, 0xd9, 0xe5, 0x1e, 0x23, 0x1a, 0xe4, 0x7c, 0x43, 0xf0, 0xaf, 0x31, 0xaa, 0x77, 0xea, 0x1e,
-	0xd1, 0xc8, 0x67, 0x2f, 0x62, 0x5f, 0x05, 0x30, 0x71, 0x75, 0x6e, 0x00, 0x27, 0x9c, 0x55, 0x01,
-	0x34, 0x50, 0xfc, 0x00, 0xf2, 0x47, 0xda, 0x9a, 0x24, 0x7d, 0xb5, 0x69, 0xd2, 0xa4, 0x79, 0x8a,
-	0x65, 0xb0, 0x7f, 0x17, 0xbc, 0x1c, 0xd8, 0x61, 0xec, 0xdf, 0x6b, 0x40, 0xf1, 0xea, 0x1e, 0xb8,
-	0x00, 0x76, 0x6f, 0xb0, 0x53, 0xb1, 0x30, 0x86, 0x72, 0xf7, 0xc9, 0x5e, 0xb7, 0xf7, 0xfc, 0xa0,
-	0xf3, 0xf6, 0xe0, 0xf5, 0x7e, 0x8f, 0x54, 0x50, 0xfb, 0x0b, 0x82, 0x7f, 0x54, 0xec, 0xc7, 0x4a,
-	0xe0, 0x63, 0x28, 0x74, 0x79, 0x24, 0x05, 0x0f, 0xf0, 0xff, 0x73, 0xde, 0x6f, 0xe8, 0xd5, 0xe6,
-	0xfc, 0x10, 0xf4, 0x5b, 0x69, 0xa0, 0xfb, 0x08, 0xf7, 0xa1, 0x3c, 0xed, 0x14, 0x5e, 0x9b, 0x67,
-	0xcb, 0x84, 0x8f, 0xb5, 0x79, 0xb7, 0x69, 0xa0, 0xce, 0xd6, 0x8f, 0x8b, 0x3a, 0x3a, 0xbf, 0xa8,
-	0xa3, 0x5f, 0x17, 0x75, 0xf4, 0xf9, 0xb2, 0x6e, 0x9d, 0x5f, 0xd6, 0xad, 0x9f, 0x97, 0x75, 0xeb,
-	0xdd, 0x6a, 0x82, 0x6f, 0x0d, 0x23, 0xc9, 0x44, 0x44, 0x83, 0x96, 0x0e, 0x55, 0x4b, 0xd1, 0x0f,
-	0xf3, 0xfa, 0xf7, 0xb9, 0xf9, 0x3b, 0x00, 0x00, 0xff, 0xff, 0xfb, 0x54, 0x29, 0x6f, 0xbb, 0x05,
-	0x00, 0x00,
+	// 693 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x54, 0xcd, 0x6e, 0xd3, 0x4a,
+	0x14, 0xce, 0xc4, 0x4d, 0x72, 0x73, 0xd2, 0x46, 0xbd, 0xa3, 0xde, 0x5e, 0x37, 0x45, 0x69, 0x65,
+	0x75, 0x91, 0x0d, 0x31, 0x4a, 0xa9, 0x90, 0xf8, 0xd9, 0xa4, 0x0a, 0x4a, 0x85, 0xa0, 0xc2, 0x45,
+	0x48, 0xb0, 0x9b, 0xda, 0x07, 0x37, 0xaa, 0xed, 0x09, 0xe3, 0x49, 0xd5, 0x3e, 0x00, 0x62, 0x87,
+	0xd8, 0xf1, 0x02, 0x3c, 0x03, 0xcf, 0xc0, 0xb2, 0x4b, 0x96, 0xa8, 0x7d, 0x11, 0x34, 0x3f, 0xa6,
+	0x09, 0x09, 0xdd, 0xcd, 0x39, 0xf3, 0x7d, 0xe7, 0x7c, 0xe7, 0xf8, 0x1b, 0x03, 0xe0, 0x39, 0x86,
+	0xdd, 0xb1, 0xe0, 0x92, 0xd3, 0xe5, 0x14, 0x51, 0x9c, 0x32, 0xd9, 0x55, 0xb9, 0xd6, 0x5a, 0xcc,
+	0x63, 0xae, 0x2f, 0x7c, 0x75, 0x32, 0x98, 0xd6, 0x56, 0xcc, 0x79, 0x9c, 0xa0, 0xaf, 0xa3, 0xe3,
+	0xc9, 0x3b, 0x5f, 0x8e, 0x52, 0xcc, 0x25, 0x4b, 0xc7, 0x16, 0xb0, 0xf1, 0x27, 0x80, 0x65, 0x17,
+	0xf6, 0x6a, 0x25, 0x97, 0x5c, 0xb0, 0x18, 0x4d, 0xe8, 0xf9, 0x50, 0x1f, 0x9c, 0x63, 0xf8, 0x72,
+	0x82, 0xe2, 0x82, 0x36, 0xa1, 0x3c, 0x8a, 0x5c, 0xb2, 0x4d, 0x3a, 0xcb, 0x41, 0x79, 0x14, 0x51,
+	0x0a, 0x4b, 0xe3, 0x84, 0x65, 0x6e, 0x59, 0x67, 0xf4, 0xd9, 0x7b, 0x04, 0xa0, 0x08, 0xfb, 0x2c,
+	0x0b, 0x31, 0xa1, 0x77, 0xa1, 0x82, 0x42, 0x70, 0xa1, 0x49, 0x8d, 0xde, 0xff, 0xdd, 0x69, 0xf5,
+	0x5d, 0x05, 0x1c, 0xa8, 0xeb, 0xc0, 0xa0, 0xbc, 0x0f, 0x04, 0x6a, 0x9a, 0x9d, 0x46, 0xf4, 0x01,
+	0xd4, 0xb1, 0xe8, 0xfc, 0x77, 0xba, 0xbe, 0x1e, 0x96, 0x82, 0x1b, 0x2c, 0x7d, 0x68, 0xf6, 0x65,
+	0x14, 0x68, 0x6d, 0x8d, 0x9e, 0x3b, 0xcf, 0x34, 0xf7, 0xc3, 0x52, 0x30, 0x85, 0xee, 0x57, 0xc0,
+	0x09, 0xd3, 0xc8, 0x5b, 0x81, 0x86, 0x82, 0x1c, 0x3e, 0x1b, 0x9c, 0x61, 0x26, 0xbd, 0x55, 0x68,
+	0xaa, 0xf0, 0x48, 0x32, 0x99, 0x9b, 0xcc, 0x47, 0x62, 0xf6, 0xa2, 0x23, 0xba, 0x0b, 0x55, 0x55,
+	0xe3, 0xf0, 0xd4, 0xea, 0xdc, 0x98, 0xef, 0x66, 0x4b, 0x0d, 0x4b, 0x81, 0x85, 0xd2, 0xc7, 0x66,
+	0x3e, 0x5d, 0xd4, 0xaa, 0xbc, 0x33, 0xcf, 0xbb, 0xe9, 0x59, 0x0c, 0xa9, 0x33, 0xfd, 0x1a, 0x54,
+	0x50, 0x2b, 0xf9, 0x42, 0xa0, 0xba, 0xcf, 0x93, 0x49, 0x9a, 0xa9, 0xcf, 0x91, 0xb1, 0x14, 0xb5,
+	0x88, 0x7a, 0xa0, 0xcf, 0x74, 0x0d, 0x2a, 0xb1, 0xe0, 0x93, 0xb1, 0xee, 0xe0, 0x04, 0x26, 0x50,
+	0x59, 0x2e, 0x22, 0x14, 0xae, 0x63, 0xb2, 0x3a, 0xa0, 0x7b, 0x50, 0x0b, 0x79, 0xf2, 0xea, 0x62,
+	0x8c, 0xee, 0xd2, 0x36, 0xe9, 0x34, 0x7b, 0x9b, 0xbf, 0xf5, 0x14, 0xa6, 0x30, 0x9d, 0x14, 0x24,
+	0x28, 0xb0, 0x74, 0x1d, 0xaa, 0x67, 0x18, 0x4a, 0x2e, 0xdc, 0x8a, 0xf6, 0x81, 0x8d, 0xbc, 0x43,
+	0x68, 0xbc, 0xd6, 0xa7, 0x3e, 0x93, 0xe1, 0x09, 0x5d, 0x05, 0x27, 0xc1, 0x4c, 0x8b, 0x73, 0x02,
+	0x75, 0xa4, 0x5d, 0xdd, 0x6f, 0x92, 0x66, 0x6a, 0x7e, 0xa7, 0xd3, 0xe8, 0xad, 0xcd, 0xce, 0x6f,
+	0x9a, 0x05, 0x05, 0xc8, 0xfb, 0x44, 0x60, 0xf9, 0x48, 0x0a, 0x64, 0xe9, 0x10, 0x99, 0x12, 0xec,
+	0x42, 0xed, 0xbd, 0xfa, 0xe4, 0x07, 0x85, 0x29, 0x8b, 0x90, 0xee, 0xc0, 0x4a, 0x94, 0xcb, 0xa7,
+	0x82, 0xc5, 0x29, 0x66, 0xf2, 0x20, 0xb2, 0xe3, 0xcf, 0x26, 0x15, 0x3f, 0x17, 0xe1, 0x0b, 0x1e,
+	0xa1, 0x5e, 0x44, 0x3d, 0x28, 0x42, 0xc5, 0xcf, 0x45, 0x38, 0xc5, 0x5f, 0x32, 0xfc, 0x99, 0xa4,
+	0xb7, 0x6b, 0x4d, 0xa0, 0xbc, 0x3b, 0xf7, 0x38, 0xd6, 0xa1, 0x1a, 0xa1, 0x64, 0xa3, 0xc4, 0xd6,
+	0xb6, 0x91, 0xf7, 0x8d, 0xc0, 0xbf, 0x66, 0x2f, 0x83, 0xf3, 0xf0, 0x84, 0x65, 0x31, 0x3e, 0xcf,
+	0x63, 0x7a, 0x1f, 0xaa, 0x27, 0x7a, 0x28, 0x6b, 0xa1, 0xd6, 0xec, 0x2a, 0xa6, 0xc7, 0x56, 0x1e,
+	0x32, 0x58, 0x65, 0x3c, 0xbb, 0xfa, 0xf2, 0x22, 0xe3, 0x4d, 0xad, 0x5f, 0x91, 0x0c, 0x94, 0xfa,
+	0xc5, 0x9b, 0x74, 0x6e, 0x7d, 0x93, 0xc3, 0x92, 0x7d, 0x95, 0xea, 0x51, 0xa4, 0x79, 0xec, 0xb9,
+	0xb0, 0x3e, 0xab, 0x3b, 0xc0, 0x7c, 0xcc, 0xb3, 0x1c, 0x7b, 0x5f, 0x09, 0xfc, 0xa3, 0x78, 0x13,
+	0x55, 0xfe, 0x09, 0xd4, 0xf6, 0x79, 0x26, 0x05, 0x4f, 0xe8, 0x7f, 0x0b, 0x5e, 0x5d, 0x1a, 0xb5,
+	0x16, 0x75, 0x54, 0x5e, 0xee, 0x90, 0x7b, 0x84, 0xbe, 0x81, 0xe6, 0x6c, 0x17, 0xba, 0xb5, 0x68,
+	0xa8, 0xa9, 0xdd, 0xb5, 0x76, 0x6e, 0x03, 0x14, 0x22, 0x3b, 0xa4, 0xbf, 0xf7, 0xfd, 0xaa, 0x4d,
+	0x2e, 0xaf, 0xda, 0xe4, 0xe7, 0x55, 0x9b, 0x7c, 0xbe, 0x6e, 0x97, 0x2e, 0xaf, 0xdb, 0xa5, 0x1f,
+	0xd7, 0xed, 0xd2, 0xdb, 0x4d, 0x5b, 0xc0, 0x1f, 0x65, 0x12, 0x45, 0xc6, 0x12, 0x5f, 0x1b, 0xc9,
+	0x57, 0xf5, 0x8e, 0xab, 0xfa, 0x4f, 0xb8, 0xfb, 0x2b, 0x00, 0x00, 0xff, 0xff, 0x4a, 0x09, 0x5a,
+	0x72, 0x86, 0x05, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1138,7 +904,7 @@ func (c *executorClient) VectorExchange(ctx context.Context, opts ...grpc.CallOp
 
 type Executor_VectorExchangeClient interface {
 	Send(*VectorExchangeMsg) error
-	CloseAndRecv() (*Error, error)
+	CloseAndRecv() (*VectorExchangeResponse, error)
 	grpc.ClientStream
 }
 
@@ -1150,11 +916,11 @@ func (x *executorVectorExchangeClient) Send(m *VectorExchangeMsg) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *executorVectorExchangeClient) CloseAndRecv() (*Error, error) {
+func (x *executorVectorExchangeClient) CloseAndRecv() (*VectorExchangeResponse, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(Error)
+	m := new(VectorExchangeResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -1168,6 +934,17 @@ type ExecutorServer interface {
 	Control(Executor_ControlServer) error
 	// VectorExchange is used to push vectors to a specific node.
 	VectorExchange(Executor_VectorExchangeServer) error
+}
+
+// UnimplementedExecutorServer can be embedded to have forward compatible implementations.
+type UnimplementedExecutorServer struct {
+}
+
+func (*UnimplementedExecutorServer) Control(srv Executor_ControlServer) error {
+	return status.Errorf(codes.Unimplemented, "method Control not implemented")
+}
+func (*UnimplementedExecutorServer) VectorExchange(srv Executor_VectorExchangeServer) error {
+	return status.Errorf(codes.Unimplemented, "method VectorExchange not implemented")
 }
 
 func RegisterExecutorServer(s *grpc.Server, srv ExecutorServer) {
@@ -1205,7 +982,7 @@ func _Executor_VectorExchange_Handler(srv interface{}, stream grpc.ServerStream)
 }
 
 type Executor_VectorExchangeServer interface {
-	SendAndClose(*Error) error
+	SendAndClose(*VectorExchangeResponse) error
 	Recv() (*VectorExchangeMsg, error)
 	grpc.ServerStream
 }
@@ -1214,7 +991,7 @@ type executorVectorExchangeServer struct {
 	grpc.ServerStream
 }
 
-func (x *executorVectorExchangeServer) SendAndClose(m *Error) error {
+func (x *executorVectorExchangeServer) SendAndClose(m *VectorExchangeResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -1249,7 +1026,7 @@ var _Executor_serviceDesc = grpc.ServiceDesc{
 func (m *ExecQuery) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1257,29 +1034,36 @@ func (m *ExecQuery) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecQuery) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecQuery) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Id) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(len(m.Id)))
-		i += copy(dAtA[i:], m.Id)
-	}
 	if len(m.Plan) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.Plan)
+		copy(dAtA[i:], m.Plan)
 		i = encodeVarintExec(dAtA, i, uint64(len(m.Plan)))
-		i += copy(dAtA[i:], m.Plan)
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecCancel) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1287,27 +1071,34 @@ func (m *ExecCancel) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecCancel) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecCancel) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if m.Error != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Error.Size()))
-		n1, err := m.Error.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.Error.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n1
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecCmd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1315,52 +1106,73 @@ func (m *ExecCmd) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecCmd) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecCmd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if m.Cmd != nil {
-		nn2, err := m.Cmd.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size := m.Cmd.Size()
+			i -= size
+			if _, err := m.Cmd.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
 		}
-		i += nn2
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecCmd_ExecQuery) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecCmd_ExecQuery) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.ExecQuery != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.ExecQuery.Size()))
-		n3, err := m.ExecQuery.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.ExecQuery.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n3
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *ExecCmd_ExecCancel) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecCmd_ExecCancel) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.ExecCancel != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.ExecCancel.Size()))
-		n4, err := m.ExecCancel.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.ExecCancel.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n4
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *ExecOKEvent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1368,17 +1180,22 @@ func (m *ExecOKEvent) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecOKEvent) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecOKEvent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecStatsEvent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1386,17 +1203,22 @@ func (m *ExecStatsEvent) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecStatsEvent) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecStatsEvent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecEvent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1404,66 +1226,73 @@ func (m *ExecEvent) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExecEvent) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecEvent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if m.Event != nil {
-		nn5, err := m.Event.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size := m.Event.Size()
+			i -= size
+			if _, err := m.Event.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
 		}
-		i += nn5
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExecEvent_ExecOk) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecEvent_ExecOk) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.ExecOk != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.ExecOk.Size()))
-		n6, err := m.ExecOk.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.ExecOk.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n6
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *ExecEvent_ExecStats) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.ExecStats != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.ExecStats.Size()))
-		n7, err := m.ExecStats.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n7
-	}
-	return i, nil
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
-func (m *ExecEvent_Error) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Error != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Error.Size()))
-		n8, err := m.Error.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+
+func (m *ExecEvent_ExecStats) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.ExecStats != nil {
+		{
+			size, err := m.ExecStats.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n8
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *Column) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1471,44 +1300,51 @@ func (m *Column) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Column) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Column) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Name) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(len(m.Name)))
-		i += copy(dAtA[i:], m.Name)
-	}
-	if m.Group != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Group))
-	}
-	if m.Order != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Order))
+	if len(m.Vector) > 0 {
+		i -= len(m.Vector)
+		copy(dAtA[i:], m.Vector)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Vector)))
+		i--
+		dAtA[i] = 0x2a
 	}
 	if m.ColType != 0 {
-		dAtA[i] = 0x20
-		i++
 		i = encodeVarintExec(dAtA, i, uint64(m.ColType))
+		i--
+		dAtA[i] = 0x20
 	}
-	if len(m.Vector) > 0 {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(len(m.Vector)))
-		i += copy(dAtA[i:], m.Vector)
+	if m.Order != 0 {
+		i = encodeVarintExec(dAtA, i, uint64(m.Order))
+		i--
+		dAtA[i] = 0x18
 	}
-	return i, nil
+	if m.Group != 0 {
+		i = encodeVarintExec(dAtA, i, uint64(m.Group))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Name) > 0 {
+		i -= len(m.Name)
+		copy(dAtA[i:], m.Name)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *VectorBatch) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1516,34 +1352,41 @@ func (m *VectorBatch) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *VectorBatch) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VectorBatch) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Len != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Len))
-	}
 	if len(m.Columns) > 0 {
-		for _, msg := range m.Columns {
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintExec(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.Columns) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Columns[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintExec(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0x12
 		}
 	}
-	return i, nil
+	if m.Len != 0 {
+		i = encodeVarintExec(dAtA, i, uint64(m.Len))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *StreamHeader) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1551,68 +1394,83 @@ func (m *StreamHeader) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *StreamHeader) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *StreamHeader) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.QueryId) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(len(m.QueryId)))
-		i += copy(dAtA[i:], m.QueryId)
-	}
-	if m.DstFragmentId != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.DstFragmentId))
+	if m.SrcFragmentId != 0 {
+		i = encodeVarintExec(dAtA, i, uint64(m.SrcFragmentId))
+		i--
+		dAtA[i] = 0x20
 	}
 	if len(m.SrcNode) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.SrcNode)
+		copy(dAtA[i:], m.SrcNode)
 		i = encodeVarintExec(dAtA, i, uint64(len(m.SrcNode)))
-		i += copy(dAtA[i:], m.SrcNode)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.SrcFragmentId != 0 {
-		dAtA[i] = 0x20
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.SrcFragmentId))
+	if m.DstFragmentId != 0 {
+		i = encodeVarintExec(dAtA, i, uint64(m.DstFragmentId))
+		i--
+		dAtA[i] = 0x10
 	}
-	return i, nil
+	if len(m.QueryId) > 0 {
+		i -= len(m.QueryId)
+		copy(dAtA[i:], m.QueryId)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.QueryId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
-func (m *Error) Marshal() (dAtA []byte, err error) {
+func (m *ExecError) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
 	return dAtA[:n], nil
 }
 
-func (m *Error) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+func (m *ExecError) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExecError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if len(m.Detail) > 0 {
+		i -= len(m.Detail)
+		copy(dAtA[i:], m.Detail)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Detail)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	if len(m.Id) > 0 {
-		dAtA[i] = 0xa
-		i++
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
 		i = encodeVarintExec(dAtA, i, uint64(len(m.Id)))
-		i += copy(dAtA[i:], m.Id)
+		i--
+		dAtA[i] = 0xa
 	}
-	if m.Code != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Code))
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *VectorExchangeMsg) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1620,70 +1478,123 @@ func (m *VectorExchangeMsg) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *VectorExchangeMsg) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VectorExchangeMsg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if m.Msg != nil {
-		nn9, err := m.Msg.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size := m.Msg.Size()
+			i -= size
+			if _, err := m.Msg.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
 		}
-		i += nn9
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
-func (m *VectorExchangeMsg_Vector) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Vector != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Vector.Size()))
-		n10, err := m.Vector.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n10
-	}
-	return i, nil
-}
 func (m *VectorExchangeMsg_Header) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VectorExchangeMsg_Header) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.Header != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Header.Size()))
-		n11, err := m.Header.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
 		}
-		i += n11
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
+}
+func (m *VectorExchangeMsg_Vector) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VectorExchangeMsg_Vector) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Vector != nil {
+		{
+			size, err := m.Vector.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
 }
 func (m *VectorExchangeMsg_Error) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Error != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintExec(dAtA, i, uint64(m.Error.Size()))
-		n12, err := m.Error.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n12
-	}
-	return i, nil
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
+
+func (m *VectorExchangeMsg_Error) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Error != nil {
+		{
+			size, err := m.Error.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintExec(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *VectorExchangeResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VectorExchangeResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VectorExchangeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintExec(dAtA []byte, offset int, v uint64) int {
+	offset -= sovExec(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *ExecQuery) Size() (n int) {
 	if m == nil {
@@ -1805,18 +1716,6 @@ func (m *ExecEvent_ExecStats) Size() (n int) {
 	}
 	return n
 }
-func (m *ExecEvent_Error) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Error != nil {
-		l = m.Error.Size()
-		n += 1 + l + sovExec(uint64(l))
-	}
-	return n
-}
 func (m *Column) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1884,7 +1783,7 @@ func (m *StreamHeader) Size() (n int) {
 	return n
 }
 
-func (m *Error) Size() (n int) {
+func (m *ExecError) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1894,8 +1793,9 @@ func (m *Error) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovExec(uint64(l))
 	}
-	if m.Code != 0 {
-		n += 1 + sovExec(uint64(m.Code))
+	l = len(m.Detail)
+	if l > 0 {
+		n += 1 + l + sovExec(uint64(l))
 	}
 	return n
 }
@@ -1912,18 +1812,6 @@ func (m *VectorExchangeMsg) Size() (n int) {
 	return n
 }
 
-func (m *VectorExchangeMsg_Vector) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Vector != nil {
-		l = m.Vector.Size()
-		n += 1 + l + sovExec(uint64(l))
-	}
-	return n
-}
 func (m *VectorExchangeMsg_Header) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1932,6 +1820,18 @@ func (m *VectorExchangeMsg_Header) Size() (n int) {
 	_ = l
 	if m.Header != nil {
 		l = m.Header.Size()
+		n += 1 + l + sovExec(uint64(l))
+	}
+	return n
+}
+func (m *VectorExchangeMsg_Vector) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Vector != nil {
+		l = m.Vector.Size()
 		n += 1 + l + sovExec(uint64(l))
 	}
 	return n
@@ -1948,16 +1848,17 @@ func (m *VectorExchangeMsg_Error) Size() (n int) {
 	}
 	return n
 }
+func (m *VectorExchangeResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
 
 func sovExec(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozExec(x uint64) (n int) {
 	return sovExec(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -2142,7 +2043,7 @@ func (m *ExecCancel) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Error == nil {
-				m.Error = &Error{}
+				m.Error = &ExecError{}
 			}
 			if err := m.Error.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2499,41 +2400,6 @@ func (m *ExecEvent) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Event = &ExecEvent_ExecStats{v}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowExec
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthExec
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthExec
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Error{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Event = &ExecEvent_Error{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2998,7 +2864,7 @@ func (m *StreamHeader) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Error) Unmarshal(dAtA []byte) error {
+func (m *ExecError) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3021,10 +2887,10 @@ func (m *Error) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Error: wiretype end group for non-group")
+			return fmt.Errorf("proto: ExecError: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Error: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ExecError: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3061,11 +2927,11 @@ func (m *Error) Unmarshal(dAtA []byte) error {
 				m.Id = []byte{}
 			}
 			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Detail", wireType)
 			}
-			m.Code = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowExec
@@ -3075,11 +2941,24 @@ func (m *Error) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= ErrorCode(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthExec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Detail = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipExec(dAtA[iNdEx:])
@@ -3135,41 +3014,6 @@ func (m *VectorExchangeMsg) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Vector", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowExec
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthExec
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthExec
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &VectorBatch{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Msg = &VectorExchangeMsg_Vector{v}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Header", wireType)
 			}
 			var msglen int
@@ -3203,6 +3047,41 @@ func (m *VectorExchangeMsg) Unmarshal(dAtA []byte) error {
 			}
 			m.Msg = &VectorExchangeMsg_Header{v}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Vector", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowExec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthExec
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthExec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &VectorBatch{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Msg = &VectorExchangeMsg_Vector{v}
+			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
@@ -3232,7 +3111,7 @@ func (m *VectorExchangeMsg) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &Error{}
+			v := &ExecError{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3262,9 +3141,63 @@ func (m *VectorExchangeMsg) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *VectorExchangeResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowExec
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VectorExchangeResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VectorExchangeResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipExec(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthExec
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthExec
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipExec(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -3296,10 +3229,8 @@ func skipExec(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -3320,55 +3251,30 @@ func skipExec(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthExec
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthExec
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowExec
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipExec(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthExec
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupExec
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthExec
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthExec = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowExec   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthExec        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowExec          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupExec = fmt.Errorf("proto: unexpected end of group")
 )

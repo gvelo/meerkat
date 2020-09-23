@@ -21,19 +21,21 @@ import (
 	"meerkat/internal/cluster"
 	"meerkat/internal/ingestion"
 	"meerkat/internal/jsoningester"
+	"meerkat/internal/query/exec"
 	"net/http"
 	"sync"
 )
 
 type ApiServer struct {
-	router  *gin.Engine
-	server  *http.Server
-	log     zerolog.Logger
-	mu      sync.Mutex
-	cluster cluster.Cluster
-	connReg cluster.ConnRegistry
-	ingRpc  jsoningester.IngesterRpc
-	bufReg  ingestion.BufferRegistry
+	router   *gin.Engine
+	server   *http.Server
+	log      zerolog.Logger
+	mu       sync.Mutex
+	cluster  cluster.Cluster
+	connReg  cluster.ConnRegistry
+	ingRpc   jsoningester.IngesterRpc
+	bufReg   ingestion.BufferRegistry
+	executor exec.Executor
 }
 
 type ApiError struct {
@@ -41,6 +43,10 @@ type ApiError struct {
 	Status    string      `json:"status"`
 	ErrorText string      `json:"error-text"`
 	Error     interface{} `json:"error,omitempty"`
+}
+
+type QueryBody struct {
+	Query string `json:"query"`
 }
 
 const (
@@ -53,16 +59,18 @@ func NewRestApi(
 	connReg cluster.ConnRegistry,
 	ingRpc jsoningester.IngesterRpc,
 	bufReg ingestion.BufferRegistry,
+	executor exec.Executor,
 ) (*ApiServer, error) {
 
 	// TODO(gvelo) set gin to production mode
 	server := &ApiServer{
-		router:  gin.Default(),
-		cluster: cluster,
-		connReg: connReg,
-		ingRpc:  ingRpc,
-		bufReg:  bufReg,
-		log:     log.With().Str("src", "rest-api").Logger(),
+		router:   gin.Default(),
+		cluster:  cluster,
+		connReg:  connReg,
+		ingRpc:   ingRpc,
+		bufReg:   bufReg,
+		executor: executor,
+		log:      log.With().Str("src", "rest-api").Logger(),
 	}
 
 	server.log.Info().Msg("creating rest api")
@@ -83,7 +91,8 @@ func NewRestApi(
 	//server.router.POST("/index/:indexID/alloc", server.updateAlloc)
 	//server.router.GET("/index/:indexID/alloc", server.getAlloc)
 
-	server.router.POST("//:tableName/ingest", server.ingest)
+	server.router.POST("/:tableName/ingest", server.ingest)
+	server.router.POST("/query", server.query)
 
 	return server, nil
 
@@ -409,6 +418,26 @@ func (s *ApiServer) ingest(c *gin.Context) {
 	c.JSON(http.StatusOK, err)
 
 	return
+
+}
+
+func (s *ApiServer) query(c *gin.Context) {
+
+	body := &QueryBody{}
+
+	err := c.Bind(body)
+
+	if err != nil {
+		bindError("cannot execute query", c, err)
+		return
+	}
+
+	err = s.executor.ExecuteQuery(body.Query, c.Writer)
+
+	if err != nil {
+		bindError("cannot execute query", c, err)
+		return
+	}
 
 }
 

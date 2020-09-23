@@ -17,11 +17,12 @@ import (
 	"github.com/RoaringBitmap/roaring"
 	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
-	"time"
 )
 
 type SegmentRegistry interface {
-	Segment(indexId []byte, from *time.Time, to *time.Time) []*Segment
+	SegmentInfo() []*SegmentInfo
+	Segments() []*Segment
+	AddSegment(segment *Segment) // SegmentInfo ????
 }
 
 type Column interface {

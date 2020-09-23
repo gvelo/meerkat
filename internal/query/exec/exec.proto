@@ -33,7 +33,7 @@ message ExecQuery {
 // ExecCancel signal a execution cancellation.
 message ExecCancel {
   // The error detail.
-  Error error = 1;
+  ExecError error = 1;
 }
 
 // ExecCmd represents an executor command ( exec query, cancel query, etc)
@@ -44,7 +44,8 @@ message ExecCmd {
   }
 }
 
-// ExecOKEvent signal that the  NodeExecutor was successfully created and started.
+// ExecOKEvent signal that the  NodeExecutor was successfully created
+// and started.
 message ExecOKEvent {}
 
 // ExecStatsEvent send stats from the node to the coordinator.
@@ -55,7 +56,6 @@ message ExecEvent {
   oneof event {
     ExecOKEvent    execOk    = 1;
     ExecStatsEvent execStats = 2;
-    Error          error     = 3;
   }
 }
 
@@ -70,7 +70,7 @@ message Column {
 
 // VectorBatch represents the group of vectors exchanged between nodes.
 message VectorBatch{
-  int64 len = 1;
+  int64    len            = 1;
   repeated Column columns = 2;
 }
 
@@ -83,35 +83,31 @@ message StreamHeader{
   int64  srcFragmentId = 4;
 }
 
-
-enum ErrorCode{
-  EOF            = 0;
-  CANCEL_BY_USER = 1;
-}
-
 // Error message used to signal errors on streams
-message Error{
-  // id is used to trace errors across nodes. ie to identify
+message ExecError{
+  // id is an uuid used to trace errors across nodes. ie to identify
   // root causes of cancellations.
-  bytes     id   = 1;
-  ErrorCode code = 2;
+  bytes     id     = 1;
+  string    detail = 3;
+  // TODO(gvelo) srcNode ? stacktrace ? stream ?
 }
 
 // VectorExchangeMsg are the type of messages flowing through
 // VectorExchange streams.
 message VectorExchangeMsg{
   oneof msg {
-    VectorBatch  vector = 1;
-    StreamHeader header = 2;
-    Error        error  = 3;
+    StreamHeader header = 1;
+    VectorBatch  vector = 2;
+    ExecError    error  = 3;
   }
 }
 
+message VectorExchangeResponse{}
 
 service Executor {
   // Control stream is used by the coordinator to execute query
   // plan fragments on cluster nodes.
   rpc Control(stream ExecCmd) returns (stream ExecEvent);
   // VectorExchange is used to push vectors to a specific node.
-  rpc VectorExchange(stream VectorExchangeMsg) returns (Error);
+  rpc VectorExchange(stream VectorExchangeMsg) returns (VectorExchangeResponse);
 }

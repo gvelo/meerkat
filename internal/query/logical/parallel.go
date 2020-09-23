@@ -33,7 +33,7 @@ func (f *Fragments) append(fragment *Fragment) {
 // needed to transfer the vectors between nodes. Fragment will be evaluated
 // on the cluster nodes and transformed into physical operators.
 // Currently the strategy used to parallelize the graph is quite naive, we
-// planto evolved it over time. The graph is traversed in post-order and a
+// plan to evolved it over time. The graph is traversed in post-order and a
 // fragment is created every time a distributed operator is found ( ie.
 // Summary or  Join ).
 // The last fragment in the slice  always executed in the query coordinator

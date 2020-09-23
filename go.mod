@@ -13,9 +13,11 @@ require (
 	github.com/disiqueira/gotree v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
-	github.com/gogo/protobuf v1.2.1
+	github.com/gogo/googleapis v1.4.0 // indirect
+	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/status v1.1.0 // indirect
 	github.com/golang/mock v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/serf v0.8.3
@@ -35,11 +37,12 @@ require (
 	github.com/ugorji/go v1.1.7 // indirect
 	github.com/xlab/treeprint v1.0.0 // indirect
 	go.etcd.io/bbolt v1.3.3
-	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
-	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
+	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/text v0.3.2
-	google.golang.org/grpc v1.22.1
+	golang.org/x/sys v0.0.0-20200918174421-af09f7315aff // indirect
+	golang.org/x/text v0.3.3
+	google.golang.org/genproto v0.0.0-20200918140846-d0d605568037 // indirect
+	google.golang.org/grpc v1.32.0
+	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
