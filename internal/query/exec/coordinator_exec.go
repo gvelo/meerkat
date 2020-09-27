@@ -26,6 +26,7 @@ import (
 	"meerkat/internal/cluster"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/parser"
+	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
 	"sync"
 )
@@ -270,6 +271,7 @@ func NewCoordinatorExecutor(
 	exec := &coordinatorExecutor{
 		id:          id,
 		segReg:      segReg,
+		conReg:      connReg,
 		nodeManager: nodeManager,
 		execCtx:     execCtx,
 		log: log.With().
@@ -282,16 +284,15 @@ func NewCoordinatorExecutor(
 }
 
 type coordinatorExecutor struct {
-	id uuid.UUID
-	//state       ExecutorState
+	id          uuid.UUID
 	log         zerolog.Logger
 	segReg      storage.SegmentRegistry
+	conReg      cluster.ConnRegistry
 	nodeManager nodeManager
 	streamReg   StreamRegistry
 	execCtx     ExecutionContext
-	setupWg     sync.WaitGroup
-	mu          sync.Mutex
 	writer      JsonWriter
+	outputOp    physical.OutputOp
 }
 
 func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
@@ -300,7 +301,7 @@ func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
 
 	c.writer = writer
 
-	// Transform the string text into a abstract sintax tree
+	// Transform the string text into a abstract syntax tree
 	ast, err := parser.Parse(query)
 
 	if err != nil {
@@ -325,24 +326,37 @@ func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
 
 	go c.handleCtxCancel()
 
-	c.setupWg.Add(2)
 	go c.broadcastFragmentsToNodes(fragments.NodeFragments())
-	go c.buildExecutableGraph(fragments.AllFragments())
-	c.setupWg.Wait()
+	err = c.buildExecutableGraph(fragments.AllFragments())
 
-	// output.run()
+	if err != nil {
+		c.Cancel(err)
+		return err
+	}
+
+	c.outputOp.Run()
 
 	return nil
 
 }
 
-func (c *coordinatorExecutor) buildExecutableGraph(fragments []*logical.Fragment) {
-	defer c.setupWg.Done()
+func (c *coordinatorExecutor) buildExecutableGraph(fragments []*logical.Fragment) error {
+
+	graphBuilder := NewExecutableGraphBuilder(c.conReg, c.segReg, c.streamReg)
+
+	output, err := graphBuilder.Build(fragments)
+
+	if err != nil {
+		return err
+	}
+
+	c.outputOp = output
+
+	return nil
 
 }
 
 func (c *coordinatorExecutor) broadcastFragmentsToNodes(fragments []*logical.Fragment) {
-	defer c.setupWg.Done()
 	c.nodeManager.sendQueryFragments(c.id, fragments)
 }
 

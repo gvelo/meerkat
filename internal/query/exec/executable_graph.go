@@ -11,26 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package exec
 
 import (
-	"context"
 	"meerkat/internal/cluster"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
 )
 
-type ExecutableGraph interface {
-	Outputs() //[]
-	Start()
-	Cancel()
-	Context() context.Context
-}
-
 type ExecutableGraphBuilder interface {
-	Build(root *logical.Fragment) ExecutableGraph
+	Build(outputs []*logical.Fragment) (physical.OutputOp, error)
 }
 
 // necesitamos el query id para loguo o viene el el plan ?
@@ -38,13 +29,18 @@ func NewExecutableGraphBuilder(connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
 	streamReg StreamRegistry) ExecutableGraphBuilder {
 
+	return &executableGraphBuilder{
+		segReg:    segReg,
+		streamReg: streamReg,
+	}
+
 }
 
 type executableGraphBuilder struct {
+	segReg    storage.SegmentRegistry
+	streamReg StreamRegistry
 }
 
-func (b *executableGraphBuilder) build(root *logical.Fragment) *physical.OutputOp {
-
-	// tener en cuenta que los miembros locales nose deben manejar mediante ExchaneIN/OUT
+func (b *executableGraphBuilder) Build(output []*logical.Fragment) (physical.OutputOp, error) {
 
 }

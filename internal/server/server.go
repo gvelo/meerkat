@@ -23,6 +23,7 @@ import (
 	"meerkat/internal/config"
 	"meerkat/internal/ingestion"
 	"meerkat/internal/jsoningester"
+	"meerkat/internal/query/exec"
 	"meerkat/internal/rest"
 	"meerkat/internal/storage"
 	"net"
@@ -128,6 +129,10 @@ func (m *Meerkat) Start(ctx context.Context) {
 	)
 
 	m.bufReg.Start()
+
+	streamReg := exec.NewStreamRegistry()
+	execServer := exec.NewServer(streamReg)
+	exec.RegisterExecutorServer(m.grpcServer, execServer)
 
 	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, m.bufReg)
 

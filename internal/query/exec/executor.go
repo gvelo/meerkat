@@ -15,6 +15,7 @@ package exec
 
 import (
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"meerkat/internal/cluster"
 	"meerkat/internal/storage"
 )
@@ -45,11 +46,11 @@ type executor struct {
 	segReg  storage.SegmentRegistry
 }
 
-func (e executor) ExecuteQuery(query string,writer JsonWriter) error {
+func (e executor) ExecuteQuery(query string, writer JsonWriter) error {
 
-	coordinator := NewCoordinatorExecutor()
+	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg)
 
-	return coordinator.exec(query,writer)
+	return coordinator.exec(query, writer)
 
 }
 
@@ -59,4 +60,75 @@ func (e *executor) CancelQuery(queryId uuid.UUID) {
 
 func (e *executor) Stop() {
 	panic("implement me")
+}
+
+func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg StreamRegistry) *Server {
+	return &Server{
+		streamReg: streamReg,
+		connReg:   connReg,
+		segReg:    segReg,
+	}
+}
+
+type Server struct {
+	streamReg StreamRegistry
+	connReg   cluster.ConnRegistry
+	segReg    storage.SegmentRegistry
+}
+
+func (s *Server) Control(controlSrv Executor_ControlServer) error {
+
+	nodeExec := NewNodeExec(s.connReg, s.segReg, controlSrv)
+	nodeExec.Run()
+
+	<-nodeExec.ExecutionContext().Done()
+
+	execErr := nodeExec.ExecutionContext().Err()
+
+	if execErr != nil {
+		return execErr.Err()
+	}
+
+	return nil
+
+}
+
+func (s *Server) VectorExchange(vectorServer Executor_VectorExchangeServer) error {
+
+	msg, err := vectorServer.Recv()
+
+	if err != nil {
+		return err
+	}
+
+	headerMsg, ok := msg.Msg.(*VectorExchangeMsg_Header)
+
+	if !ok {
+		return errors.New("invalid stream header")
+	}
+
+	queryId, err := uuid.FromBytes(headerMsg.Header.QueryId)
+
+	if err != nil {
+		return err
+	}
+
+	ch := make(chan *ExecError, 1)
+
+	stream := NewVectorExchangeStream(vectorServer, ch)
+
+	err = s.streamReg.RegisterStream(queryId, headerMsg.Header.StreamId, stream)
+
+	if err != nil {
+		return err
+	}
+
+	execErr := <-ch
+
+	if execErr != nil {
+		return execErr.Err()
+	}
+
+	return nil
+
 }

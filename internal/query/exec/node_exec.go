@@ -13,6 +13,29 @@
 
 package exec
 
-type NodeExec struct {
+import (
+	"meerkat/internal/cluster"
+	"meerkat/internal/storage"
+)
 
+type nodeExec struct {
+	connReg cluster.ConnRegistry
+	segReg  storage.SegmentRegistry
+	execCtx ExecutionContext
+}
+
+func NewNodeExec(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, controlSrv Executor_ControlServer) *nodeExec {
+	return &nodeExec{
+		connReg: connReg,
+		segReg:  segReg,
+		execCtx: NewExecutionContext(),
+	}
+}
+
+func (n *nodeExec) Run() {
+
+}
+
+func (n *nodeExec) ExecutionContext() ExecutionContext {
+	return n.execCtx
 }

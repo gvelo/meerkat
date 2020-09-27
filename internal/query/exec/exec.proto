@@ -77,10 +77,8 @@ message VectorBatch{
 // StreamHeader is the first message sent on a VectorExchangeMsg stream. It is used
 // to identify the stream targuet exchange operator
 message StreamHeader{
-  bytes  queryId       = 1;
-  int64  dstFragmentId = 2;
-  string srcNode       = 3;
-  int64  srcFragmentId = 4;
+  bytes queryId       = 1;
+  int64 streamId      = 2;
 }
 
 // Error message used to signal errors on streams

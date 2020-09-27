@@ -13,7 +13,11 @@
 
 package exec
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+)
+import "github.com/gogo/status"
 
 // extractExecError extract an ExecError from an error returned from the
 // grpc api. Return nil the error doesn't carry an ExecError.
@@ -45,4 +49,16 @@ func newExecError(detail string) *ExecError {
 		Id:     id[:],
 		Detail: detail,
 	}
+}
+
+func (m *ExecError) Err() error {
+
+	st, err := status.New(codes.Canceled, m.Detail).WithDetails(m)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return st.Err()
+
 }
