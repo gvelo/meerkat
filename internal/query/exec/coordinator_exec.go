@@ -291,15 +291,12 @@ type coordinatorExecutor struct {
 	nodeManager nodeManager
 	streamReg   StreamRegistry
 	execCtx     ExecutionContext
-	writer      JsonWriter
 	outputOp    physical.OutputOp
 }
 
-func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
+func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error {
 
 	defer c.execCtx.Cancel()
-
-	c.writer = writer
 
 	// Transform the string text into a abstract syntax tree
 	ast, err := parser.Parse(query)
@@ -327,7 +324,8 @@ func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
 	go c.handleCtxCancel()
 
 	go c.broadcastFragmentsToNodes(fragments.NodeFragments())
-	err = c.buildExecutableGraph(fragments.AllFragments())
+
+	err = c.buildExecutableGraph(writer, fragments.AllFragments())
 
 	if err != nil {
 		c.Cancel(err)
@@ -340,11 +338,14 @@ func (c *coordinatorExecutor) exec(query string, writer JsonWriter) error {
 
 }
 
-func (c *coordinatorExecutor) buildExecutableGraph(fragments []*logical.Fragment) error {
+func (c *coordinatorExecutor) buildExecutableGraph(
+	writer QueryOutputWriter,
+	fragments []*logical.Fragment,
+) error {
 
 	graphBuilder := NewExecutableGraphBuilder(c.conReg, c.segReg, c.streamReg)
 
-	output, err := graphBuilder.Build(fragments)
+	output, err := graphBuilder.BuildCoordinatorGraph(writer, fragments)
 
 	if err != nil {
 		return err

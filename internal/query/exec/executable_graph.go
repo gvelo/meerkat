@@ -18,10 +18,12 @@ import (
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
+	"sync"
 )
 
 type ExecutableGraphBuilder interface {
-	Build(outputs []*logical.Fragment) (physical.OutputOp, error)
+	BuildCoordinatorGraph(writer QueryOutputWriter, outputs []*logical.Fragment) (physical.OutputOp, error)
+	BuildNodeGraph(outputs []*logical.Fragment, outputWg *sync.WaitGroup) ([]physical.OutputOp, error)
 }
 
 // necesitamos el query id para loguo o viene el el plan ?
@@ -41,6 +43,10 @@ type executableGraphBuilder struct {
 	streamReg StreamRegistry
 }
 
-func (b *executableGraphBuilder) Build(output []*logical.Fragment) (physical.OutputOp, error) {
+func (e *executableGraphBuilder) BuildCoordinatorGraph(writer QueryOutputWriter, outputs []*logical.Fragment) (physical.OutputOp, error) {
+	panic("implement me")
+}
 
+func (e *executableGraphBuilder) BuildNodeGraph(outputs []*logical.Fragment, outputWg *sync.WaitGroup) ([]physical.OutputOp, error) {
+	panic("implement me")
 }

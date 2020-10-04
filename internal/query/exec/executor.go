@@ -22,14 +22,14 @@ import (
 
 //go:generate protoc -I . -I ../../../build/proto/ -I ../../../internal/storage/ --plugin ../../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./exec.proto
 
-type JsonWriter interface {
+type QueryOutputWriter interface {
 	Write([]byte) (int, error)
 	Flush()
 	CloseNotify() <-chan bool
 }
 
 type Executor interface {
-	ExecuteQuery(query string, writer JsonWriter) error
+	ExecuteQuery(query string, writer QueryOutputWriter) error
 	CancelQuery(queryId uuid.UUID)
 	Stop()
 }
@@ -46,7 +46,7 @@ type executor struct {
 	segReg  storage.SegmentRegistry
 }
 
-func (e executor) ExecuteQuery(query string, writer JsonWriter) error {
+func (e executor) ExecuteQuery(query string, writer QueryOutputWriter) error {
 
 	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg)
 
@@ -78,8 +78,8 @@ type Server struct {
 
 func (s *Server) Control(controlSrv Executor_ControlServer) error {
 
-	nodeExec := NewNodeExec(s.connReg, s.segReg, controlSrv)
-	nodeExec.Run()
+	nodeExec := NewNodeExec(s.connReg, s.segReg, s.streamReg, controlSrv)
+	nodeExec.Start()
 
 	<-nodeExec.ExecutionContext().Done()
 
