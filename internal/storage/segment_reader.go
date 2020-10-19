@@ -14,11 +14,9 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/storage/io"
-	"time"
 )
 
 const (
@@ -31,12 +29,12 @@ type colData struct {
 	bounds  io.Bounds
 }
 
-func ReadSegment(path string) (*Segment, error) {
+func ReadSegment(path string) *Segment {
 
 	f, err := io.MMap(path)
 
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	br := f.NewBinaryReader()
@@ -54,10 +52,10 @@ func ReadSegment(path string) (*Segment, error) {
 	switch segmentVersion {
 	case SegmentVersion1:
 		s := NewSegment(f)
-		err := s.read()
-		return s, err
+		s.read()
+		return s
 	default:
-		return nil, errors.New("unknown segment version")
+		panic("unknown segment version")
 	}
 
 }
@@ -69,6 +67,7 @@ func NewSegment(f *io.MMFile) *Segment {
 	}
 }
 
+// TODO(gvelo) extract interface for segment.
 type Segment struct {
 	f         *io.MMFile
 	id        uuid.UUID
@@ -79,11 +78,12 @@ type Segment struct {
 	tableId   string
 	tableName string
 	numOfCol  int
-	//columns   map[string]Column
-	columns map[string]interface{}
+	// columns   map[string]Column
+	columns     map[string]interface{}
+	segmentInfo *SegmentInfo
 }
 
-func (s *Segment) read() error {
+func (s *Segment) read() {
 
 	// magicNumber + version
 	s.start = len(MagicNumber) + 1
@@ -113,17 +113,13 @@ func (s *Segment) read() error {
 
 	s.readColumns(cd)
 
-	// TODO(gvelo) recover from panic and return the err.
-
-	return nil
-
 }
 
 func (s *Segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
-		//var col Column
+		// var col Column
 		var col interface{}
 
 		switch cData.colType {
@@ -143,26 +139,21 @@ func (s *Segment) readColumns(cd []colData) {
 
 }
 
-func (s *Segment) IndexName() string {
-	panic("implement me")
-}
-
-func (s *Segment) IndexID() string {
-	panic("implement me")
-}
-
-func (s *Segment) From() time.Time {
-	return time.Unix(0, int64(s.from))
-}
-
-func (s *Segment) To() time.Time {
-	return time.Unix(0, int64(s.to))
-}
-
 func (s *Segment) Rows() int {
 	return s.numOfRows
 }
 
 func (s *Segment) Col(id string) interface{} {
 	return s.columns[id]
+}
+
+func (s *Segment) Info() *SegmentInfo {
+	return s.segmentInfo
+}
+
+func (s *Segment) Close() {
+	err := s.f.UnMap()
+	if err != nil {
+		panic(err)
+	}
 }

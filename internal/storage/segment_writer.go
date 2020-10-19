@@ -37,25 +37,14 @@ type segmentWriter struct {
 	offsets map[string]int
 }
 
-func (sw *segmentWriter) Write() (err error) {
+func (sw *segmentWriter) Write() {
 
-	defer func() {
-		if r := recover(); r != nil {
-			panic(r)
-			//e, ok := r.(error)
-			//if ok {
-			//	err = e
-			//	return
-			//} else {
-			//	panic(r)
-			//}
-		}
-	}()
+	var err error
 
 	sw.bw, err = io.NewBinaryWriter(sw.path)
 
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	defer sw.bw.Close()
@@ -109,7 +98,7 @@ func (sw *segmentWriter) writeFooter() {
 
 }
 
-func WriteSegment(path string, src SegmentSource) error {
+func WriteSegment(path string, src SegmentSource) {
 	w := newSegmentWriter(path, src)
-	return w.Write()
+	w.Write()
 }

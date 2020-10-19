@@ -83,14 +83,13 @@ message ColumnInfo {
 }
 
 message SegmentInfo {
-  bytes    id                    = 1;
-  bytes    database_id           = 2;
-  string   database_name         = 3;
-  string   table_name            = 4;
-  uint64   partition_id          = 5;
-  uint32   len                   = 6;
-  Interval interval              = 7;
-  repeated ColumnInfo columns    = 8;
+  bytes    id = 1;
+  string   database_name = 2;
+  string   table_name = 3;
+  uint64   partition_id = 4;
+  uint32   len = 5;
+  Interval interval = 6;
+  repeated ColumnInfo columns = 7;
 }
 
 message Interval {

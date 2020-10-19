@@ -355,17 +355,9 @@ func TestReadWriteSegment(t *testing.T) {
 
 	segmentFile := path.Join(os.TempDir(), "test-segment")
 
-	err := WriteSegment(segmentFile, segmentSrc)
+	WriteSegment(segmentFile, segmentSrc)
 
-	if err != nil {
-		panic(err)
-	}
-
-	segment, err := ReadSegment(segmentFile)
-
-	if err != nil {
-		panic(err)
-	}
+	segment := ReadSegment(segmentFile)
 
 	checkColumnsIterators(t, segment, segmentSrc)
 	checkColumnsReads(t, segment, segmentSrc)

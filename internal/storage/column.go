@@ -19,12 +19,6 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-type SegmentRegistry interface {
-	SegmentInfo() []*SegmentInfo
-	Segments() []*Segment
-	AddSegment(segment *Segment) // SegmentInfo ????
-}
-
 type Column interface {
 	Encoding() encoding.EncodingType
 	Validity() *roaring.Bitmap

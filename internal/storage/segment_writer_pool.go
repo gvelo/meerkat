@@ -23,7 +23,7 @@ import (
 	"sync"
 )
 
-const segmentFolderName = "segments"
+const segmentFolderNameOld = "segments"
 
 type SegmentWriter interface {
 	Write(src SegmentSource)
@@ -33,7 +33,7 @@ func NewSegmentWriterPool(chanSize int, poolSize int, dbPath string) *SegmentWri
 	return &SegmentWriterPool{
 		poolSize: poolSize,
 		inChan:   make(chan SegmentSource, chanSize),
-		path:     path.Join(dbPath, segmentFolderName),
+		path:     path.Join(dbPath, segmentFolderNameOld),
 		log:      log.With().Str("src", "segmentWriterPool").Logger(),
 	}
 }
@@ -142,6 +142,8 @@ func (w *segmentWriterWorker) start() {
 
 func (w *segmentWriterWorker) writeSegment(src SegmentSource) {
 
+	// TODO(gvelo) handle panic from WriteSegment
+
 	info := src.Info()
 
 	fileName := base64.RawURLEncoding.EncodeToString(info.Id)
@@ -155,12 +157,12 @@ func (w *segmentWriterWorker) writeSegment(src SegmentSource) {
 
 	logger.Debug().Msg("writing segment")
 
-	err := WriteSegment(filePath, src)
+	WriteSegment(filePath, src)
 
-	if err != nil {
-		logger.Error().Err(err).Msg("error writing segment")
-		return
-	}
+	// if err != nil {
+	// 	logger.Error().Err(err).Msg("error writing segment")
+	// 	return
+	// }
 
 	logger.Debug().Msg("segment successfully written")
 
