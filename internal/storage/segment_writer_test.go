@@ -221,7 +221,7 @@ package storage
 //
 //		v := iter.Next()
 //
-//		values = append(values, v.Values()...)
+//		values = append(values, v.Value()...)
 //
 //		if f.Nullable {
 //			for n := 0; n < v.Len(); n++ {
@@ -236,7 +236,7 @@ package storage
 //
 //	}
 //
-//	assert.Equal(t, buf.Values(), values)
+//	assert.Equal(t, buf.Value(), values)
 //
 //	if f.Nullable {
 //		assert.Equal(t, buf.Nulls(), nulls)
@@ -268,10 +268,10 @@ package storage
 //		if f.Nullable {
 //			assert.Equal(t, !buf.Nulls()[rid], vec.IsValid(i))
 //			if !buf.Nulls()[rid] {
-//				assert.Equal(t, buf.Values()[rid], vec.Values()[i])
+//				assert.Equal(t, buf.Value()[rid], vec.Value()[i])
 //			}
 //		} else {
-//			assert.Equal(t, buf.Values()[rid], vec.Values()[i])
+//			assert.Equal(t, buf.Value()[rid], vec.Value()[i])
 //		}
 //
 //	}

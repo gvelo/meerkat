@@ -1,4 +1,4 @@
-// Copyright 2019 The Meerkat Authors
+// Copyright 2020 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,29 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build darwin linux
-
-package mmap
+package encoding
 
 import (
-	"os"
-	"syscall"
+	"meerkat/internal/util/sliceutil"
 )
 
-func mmap(f *os.File, size int64) ([]byte, error) {
-
-	b, err := syscall.Mmap(int(f.Fd()), 0, int(size), syscall.PROT_READ, syscall.MAP_SHARED)
-
-	// TODO add kernel advicing.
-
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-
+type Float64PlainDecoder struct {
 }
 
-func unmap(ref []byte) error {
-	return syscall.Munmap(ref)
+func NewFloat64PlainDecoder() *Float64PlainDecoder {
+	return &Float64PlainDecoder{}
+}
+
+func (d *Float64PlainDecoder) Decode(block []byte, buf []float64) []float64 {
+
+	data := sliceutil.B2F(block)
+
+	if len(buf) < len(data) {
+		panic("there isn't enough space to decode integer values")
+	}
+
+	n := copy(buf, data)
+
+	return buf[:n]
+
 }

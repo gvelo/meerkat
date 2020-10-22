@@ -149,9 +149,9 @@ func updateCounters(n []interface{}, rAgg []interface{}, aggCols []Aggregation, 
 		// aca tenemos que separar los operadores.
 		switch col := n[it.AggCol].(type) {
 		case vector.IntVector:
-			counter.Update(float64(col.Values()[i]))
+			counter.Update(float64(col.Value()[i]))
 		case vector.FloatVector:
-			counter.Update(col.Values()[i])
+			counter.Update(col.Value()[i])
 		case vector.ByteSliceVector:
 			counter.Update(1)
 		default:
@@ -170,9 +170,9 @@ func createKey(n []interface{}, keyCols []int, index int) []byte {
 		case vector.ByteSliceVector:
 			err = binary.Write(buf, binary.LittleEndian, t.Get(index))
 		case vector.IntVector:
-			err = binary.Write(buf, binary.LittleEndian, int64(t.Values()[index]))
+			err = binary.Write(buf, binary.LittleEndian, int64(t.Value()[index]))
 		case vector.FloatVector:
-			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Values()[index]))
+			err = binary.Write(buf, binary.LittleEndian, math.Float64bits(t.Value()[index]))
 		default:
 			log.Error().Msg("Error creating keys")
 		}

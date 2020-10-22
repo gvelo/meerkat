@@ -1,6 +1,9 @@
 package storage
 
-import "meerkat/internal/storage/colval"
+import (
+	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/encoding"
+)
 
 //go:generate protoc -I . -I ../../build/proto/ --plugin ../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./storage.proto
 
@@ -53,7 +56,7 @@ type ColumnSourceInfo struct {
 	ColumnType ColumnType
 	// TODO(gvelo): indexing and encoding concerns should be in another component.
 	IndexType IndexType
-	Encoding  Encoding
+	Encoding  encoding.Type
 	Nullable  bool
 	Len       uint32
 }

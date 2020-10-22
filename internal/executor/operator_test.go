@@ -67,34 +67,34 @@ func TestQueryKusto(t *testing.T) {
 // C3 = float
 func TestQuery1(t *testing.T) {
 	// a := assert.New(t)
-
-	ctx := NewContext(nil, 100)
-	print(ctx)
 	/*
-		op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1
-		op2 := NewIndexScanOperator(ctx, Gt, 2, "ts") // ts < 2
+		ctx := NewContext(nil, 100)
+		print(ctx)
 
-		op3 := NewBinaryBitmapOperator(ctx, And, op1, op2) // ts > 1 AND ts < 2
-		op4 := NewIndexScanOperator(ctx, Eq, 12, "C1")     // C1 == 12
+			op1 := NewIndexScanOperator(ctx, Lt, 1, "ts") // ts > 1
+			op2 := NewIndexScanOperator(ctx, Gt, 2, "ts") // ts < 2
 
-		op5 := NewBinaryBitmapOperator(ctx, And, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
+			op3 := NewBinaryBitmapOperator(ctx, And, op1, op2) // ts > 1 AND ts < 2
+			op4 := NewIndexScanOperator(ctx, Eq, 12, "C1")     // C1 == 12
 
-		op6 := NewReaderOperator(ctx, op5, "F")
-		op7 := NewReaderOperator(ctx, op5, "C1")
-		op8 := NewReaderOperator(ctx, op5, "C2")
-		op9 := NewReaderOperator(ctx, op5, "C3")
+			op5 := NewBinaryBitmapOperator(ctx, And, op3, op4) // ts > 1 AND ts < 2 AND C1 == 12
 
-		op10 := NewBufferOperator(ctx, []VectorOperator{op6, op7, op8, op9})
+			op6 := NewReaderOperator(ctx, op5, "F")
+			op7 := NewReaderOperator(ctx, op5, "C1")
+			op8 := NewReaderOperator(ctx, op5, "C2")
+			op9 := NewReaderOperator(ctx, op5, "C3")
 
-		op11 := NewMaterializeOperator(ctx, op10, nil)
+			op10 := NewBufferOperator(ctx, []VectorOperator{op6, op7, op8, op9})
 
-		// TODO: Check where to put this operator. it should be set in the Query node.
-		// op12 := NewLimitOperator(ctx, op11, 100)
+			op11 := NewMaterializeOperator(ctx, op10, nil)
 
-		// op12.Next() // Should return the values [F] [C1] [C2] [C3]
-		// limits the request.
-		op11.Next()
-		// op5 := Decompress
+			// TODO: Check where to put this operator. it should be set in the Query node.
+			// op12 := NewLimitOperator(ctx, op11, 100)
+
+			// op12.Next() // Should return the values [F] [C1] [C2] [C3]
+			// limits the request.
+			op11.Next()
+			// op5 := Decompress
 	*/
 
 }

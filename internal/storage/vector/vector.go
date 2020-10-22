@@ -93,9 +93,9 @@ func (v *ByteSliceVector) SetInvalid(i int) {
 func (v *ByteSliceVector) AppendSlice(slice []byte) {
 
 	// Remove when we use fixed vectors
-	//if v.l == v.c {
-	//	panic("vector out of bounds")
-	//}
+	if v.l == v.c {
+		panic("vector out of bounds")
+	}
 
 	v.buf = append(v.buf, slice...)
 	v.offsets = append(v.offsets, len(v.buf))
@@ -113,7 +113,8 @@ func (v *ByteSliceVector) AppendNull() {
 		panic("vector out of bounds")
 	}
 
-	v.offsets[v.l] = len(v.buf)
+	//v.offsets[v.l] = len(v.buf)
+	v.offsets = append(v.offsets, len(v.buf))
 
 	// TODO(gvelo) memset
 	v.SetInvalid(v.l)
@@ -244,10 +245,8 @@ func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 	// TODO: parametrize vector capacity.
 	return ByteSliceVector{
-		valid:   make([]uint64, 8192*2),
-		buf:     make([]byte, 0), // we do the appends
-		offsets: make([]int, 0),  // we do the appends
-		c:       0,
+		valid: make([]uint64, 8192*2),
+		c:     8192 * 2,
 	}
 
 }

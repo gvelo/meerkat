@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"meerkat/internal/storage/readers"
+	"meerkat/internal/storage"
 	"os"
 )
 
@@ -46,15 +46,15 @@ func main() {
 }
 
 func printStats(path string) {
-	s, err := readers.ReadSegment(path)
+	s, err := storage.ReadSegment(path)
 	if err != nil {
 		fmt.Println("Error " + err.Error())
 		return
 	}
-	fmt.Printf("===  Segment Name : %s  === \n", s.IndexInfo.Name)
-	fmt.Printf("== %d Fields:\n", len(s.IndexInfo.Fields))
+	fmt.Printf("===  IndexID : %s  === \n", s.IndexID())
+	/*fmt.Printf("== %d Fields:\n", len(s.Fields))
 	for _, f := range s.IndexInfo.Fields {
 		fmt.Printf("= [Name:%s], [Type:%d], [Id,%d], [indexed:%v] \n", f.Name, f.Type, f.ID, f.Index)
-	}
+	}*/
 
 }

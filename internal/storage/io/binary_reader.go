@@ -18,6 +18,7 @@ import (
 	"meerkat/internal/util/sliceutil"
 )
 
+// TODO: Check BinaryReader & BinaryWriter interfaces, not the same.
 type BinaryReader struct {
 	bytes  []byte
 	offset int

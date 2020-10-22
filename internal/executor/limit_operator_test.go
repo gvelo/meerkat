@@ -67,22 +67,20 @@ func TestLimitOperator(t *testing.T) {
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Run(tc.name, func(t *testing.T) {
 
-				op1 := NewLimitOperator(nil, tc.v, tc.limit)
-				op1.Init()
-				var i = 0
-				n := op1.Next()
-				total := 0
-				for ; n != nil; n = op1.Next() {
-					l := getLen(n[0].(interface{}))
-					assert.Equal(t, l, tc.exp.([]int)[i], "Not the same values")
-					total = total + l
-					i++
-				}
+			op1 := NewLimitOperator(nil, tc.v, tc.limit)
+			op1.Init()
+			var i = 0
+			n := op1.Next()
+			total := 0
+			for ; n != nil; n = op1.Next() {
+				l := getLen(n[0].(interface{}))
+				assert.Equal(t, l, tc.exp.([]int)[i], "Not the same values")
+				total = total + l
+				i++
+			}
 
-				assert.Equal(t, total, tc.limit, "Not the same values")
-			})
+			assert.Equal(t, total, tc.limit, "Not the same values")
 		})
 	}
 

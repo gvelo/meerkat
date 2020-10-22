@@ -1,4 +1,4 @@
-// Copyright 2019 The Meerkat Authors
+// Copyright 2020 The Meerkat Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -14,21 +14,26 @@
 package encoding
 
 import (
-	"meerkat/internal/storage/segment"
-	"meerkat/internal/storage/segment/inmem"
+	"meerkat/internal/storage/io"
 )
 
-type EncoderHandler struct {
-	root Encoder
+type Int64DdDecoder struct {
 }
 
-func NewEncoderHandler(fieldInfo *segment.FieldInfo, page *inmem.Page) *EncoderHandler {
-	// create a chain of encoders
-	page.Enc = inmem.Raw
-	chain := &RawEncoder{next: nil}
-	return &EncoderHandler{root: chain}
+func NewInt64DdDecoder() *Int64DdDecoder {
+	return &Int64DdDecoder{}
 }
 
-func (e *EncoderHandler) DoEncode(slice interface{}) interface{} {
-	return e.root.Encode(slice)
+func (d *Int64DdDecoder) Decode(block []byte, buf []int64) []int64 {
+
+	// TODO check buf for enough room
+
+	b := io.NewBinaryReader(block)
+	buf[0] = b.ReadVarint64()
+	buf[1] = b.ReadVarint64() + buf[0]
+	for i := 2; i < len(buf); i++ {
+		buf[i] = buf[i-1] + (buf[i-1] - buf[i-2]) + b.ReadVarint64()
+	}
+
+	return buf
 }

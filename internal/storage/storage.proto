@@ -60,11 +60,13 @@ enum IndexType {
   RANGE    = 4;
 }
 
-enum Encoding {
+enum Type {
   PLAIN          = 0;
   SNAPPY         = 1;
   DICT           = 2;
   DICT_BITPACKED = 3;
+  XOR            = 4;
+  DOUBLE_DELTA   = 5;
 }
 
 
@@ -72,7 +74,7 @@ message ColumnInfo {
   string     name = 1;
   ColumnType column_type = 2;
   IndexType  index_type = 3;
-  Encoding   encoding = 4;
+  Type   encoding = 4;
   bool       nullable = 5;
   uint32     len = 6;
   uint64     cardinality = 7;
