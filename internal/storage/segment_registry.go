@@ -20,7 +20,7 @@ const (
 
 type SegmentRegistry interface {
 	SegmentInfos() []*SegmentInfo
-	Segments(partitions []uint64, dbName string, tableName string) []*Segment
+	Segments(partitions []uint64, dbName string, tableName string) []SegmentIF
 	AddSegment(segmentInfo *SegmentInfo)
 	RemoveSegment(segmentId uuid.UUID)
 	MergeSegment(segmentInfo *SegmentInfo, mergedSegments []uuid.UUID)
@@ -34,7 +34,7 @@ type segmentEntry struct {
 	segmentInfo *SegmentInfo
 	deleted     bool
 	refCount    int
-	segment     *Segment
+	segment     SegmentIF
 	mu          sync.Mutex
 }
 
@@ -130,7 +130,7 @@ func (s *segmentRegistry) SegmentInfos() []*SegmentInfo {
 
 }
 
-func (s *segmentRegistry) Segments(partitions []uint64, dbName string, tableName string) []*Segment {
+func (s *segmentRegistry) Segments(partitions []uint64, dbName string, tableName string) []SegmentIF {
 
 	s.log.Debug().Msg("getSegments")
 
@@ -138,7 +138,7 @@ func (s *segmentRegistry) Segments(partitions []uint64, dbName string, tableName
 
 	s.openSegments(entries)
 
-	segments := make([]*Segment, len(entries))
+	segments := make([]SegmentIF, len(entries))
 
 	for i, entry := range entries {
 		segments[i] = entry.segment

@@ -32,7 +32,6 @@ type blockWriterMock struct {
 func (w *blockWriterMock) Flush() {
 }
 
-
 func (w *blockWriterMock) Block() []byte {
 	_, n := binary.Uvarint(w.block)
 	return w.block[n:]
@@ -43,15 +42,20 @@ func (w *blockWriterMock) WriteBlock(block []byte, baseRid uint32) {
 	w.rid = baseRid
 }
 
+func (w *blockWriterMock) Write(block []byte) {
+	// TODO: make tests for Dict. we'll need an interfacer for io.Readers & writers to mock.
+	// Nothig to do.
+}
+
 func TestByteSliceSnappyEnc(t *testing.T) {
 	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
-		return NewByteSliceSnappyEncodeer(bw)
+		return NewByteSliceSnappyEncoder(bw)
 	}, NewByteSliceSnappyDecoder())
 }
 
 func TestByteSlicePlainEnc(t *testing.T) {
 	testByteSliceEnc(t, func(bw BlockWriter) ByteSliceEncoder {
-		return NewByteSlicePlainEncodeer(bw)
+		return NewByteSlicePlainEncoder(bw)
 	}, NewByteSlicePlainDecoder())
 }
 
@@ -71,8 +75,8 @@ func testByteSliceEnc(t *testing.T, ef SliceEncFactory, d ByteSliceDecoder) {
 	offsets := make([]int, s)
 
 	data, offsets = d.Decode(pw.Block())
-	fmt.Println("exp ",v.Data())
-	fmt.Println("act ",data)
+	fmt.Println("exp ", v.Data())
+	fmt.Println("act ", data)
 	fmt.Println(len(v.Data()))
 	fmt.Println(len(data))
 

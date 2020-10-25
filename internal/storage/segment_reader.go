@@ -63,7 +63,7 @@ func ReadSegment(path string) *Segment {
 func NewSegment(f *io.MMFile) *Segment {
 	return &Segment{
 		f:       f,
-		columns: make(map[string]interface{}),
+		columns: make(map[string]Column),
 	}
 }
 
@@ -79,7 +79,7 @@ type Segment struct {
 	tableName string
 	numOfCol  int
 	// columns   map[string]Column
-	columns     map[string]interface{}
+	columns     map[string]Column
 	segmentInfo *SegmentInfo
 }
 
@@ -119,14 +119,15 @@ func (s *Segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
-		// var col Column
-		var col interface{}
+		var col Column
 
 		switch cData.colType {
 		case ColumnType_TIMESTAMP:
 			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
 		case ColumnType_INT64:
 			col = NewInt64Column(s.f.Bytes, cData.bounds, s.numOfRows)
+		case ColumnType_FLOAT64:
+			col = NewFloat64Column(s.f.Bytes, cData.bounds, s.numOfRows)
 		case ColumnType_STRING:
 			col = NewBinaryColumn(s.f.Bytes, cData.bounds, s.numOfRows)
 		default:
@@ -139,16 +140,12 @@ func (s *Segment) readColumns(cd []colData) {
 
 }
 
-func (s *Segment) Rows() int {
-	return s.numOfRows
-}
-
-func (s *Segment) Col(id string) interface{} {
-	return s.columns[id]
-}
-
 func (s *Segment) Info() *SegmentInfo {
 	return s.segmentInfo
+}
+
+func (s *Segment) Column(name string) Column {
+	return s.columns[name]
 }
 
 func (s *Segment) Close() {

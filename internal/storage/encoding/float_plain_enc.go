@@ -18,27 +18,36 @@ import (
 	"meerkat/internal/util/sliceutil"
 )
 
-type Int64PlainEncoder struct {
+/*
+This code is originally from: https://github.com/dgryski/go-tsz and  https://github.com/influxdata/influxdb has been modified to remove
+use our encoder interface.
+
+It implements the float compression as presented in: http://www.vldb.org/pvldb/vol8/p1816-teller.pdf.
+This implementation uses a sentinel value of NaN which means that float64 NaN cannot be stored using
+this version.
+*/
+
+type Float64PlainEncoder struct {
 	bw BlockWriter
 }
 
-func NewInt64PlainEncoder(bw BlockWriter) *Int64PlainEncoder {
-	return &Int64PlainEncoder{
+func NewFloat64PlainEncoder(bw BlockWriter) *Float64PlainEncoder {
+	return &Float64PlainEncoder{
 		bw: bw,
 	}
 }
 
-func (e *Int64PlainEncoder) Flush() {
+func (e *Float64PlainEncoder) Flush() {
 }
 
-func (e *Int64PlainEncoder) FlushBlocks() {
+func (e *Float64PlainEncoder) FlushBlocks() {
 }
 
-func (e *Int64PlainEncoder) Type() Type {
+func (e *Float64PlainEncoder) Type() Type {
 	return Plain
 }
 
-func (e *Int64PlainEncoder) Encode(v colval.Int64ColValues) {
-	b := sliceutil.I642B(v.Values())
+func (e *Float64PlainEncoder) Encode(v colval.Float64ColValues) {
+	b := sliceutil.F2B(v.Values())
 	e.bw.WriteBlock(b, v.Rid()[0])
 }

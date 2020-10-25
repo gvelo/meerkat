@@ -157,3 +157,51 @@ func (r *ScalarPlainBlockReader) readBlock() Block {
 	return b
 
 }
+
+type ByteSlicePlainBlockReader struct {
+	br     *io.BinaryReader
+	bounds io.Bounds
+}
+
+func (r *ByteSlicePlainBlockReader) ReadBlock(offset int) Block {
+	r.br.SetOffset(offset)
+	return r.readBlock()
+}
+
+func (r *ByteSlicePlainBlockReader) HasNext() bool {
+	return r.br.Offset() < r.bounds.End
+}
+
+func (r *ByteSlicePlainBlockReader) Next() Block {
+	return r.readBlock()
+}
+
+func (r *ByteSlicePlainBlockReader) readBlock() Block {
+
+	b := Block{}
+
+	b.l = r.br.ReadUVarint()
+	start := r.br.Offset()
+	b.bytes = r.br.ReadSlice(start, start+b.l)
+
+	if r.br.Offset() > r.bounds.End {
+		panic("read out of column bounds")
+	}
+
+	return b
+
+}
+
+func NewByteSlicePlainBlockReader(bytes []byte, bounds io.Bounds) *ByteSlicePlainBlockReader {
+
+	br := io.NewBinaryReader(bytes)
+	br.SetOffset(bounds.Start)
+
+	b := &ByteSlicePlainBlockReader{
+		bounds: bounds,
+		br:     br,
+	}
+
+	return b
+
+}

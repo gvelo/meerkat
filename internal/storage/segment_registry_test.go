@@ -19,7 +19,7 @@ func (s storageMock) WriteSegment(src SegmentSource) *SegmentInfo {
 	return args.Get(0).(*SegmentInfo)
 }
 
-func (s storageMock) OpenSegment(info *SegmentInfo) *Segment {
+func (s storageMock) OpenSegment(info *SegmentInfo) SegmentIF {
 	args := s.Called(info)
 	return args.Get(0).(*Segment)
 }
@@ -55,7 +55,7 @@ func testAddSegment(t *testing.T) {
 	storageMock.On("OpenSegment", segmentInfo).Return(&Segment{})
 
 	reg.AddSegment(segmentInfo)
-	t.Log("********************************************")
+
 	reg.Stop()
 
 	result := reg.Segments(nil, "", "")

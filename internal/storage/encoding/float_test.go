@@ -15,57 +15,58 @@ package encoding
 
 import (
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"meerkat/internal/storage/colval"
 	"testing"
 )
 
-type IntEncFactory func(bw BlockWriter) Int64Encoder
+type FloatEncFactory func(bw BlockWriter) Float64Encoder
 
-func TestIntEncoding(t *testing.T) {
+func TestFloatEncoding(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		factory IntEncFactory
-		decoder Int64Decoder
+		factory FloatEncFactory
+		decoder Float64Decoder
 	}{
 		{
-			name: "plain_int_encoding",
-			factory: func(bw BlockWriter) Int64Encoder {
-				return NewInt64PlainEncoder(bw)
+			name: "plain_float_encoding",
+			factory: func(bw BlockWriter) Float64Encoder {
+				return NewFloat64PlainEncoder(bw)
 			},
-			decoder: NewInt64PlainDecoder(),
+			decoder: NewFloat64PlainDecoder(),
 		},
 		{
-			name: "dd_int_encoding",
-			factory: func(bw BlockWriter) Int64Encoder {
-				return NewInt64DdEncoder(bw)
+			name: "xor_float_encoding",
+			factory: func(bw BlockWriter) Float64Encoder {
+				return NewFloat64XorEncoder(bw)
 			},
-			decoder: NewInt64DdDecoder(),
+			decoder: NewFloat64XorDecoder(),
 		},
 	}
 
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			testIntEncoding(t, tc.factory, tc.decoder)
+			testFloatEncoding(t, tc.factory, tc.decoder)
 		})
 	}
 
 }
 
-func testIntEncoding(t *testing.T, f IntEncFactory, d Int64Decoder) {
+func testFloatEncoding(t *testing.T, f FloatEncFactory, d Float64Decoder) {
 
 	s := 1024
 
 	bw := &blockWriterMock{}
 
-	v := createTestIntColVal(s)
+	v := createRandomFloatColVal(s)
 
 	e := f(bw)
 
 	e.Encode(v)
 
-	data := make([]int64, len(v.Values()))
+	data := make([]float64, len(v.Values())*8*2)
 
 	data = d.Decode(bw.block, data)
 
@@ -73,16 +74,16 @@ func testIntEncoding(t *testing.T, f IntEncFactory, d Int64Decoder) {
 
 }
 
-func createTestIntColVal(size int) colval.Int64ColValues {
+func createRandomFloatColVal(size int) colval.Float64ColValues {
 
-	var data []int64
+	var data []float64
 	var rid []uint32
-	top := 100
+
 	for i := 0; i < size; i++ {
-		data = append(data, int64(top-i))
+		data = append(data, rand.Float64())
 		rid = append(rid, uint32(i))
 	}
 
-	return colval.NewInt64ColValues(data, rid)
+	return colval.NewFloat64ColValues(data, rid)
 
 }

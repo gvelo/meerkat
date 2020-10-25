@@ -54,22 +54,20 @@ func TestUnaryOperator(t *testing.T) {
 	// RUN TC
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Run(tc.name, func(t *testing.T) {
 
-				op1 := NewUnaryOperator(nil, tc.v, tc.fn)
-				op1.Init()
-				var i = 0
-				n := op1.Next()
-				total := 0
-				for ; n != nil; n = op1.Next() {
-					l := getLen(n)
-					// TODO: make a function to check.
-					assert.Equal(t, l, tc.exp.([]int)[i], "Not the same values")
-					total = total + l
-					i++
-				}
+			op1 := NewUnaryOperator(nil, tc.v, tc.fn)
+			op1.Init()
+			var i = 0
+			n := op1.Next()
+			total := 0
+			for ; n != nil; n = op1.Next() {
+				l := getLen(n)
+				// TODO: make a function to check.
+				assert.Equal(t, l, tc.exp.([]int)[i], "Not the same values")
+				total = total + l
+				i++
+			}
 
-			})
 		})
 	}
 

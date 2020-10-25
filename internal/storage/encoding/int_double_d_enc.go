@@ -15,30 +15,40 @@ package encoding
 
 import (
 	"meerkat/internal/storage/colval"
-	"meerkat/internal/util/sliceutil"
+	"meerkat/internal/storage/io"
 )
 
-type Int64PlainEncoder struct {
+type Int64DdEncoder struct {
 	bw BlockWriter
 }
 
-func NewInt64PlainEncoder(bw BlockWriter) *Int64PlainEncoder {
-	return &Int64PlainEncoder{
+func NewInt64DdEncoder(bw BlockWriter) *Int64DdEncoder {
+	return &Int64DdEncoder{
 		bw: bw,
 	}
 }
 
-func (e *Int64PlainEncoder) Flush() {
+//TODO check this.
+func (e *Int64DdEncoder) Flush() {
+
 }
 
-func (e *Int64PlainEncoder) FlushBlocks() {
+func (e *Int64DdEncoder) FlushBlocks() {
+
 }
 
-func (e *Int64PlainEncoder) Type() Type {
-	return Plain
+func (e *Int64DdEncoder) Type() Type {
+	return DoubleDelta
 }
 
-func (e *Int64PlainEncoder) Encode(v colval.Int64ColValues) {
-	b := sliceutil.I642B(v.Values())
-	e.bw.WriteBlock(b, v.Rid()[0])
+func (e *Int64DdEncoder) Encode(v colval.Int64ColValues) {
+
+	b := io.NewBuffer(64 * 1024) //TODO calculate this.
+	b.WriteVarInt64(v.Values()[0])
+
+	b.WriteVarInt64(v.Values()[1] - v.Values()[0])
+	for i := 2; i < v.Len(); i++ {
+		b.WriteVarInt64((v.Values()[i] - v.Values()[i-1]) - (v.Values()[i-1] - v.Values()[i-2]))
+	}
+	e.bw.WriteBlock(b.Data(), v.Rid()[0])
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/encoding"
 	"path"
 )
 
@@ -61,7 +62,7 @@ type ColumnSourceInfo struct {
 	ColumnType ColumnType
 	// TODO(gvelo): indexing and encoding concerns should be in another component.
 	IndexType IndexType
-	Encoding  Encoding
+	Encoding  encoding.Type
 	Nullable  bool
 	Len       uint32
 }
@@ -71,9 +72,20 @@ type SegmentSource interface {
 	ColumnSource(colName string, blockSize int) ColumnSource
 }
 
+// TODO rename
+type SegmentIF interface {
+	Info() *SegmentInfo
+	Column(name string) Column
+	Close()
+}
+
 type SegmentStorage interface {
 	WriteSegment(src SegmentSource) *SegmentInfo
-	OpenSegment(info *SegmentInfo) *Segment
+	// TODO(gvelo) currently we are using *SegmentInfo as a param just
+	// to add a reference to SegmentInfo in the segment. We should serialize
+	// and write the SegmentInfo into the segment and replaze this param by the
+	// the segment id.
+	OpenSegment(info *SegmentInfo) SegmentIF
 	DeleteSegment(id uuid.UUID)
 }
 
@@ -114,7 +126,7 @@ func (d defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
 
 }
 
-func (d defaultStorage) OpenSegment(info *SegmentInfo) *Segment {
+func (d defaultStorage) OpenSegment(info *SegmentInfo) SegmentIF {
 
 	fileName := buildSegmentFileName(info.Id)
 
@@ -128,6 +140,9 @@ func (d defaultStorage) OpenSegment(info *SegmentInfo) *Segment {
 	logger.Debug().Msg("opening segment")
 
 	segment := ReadSegment(filePath)
+
+	// TODO(segmentInfo should be written into the segment file)
+	segment.segmentInfo = info
 
 	return segment
 

@@ -34,3 +34,7 @@ func (w *blockWriter) WriteBlock(block []byte, baseRid uint32) {
 	w.bi.IndexBlock(block, w.bw.Offset(), baseRid)
 	w.bw.WriteRaw(block)
 }
+
+func (w *blockWriter) Write(block []byte) {
+	w.bw.WriteRaw(block)
+}

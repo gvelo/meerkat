@@ -1,11 +1,12 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"meerkat/internal/storage/colval"
-	"meerkat/internal/util/testutil"
+	"meerkat/internal/storage/encoding"
 	"os"
 	"path"
 	"testing"
@@ -35,7 +36,7 @@ func generateRandomColumnData(colType ColumnType, nullable bool, maxColLen uint3
 		case ColumnType_FLOAT64:
 			colData = append(colData, rand.Float64())
 		case ColumnType_STRING:
-			colData = append(colData, testutil.RandomBytes(10))
+			colData = append(colData, []byte(fmt.Sprint("string", rand.Intn(10))))
 		case ColumnType_TIMESTAMP:
 			colData = append(colData, rand.Int())
 		default:
@@ -103,7 +104,7 @@ func TestInt64TestColumnSrc(t *testing.T) {
 		Name:       "testColumn",
 		ColumnType: ColumnType_INT64,
 		IndexType:  IndexType_NONE,
-		Encoding:   Encoding_PLAIN,
+		Encoding:   encoding.Plain,
 		Nullable:   true,
 	}
 
@@ -143,6 +144,50 @@ func countNulls(values []interface{}) int {
 		}
 	}
 	return i
+}
+
+type Float64TestColumnSrc struct {
+	data      []interface{}
+	pos       int
+	blockSize int
+}
+
+func NewFloat64TestColumnSrc(data []interface{}, blockSize int) *Float64TestColumnSrc {
+	return &Float64TestColumnSrc{
+		data:      data,
+		pos:       0,
+		blockSize: blockSize,
+	}
+}
+
+func (s *Float64TestColumnSrc) HasNext() bool {
+	return s.pos < len(s.data)
+}
+
+func (s *Float64TestColumnSrc) HasNulls() bool {
+	panic("implement me")
+}
+
+func (s *Float64TestColumnSrc) Next() colval.Float64ColValues {
+
+	var rids []uint32
+	var values []float64
+
+	for ; s.pos < len(s.data) && len(values) < s.blockSize; s.pos++ {
+
+		if s.data[s.pos] == nil {
+			continue
+		}
+
+		value := s.data[s.pos].(float64)
+
+		values = append(values, value)
+		rids = append(rids, uint32(s.pos))
+
+	}
+
+	return colval.NewFloat64ColValues(values, rids)
+
 }
 
 type ByteSliceTestColumnSrc struct {
@@ -200,7 +245,7 @@ func TestByteSliceTestColumnSrc(t *testing.T) {
 		Name:       "testColumn",
 		ColumnType: ColumnType_STRING,
 		IndexType:  IndexType_NONE,
-		Encoding:   Encoding_PLAIN,
+		Encoding:   encoding.Plain,
 		Nullable:   true,
 	}
 
@@ -279,7 +324,7 @@ func (t *TestSegmentSource) ColumnSource(colName string, blockSize int) ColumnSo
 		case ColumnType_INT32:
 			panic("not implemented yet")
 		case ColumnType_FLOAT64:
-			panic("not implemented yet")
+			return NewFloat64TestColumnSrc(t.columns[colInfo.Name], blockSize)
 		case ColumnType_TIMESTAMP:
 			panic("not implemented yet")
 		case ColumnType_STRING:
@@ -326,28 +371,49 @@ func TestReadWriteSegment(t *testing.T) {
 				Name:       "column-test-int64",
 				ColumnType: ColumnType_INT64,
 				IndexType:  IndexType_NONE,
-				Encoding:   Encoding_PLAIN,
+				Encoding:   encoding.Plain,
 				Nullable:   false,
 			},
 			{
 				Name:       "column-test-int64-nullable",
 				ColumnType: ColumnType_INT64,
 				IndexType:  IndexType_NONE,
-				Encoding:   Encoding_PLAIN,
+				Encoding:   encoding.Plain,
 				Nullable:   true,
 			},
 			{
 				Name:       "column-test-string",
 				ColumnType: ColumnType_STRING,
 				IndexType:  IndexType_NONE,
-				Encoding:   Encoding_PLAIN,
+				Encoding:   encoding.Plain,
+				Nullable:   false,
+			},
+			{
+				Name:       "column-test-string-dict-encoding",
+				ColumnType: ColumnType_STRING,
+				IndexType:  IndexType_NONE,
+				Encoding:   encoding.Dict,
+				Nullable:   false,
+			},
+			{
+				Name:       "column-test-string-snappy-encoding",
+				ColumnType: ColumnType_STRING,
+				IndexType:  IndexType_NONE,
+				Encoding:   encoding.Snappy,
 				Nullable:   false,
 			},
 			{
 				Name:       "column-test-string-nullable",
 				ColumnType: ColumnType_STRING,
 				IndexType:  IndexType_NONE,
-				Encoding:   Encoding_PLAIN,
+				Encoding:   encoding.Plain,
+				Nullable:   true,
+			},
+			{
+				Name:       "column-test-float-nullable",
+				ColumnType: ColumnType_FLOAT64,
+				IndexType:  IndexType_NONE,
+				Encoding:   encoding.Plain,
 				Nullable:   true,
 			},
 		},
@@ -373,7 +439,7 @@ func checkColumnsIterators(t *testing.T, segment *Segment, src *TestSegmentSourc
 		if col, found := segment.columns[info.Name]; found {
 			actual := readColumnIter(col, info, src.Info().Len)
 			expected := src.columns[info.Name]
-			assert.Equal(t, expected, actual)
+			assert.Equal(t, expected[0:100], actual[0:100])
 			continue
 		}
 
@@ -390,6 +456,19 @@ func readColumnIter(column interface{}, info ColumnSourceInfo, srcLen uint32) []
 	switch c := column.(type) {
 
 	case *int64Column:
+		iter := c.Iterator()
+		for iter.HasNext() {
+			vec := iter.Next()
+			for i, v := range vec.Values() {
+				if info.Nullable && !vec.IsValid(i) {
+					values = append(values, nil)
+				} else {
+					values = append(values, v)
+				}
+			}
+		}
+
+	case *float64Column:
 		iter := c.Iterator()
 		for iter.HasNext() {
 			vec := iter.Next()
@@ -460,6 +539,15 @@ func readColumn(column interface{}, colInfo ColumnSourceInfo, rids []uint32) []i
 
 	switch c := column.(type) {
 	case *int64Column:
+		vec := c.Reader().Read(rids)
+		for i, v := range vec.Values() {
+			if colInfo.Nullable && !vec.IsValid(i) {
+				values = append(values, nil)
+			} else {
+				values = append(values, v)
+			}
+		}
+	case *float64Column:
 		vec := c.Reader().Read(rids)
 		for i, v := range vec.Values() {
 			if colInfo.Nullable && !vec.IsValid(i) {

@@ -165,9 +165,9 @@ func createResultVector(n []interface{}, keyCols []int, aggCols []Aggregation, i
 	for _, it := range keyCols {
 		switch col := n[it].(type) {
 		case vector.IntVector:
-			rKey = append(rKey, col.Values()[i])
+			rKey = append(rKey, col.Value()[i])
 		case vector.FloatVector:
-			rKey = append(rKey, col.Values()[i])
+			rKey = append(rKey, col.Value()[i])
 		case vector.ByteSliceVector:
 			rKey = append(rKey, col.Get(i))
 		default:

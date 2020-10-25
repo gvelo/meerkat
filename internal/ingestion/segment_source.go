@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/encoding"
 	"meerkat/internal/util/sliceutil"
 	"sort"
 	"strconv"
@@ -66,7 +67,7 @@ func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 			Name:       name,
 			ColumnType: column.colType,
 			IndexType:  storage.IndexType_NONE,
-			Encoding:   storage.Encoding_PLAIN,
+			Encoding:   encoding.Plain,
 			Nullable:   nullable,
 			Len:        uint32(column.buf.Len()),
 		}

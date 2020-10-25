@@ -10,12 +10,13 @@ require (
 	github.com/blevesearch/segment v0.0.0-20160915185041-762005e7a34f
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/davecgh/go-spew v1.1.1
+	github.com/dgryski/go-bitstream v0.0.0-20180413035011-3522498ce2c8
 	github.com/disiqueira/gotree v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gogo/googleapis v1.4.0 // indirect
 	github.com/gogo/protobuf v1.3.1
-	github.com/gogo/status v1.1.0 // indirect
+	github.com/gogo/status v1.1.0
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
@@ -25,6 +26,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-isatty v0.0.9 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/psilva261/timsort v0.0.0-20181228194941-fa3a1b6085e1
 	github.com/rs/zerolog v1.14.3
 	github.com/smartystreets/assertions v0.0.0-20190215210624-980c5ac6f3ac // indirect

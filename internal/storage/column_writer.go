@@ -54,7 +54,7 @@ type ColumnWriter interface {
 //
 //	case ColumnType_STRING:
 //		src := bufcolval.NewByteSliceBufColSource(buf.(*buffer.ByteSliceBuffer), txtBlockSize, perm)
-//		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+//		enc := encoding.NewByteSliceSnappyEncoder(blkWriter)
 //		return NewByteSliceColumnWriter(ColumnType_STRING, src, enc, nil, blkIdx, validity, bw)
 //
 //	default:
@@ -77,6 +77,8 @@ type ColumnWriter interface {
 //
 //}
 
+type EncodingFactory func(info ColumnSourceInfo, blkWriter encoding.BlockWriter) encoding.Encoder
+
 func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.BinaryWriter) ColumnWriter {
 
 	switch info.ColumnType {
@@ -85,7 +87,7 @@ func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.Bin
 
 		blkIdx := index.NewBlockIndexWriter(bw)
 		blkWriter := NewBlockWriter(bw, blkIdx)
-		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		enc := encoding.GetIntEncoder(info.Encoding, blkWriter).(encoding.Int64Encoder)
 		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
 
 		return NewInt64ColumnWriter(ColumnType_TIMESTAMP,
@@ -112,7 +114,7 @@ func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.Bin
 		blkIdx := index.NewBlockIndexWriter(bw)
 		blkWriter := NewBlockWriter(bw, blkIdx)
 		src := segmentSrc.ColumnSource(info.Name, blockLen).(Int64ColumnSource)
-		enc := encoding.NewInt64PlainEncoder(blkWriter)
+		enc := encoding.GetIntEncoder(info.Encoding, blkWriter).(encoding.Int64Encoder)
 		var validity index.ValidityIndexWriter
 
 		if info.Nullable {
@@ -122,13 +124,24 @@ func NewColumnWriter(info ColumnSourceInfo, segmentSrc SegmentSource, bw *io.Bin
 		return NewInt64ColumnWriter(ColumnType_INT64, src, enc, nil, blkIdx, validity, bw)
 
 	case ColumnType_FLOAT64:
-		panic("not implemented yet")
+
+		blkIdx := index.NewBlockIndexWriter(bw)
+		blkWriter := NewBlockWriter(bw, blkIdx)
+		src := segmentSrc.ColumnSource(info.Name, blockLen).(Float64ColumnSource)
+		enc := encoding.GetFloatEncoder(info.Encoding, blkWriter).(encoding.Float64Encoder)
+		var validity index.ValidityIndexWriter
+
+		if info.Nullable {
+			validity = index.NewValidityBitmapIndex(bw)
+		}
+
+		return NewFloat64ColumnWriter(ColumnType_FLOAT64, src, enc, nil, blkIdx, validity, bw)
 
 	case ColumnType_STRING:
 		blkIdx := index.NewBlockIndexWriter(bw)
 		blkWriter := NewBlockWriter(bw, blkIdx)
 		src := segmentSrc.ColumnSource(info.Name, txtBlockSize).(ByteSliceColumnSource)
-		enc := encoding.NewByteSliceSnappyEncodeer(blkWriter)
+		enc := encoding.GetBinaryEncoder(info.Encoding, blkWriter, bw).(encoding.ByteSliceEncoder)
 		var validity index.ValidityIndexWriter
 
 		if info.Nullable {

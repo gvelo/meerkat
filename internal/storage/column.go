@@ -15,15 +15,11 @@ package storage
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
 )
 
 type Column interface {
-	Encoding() encoding.EncodingType
 	Validity() *roaring.Bitmap
-	HasNulls() bool
-	Stats() *Stats
 }
 
 type Int64Column interface {
@@ -136,12 +132,4 @@ type FloatIndex interface {
 type TimeIndex interface {
 	TimeRange(start int, end int) (startPos, endPos int)
 	TimeRangeAsBitmap(start int, end int) *roaring.Bitmap
-}
-
-type Stats struct {
-	Size        int // no compressed
-	Cardinality int
-	Compresed   int // size compressed
-	Max         interface{}
-	Min         interface{}
 }
