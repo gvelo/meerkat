@@ -19,17 +19,36 @@ func (s storageMock) WriteSegment(src SegmentSource) *SegmentInfo {
 	return args.Get(0).(*SegmentInfo)
 }
 
-func (s storageMock) OpenSegment(info *SegmentInfo) SegmentIF {
+func (s storageMock) OpenSegment(info *SegmentInfo) Segment {
 	args := s.Called(info)
-	return args.Get(0).(*Segment)
+	return args.Get(0).(Segment)
 }
 
 func (s storageMock) DeleteSegment(id uuid.UUID) {
 	s.Called(id)
 }
 
+type segmentMock struct {
+	mock.Mock
+}
+
+func (s *segmentMock) Info() *SegmentInfo {
+	args := s.Called()
+	return args.Get(0).(*SegmentInfo)
+}
+
+func (s *segmentMock) Column(name string) Column {
+	args := s.Called(name)
+	return args.Get(0).(Column)
+}
+
+func (s *segmentMock) Close() {
+	s.Called()
+}
+
 var tests = map[string]func(t *testing.T){
-	"test add segment": testAddSegment,
+	"test add segment":         testAddSegment,
+	"test read write registry": testReadWrite,
 }
 
 func TestSegmentRegistry(t *testing.T) {
@@ -45,23 +64,48 @@ func deleteRegistry() {
 
 func testAddSegment(t *testing.T) {
 
+	segmentInfo := createTestSegmentInfo()
+
 	storageMock := &storageMock{}
+	segMock := &segmentMock{}
+	segMock.On("Close").Return()
+	storageMock.On("OpenSegment", segmentInfo).Return(segMock)
 
 	reg := NewSegmentRegistry(os.TempDir(), storageMock)
 	reg.Start()
 
-	segmentInfo := createTestSegmentInfo()
-
-	storageMock.On("OpenSegment", segmentInfo).Return(&Segment{})
-
 	reg.AddSegment(segmentInfo)
 
+	result := reg.Segments(nil, "", "")
+	assert.Len(t, result, 1)
+	assert.Equal(t, segMock, result[0])
+	reg.Stop()
+	storageMock.AssertExpectations(t)
+
+}
+
+func testReadWrite(t *testing.T) {
+
+	segmentInfo := createTestSegmentInfo()
+
+	storageMock := &storageMock{}
+
+	regPath := os.TempDir()
+	reg := NewSegmentRegistry(regPath, storageMock)
+	reg.Start()
+
+	reg.AddSegment(segmentInfo)
 	reg.Stop()
 
-	result := reg.Segments(nil, "", "")
+	reg = NewSegmentRegistry(regPath, storageMock)
+	reg.Start()
+
+	result := reg.SegmentInfos()
 
 	assert.Len(t, result, 1)
-	assert.Equal(t, &Segment{}, result[0])
+	assert.Equal(t, segmentInfo.Id, result[0].Id)
+	reg.Stop()
+	storageMock.AssertExpectations(t)
 
 }
 

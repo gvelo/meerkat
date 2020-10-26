@@ -72,8 +72,7 @@ type SegmentSource interface {
 	ColumnSource(colName string, blockSize int) ColumnSource
 }
 
-// TODO rename
-type SegmentIF interface {
+type Segment interface {
 	Info() *SegmentInfo
 	Column(name string) Column
 	Close()
@@ -85,7 +84,7 @@ type SegmentStorage interface {
 	// to add a reference to SegmentInfo in the segment. We should serialize
 	// and write the SegmentInfo into the segment and replaze this param by the
 	// the segment id.
-	OpenSegment(info *SegmentInfo) SegmentIF
+	OpenSegment(info *SegmentInfo) Segment
 	DeleteSegment(id uuid.UUID)
 }
 
@@ -126,7 +125,7 @@ func (d defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
 
 }
 
-func (d defaultStorage) OpenSegment(info *SegmentInfo) SegmentIF {
+func (d defaultStorage) OpenSegment(info *SegmentInfo) Segment {
 
 	fileName := buildSegmentFileName(info.Id)
 

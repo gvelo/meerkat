@@ -29,7 +29,7 @@ type colData struct {
 	bounds  io.Bounds
 }
 
-func ReadSegment(path string) *Segment {
+func ReadSegment(path string) *segment {
 
 	f, err := io.MMap(path)
 
@@ -60,15 +60,14 @@ func ReadSegment(path string) *Segment {
 
 }
 
-func NewSegment(f *io.MMFile) *Segment {
-	return &Segment{
+func NewSegment(f *io.MMFile) *segment {
+	return &segment{
 		f:       f,
 		columns: make(map[string]Column),
 	}
 }
 
-// TODO(gvelo) extract interface for segment.
-type Segment struct {
+type segment struct {
 	f         *io.MMFile
 	id        uuid.UUID
 	from      int
@@ -83,7 +82,7 @@ type Segment struct {
 	segmentInfo *SegmentInfo
 }
 
-func (s *Segment) read() {
+func (s *segment) read() {
 
 	// magicNumber + version
 	s.start = len(MagicNumber) + 1
@@ -115,7 +114,7 @@ func (s *Segment) read() {
 
 }
 
-func (s *Segment) readColumns(cd []colData) {
+func (s *segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
@@ -140,15 +139,15 @@ func (s *Segment) readColumns(cd []colData) {
 
 }
 
-func (s *Segment) Info() *SegmentInfo {
+func (s *segment) Info() *SegmentInfo {
 	return s.segmentInfo
 }
 
-func (s *Segment) Column(name string) Column {
+func (s *segment) Column(name string) Column {
 	return s.columns[name]
 }
 
-func (s *Segment) Close() {
+func (s *segment) Close() {
 	err := s.f.UnMap()
 	if err != nil {
 		panic(err)

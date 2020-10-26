@@ -430,7 +430,7 @@ func TestReadWriteSegment(t *testing.T) {
 
 }
 
-func checkColumnsIterators(t *testing.T, segment *Segment, src *TestSegmentSource) {
+func checkColumnsIterators(t *testing.T, segment *segment, src *TestSegmentSource) {
 
 	for _, info := range src.colInfo {
 
@@ -502,7 +502,7 @@ func readColumnIter(column interface{}, info ColumnSourceInfo, srcLen uint32) []
 
 }
 
-func checkColumnsReads(t *testing.T, segment *Segment, src *TestSegmentSource) {
+func checkColumnsReads(t *testing.T, segment *segment, src *TestSegmentSource) {
 
 	rids := []uint32{0, 123, 124, 1023, 2048, 8191, 8192, 8193, 10212, 20000, 24575}
 

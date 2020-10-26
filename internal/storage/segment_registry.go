@@ -15,12 +15,12 @@ import (
 const (
 	registryFileName = "segreg.db"
 	bucketName       = "segments"
-	cleanInterval    = 5 * time.Second
+	cleanInterval    = 1 * time.Second
 )
 
 type SegmentRegistry interface {
 	SegmentInfos() []*SegmentInfo
-	Segments(partitions []uint64, dbName string, tableName string) []SegmentIF
+	Segments(partitions []uint64, dbName string, tableName string) []Segment
 	AddSegment(segmentInfo *SegmentInfo)
 	RemoveSegment(segmentId uuid.UUID)
 	MergeSegment(segmentInfo *SegmentInfo, mergedSegments []uuid.UUID)
@@ -34,7 +34,7 @@ type segmentEntry struct {
 	segmentInfo *SegmentInfo
 	deleted     bool
 	refCount    int
-	segment     SegmentIF
+	segment     Segment
 	mu          sync.Mutex
 }
 
@@ -120,7 +120,7 @@ func (s *segmentRegistry) SegmentInfos() []*SegmentInfo {
 		panic(errors.New("segment registry not running"))
 	}
 
-	segments := make([]*SegmentInfo, len(s.cache))
+	var segments []*SegmentInfo
 
 	for _, entry := range s.cache {
 		segments = append(segments, entry.segmentInfo)
@@ -130,15 +130,14 @@ func (s *segmentRegistry) SegmentInfos() []*SegmentInfo {
 
 }
 
-func (s *segmentRegistry) Segments(partitions []uint64, dbName string, tableName string) []SegmentIF {
+func (s *segmentRegistry) Segments(partitions []uint64, dbName string, tableName string) []Segment {
 
 	s.log.Debug().Msg("getSegments")
 
 	entries := s.filterSegments(partitions, dbName, tableName)
 
 	s.openSegments(entries)
-
-	segments := make([]SegmentIF, len(entries))
+	segments := make([]Segment, len(entries))
 
 	for i, entry := range entries {
 		segments[i] = entry.segment
@@ -153,6 +152,7 @@ func (s *segmentRegistry) openSegments(entries []*segmentEntry) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.releaseAll(entries)
+			panic(r)
 		}
 	}()
 	for _, entry := range entries {
@@ -486,7 +486,9 @@ func (s *segmentRegistry) Stop() {
 	s.wg.Wait()
 
 	for _, entry := range s.cache {
-		entry.segment.Close()
+		if entry.segment != nil {
+			entry.segment.Close()
+		}
 	}
 
 }

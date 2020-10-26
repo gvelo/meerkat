@@ -51,7 +51,7 @@ func testCases(from, to, strToFind string) [][]string {
 
 }
 
-func createSegment(indexInfo *schema.IndexInfo) *storage.Segment {
+func createSegment(indexInfo *schema.IndexInfo) *storage.segment {
 
 	buf := createBuffersFromFile(indexInfo, "/Users/sebad/desa/workspace_go/meerkat/test/data.csv")
 
@@ -79,7 +79,7 @@ func createSegment(indexInfo *schema.IndexInfo) *storage.Segment {
 	return seg
 }
 
-func buildPhysicPlan(s *storage.Segment, ii *schema.IndexInfo, from, to int, strToFind string) executor.StringOperator {
+func buildPhysicPlan(s *storage.segment, ii *schema.IndexInfo, from, to int, strToFind string) executor.StringOperator {
 
 	sz := 200
 	ctx := executor.NewContext(s, ii, sz)

@@ -22,17 +22,17 @@ import (
 type Context interface {
 	Value(key string, value interface{})
 	Get(key string) (interface{}, bool)
-	Segment() *storage.Segment
+	Segment() *storage.segment
 	Sz() int
 }
 
 type ctx struct {
-	s  *storage.Segment
+	s  *storage.segment
 	m  map[string]interface{}
 	sz int
 }
 
-func NewContext(s *storage.Segment, sz int) Context {
+func NewContext(s *storage.segment, sz int) Context {
 	return &ctx{
 		s:  s,
 		m:  make(map[string]interface{}),
@@ -53,6 +53,6 @@ func (c *ctx) Get(key string) (interface{}, bool) {
 	return i, ok
 }
 
-func (c *ctx) Segment() *storage.Segment {
+func (c *ctx) Segment() storage.segment {
 	return c.s
 }
