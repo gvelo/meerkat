@@ -81,17 +81,17 @@ func NewRestApi(
 	//server.router.POST("/index", server.createIndex)
 	//server.router.GET("/index/:indexID", server.getIndex)
 	//server.router.POST("/index/:indexID", server.updateIndex)
-	//server.router.DELETE("/index/:indexID", server.deleteIndex)
+	// server.router.DELETE("/index/:indexID", server.deleteIndex)
 	//
-	//server.router.GET("/index/:indexID/fields", server.getFields)
-	//server.router.POST("/index/:indexID/fields", server.createFields)
-	//server.router.POST("/index/:indexID/fields/:fieldID", server.updateField)
-	//server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteField)
+	// server.router.GET("/index/:indexID/fields", server.getFields)
+	// server.router.POST("/index/:indexID/fields", server.createFields)
+	// server.router.POST("/index/:indexID/fields/:fieldID", server.updateField)
+	// server.router.DELETE("/index/:indexID/fields/:fieldID", server.deleteField)
 	//
-	//server.router.POST("/index/:indexID/alloc", server.updateAlloc)
-	//server.router.GET("/index/:indexID/alloc", server.getAlloc)
+	// server.router.POST("/index/:indexID/alloc", server.updateAlloc)
+	// server.router.GET("/index/:indexID/alloc", server.getAlloc)
 
-	server.router.POST("/:tableName/ingest", server.ingest)
+	server.router.POST("/ingest/:tableName", server.ingest)
 	server.router.POST("/query", server.query)
 
 	return server, nil

@@ -23,10 +23,10 @@ type Operator interface {
 	// Init will call the init method on all it's input operators.
 	Init()
 
-	// Destroy the Operator releasing all the acquired resources.
-	// Destroy will cascade calling the Destroy method on all it's
+	// Close the Operator releasing all the acquired resources.
+	// Close will cascade calling the Close method on all its
 	// children operators.
-	Destroy()
+	Close()
 }
 
 type BatchOperator interface {

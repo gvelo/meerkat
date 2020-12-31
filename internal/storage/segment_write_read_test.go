@@ -359,8 +359,7 @@ func TestReadWriteSegment(t *testing.T) {
 
 	id := [16]byte(uuid.New())
 	segmentSrc := generateRandomSegmentSrc(SegmentSourceInfo{
-		Id:           id[:],
-		DatabaseId:   id[:],
+		Id:           id,
 		DatabaseName: "test-db",
 		TableName:    "test-table",
 		PartitionId:  0,

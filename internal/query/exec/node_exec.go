@@ -57,9 +57,13 @@ func (n *nodeExec) Start() {
 
 func (n *nodeExec) handleControlStream() {
 
+	fmt.Println("handleControlStream()")
+
 	for {
 
 		execCmd, err := n.controlSrv.Recv()
+
+		fmt.Println("n.controlSrv.Recv()", execCmd, err)
 
 		if err == io.EOF {
 			return
@@ -91,7 +95,11 @@ func (n *nodeExec) ExecutionContext() ExecutionContext {
 
 func (n *nodeExec) execQuery(query *ExecQuery) {
 
+	fmt.Println("execQuery(query *ExecQuery)", query)
+
 	id, err := uuid.FromBytes(query.Id)
+
+	fmt.Println("query.id = ", id, err)
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
@@ -100,6 +108,8 @@ func (n *nodeExec) execQuery(query *ExecQuery) {
 	}
 
 	fragments, err := decodePlan(query)
+
+	fmt.Println("decodePlan(query)", fragments, err)
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
@@ -146,7 +156,9 @@ func decodePlan(query *ExecQuery) ([]*logical.Fragment, error) {
 func (n *nodeExec) buildExecutableGraph(fragments []*logical.Fragment) error {
 
 	builder := NewExecutableGraphBuilder(n.connReg, n.segReg, n.streamReg)
+
 	var err error
+
 	n.outputOps, err = builder.BuildNodeGraph(fragments, n.outputWg)
 
 	if err != nil {

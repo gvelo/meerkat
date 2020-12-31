@@ -9,8 +9,8 @@ import (
 
 func TestParallelize(t *testing.T) {
 
-	//ast, err := parser.Parse("T|where A>10|summarize avg=avg(C) by colA=bin(d)")
-	ast, err := parser.Parse("T|where A>10|where B>5")
+	// ast, err := parser.Parse("T|where A>10|summarize avg=avg(C) by colA=bin(d)")
+	ast, err := parser.Parse("T")
 
 	fmt.Println("====== AST ===== ")
 	spew.Dump(ast)
@@ -25,8 +25,9 @@ func TestParallelize(t *testing.T) {
 	spew.Dump(logical)
 	fmt.Println()
 
-	fragments := Parallelize(logical)
-
+	localNodeName := "localNode"
+	nodeNames := []string{"node1", "node2"}
+	fragments := Parallelize(logical, localNodeName, nodeNames)
 
 	fmt.Println("====== PARALLEL ===== ")
 	spew.Dump(fragments)

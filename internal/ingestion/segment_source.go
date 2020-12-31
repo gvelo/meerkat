@@ -37,7 +37,7 @@ func NewSegmentSource(table *TableBuffer) *SegmentSource {
 
 func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 
-	id := [16]byte(uuid.New())
+	id := uuid.New()
 
 	tsCol := table.Columns()[storage.TSColumnName].buf.(*TSBuffer)
 
@@ -45,8 +45,7 @@ func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 	tsTo := tsCol.Values()[tsCol.Len()-1]
 
 	info := storage.SegmentSourceInfo{
-		Id:           id[:],
-		DatabaseId:   nil,
+		Id:           id,
 		DatabaseName: "",
 		TableName:    table.tableName,
 		PartitionId:  table.partitionID,

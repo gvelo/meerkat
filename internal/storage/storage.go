@@ -2,11 +2,13 @@ package storage
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"meerkat/internal/storage/colval"
 	"meerkat/internal/storage/encoding"
+	"os"
 	"path"
 )
 
@@ -47,8 +49,7 @@ type ByteSliceColumnSource interface {
 }
 
 type SegmentSourceInfo struct {
-	Id           []byte
-	DatabaseId   []byte
+	Id           uuid.UUID
 	DatabaseName string
 	TableName    string
 	PartitionId  uint64
@@ -94,24 +95,31 @@ type defaultStorage struct {
 }
 
 func NewStorage(dbPath string) SegmentStorage {
+
+	segmentFolderPath := path.Join(dbPath, segmentFolderName)
+
+	err := os.MkdirAll(segmentFolderPath, 0770)
+
+	if err != nil {
+		panic(fmt.Errorf("could not create dir %v , %v", segmentFolderPath, err))
+	}
+
 	return &defaultStorage{
 		dbPath: dbPath,
 		log:    log.With().Str("component", "Storage").Logger(),
 	}
 }
 
-func (d defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
+func (d *defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
 
-	info := src.Info()
+	srcInfo := src.Info()
 
-	fileName := buildSegmentFileName(info.Id)
-
-	filePath := path.Join(d.dbPath, segmentFolderName, fileName)
+	filePath := d.buildSegmentPathFromUUID(srcInfo.Id)
 
 	logger := d.log.With().
-		Str("sid", fileName).
-		Str("table", info.TableName).
-		Uint64("partition", info.PartitionId).Logger()
+		Str("sid", filePath).
+		Str("table", srcInfo.TableName).
+		Uint64("partition", srcInfo.PartitionId).Logger()
 
 	logger.Debug().Msg("writing segment")
 
@@ -121,18 +129,29 @@ func (d defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
 
 	// TODO(gvelo) build SegmentInfo
 
-	return &SegmentInfo{}
+	segInfo := &SegmentInfo{
+		Id:           srcInfo.Id[:],
+		DatabaseName: srcInfo.DatabaseName,
+		TableName:    srcInfo.DatabaseName,
+		PartitionId:  srcInfo.PartitionId,
+		Len:          srcInfo.Len,
+		Interval: &Interval{
+			From: srcInfo.Interval.From,
+			To:   srcInfo.Interval.To,
+		},
+		Columns: nil,
+	}
+
+	return segInfo
 
 }
 
-func (d defaultStorage) OpenSegment(info *SegmentInfo) Segment {
+func (d *defaultStorage) OpenSegment(info *SegmentInfo) Segment {
 
-	fileName := buildSegmentFileName(info.Id)
-
-	filePath := path.Join(d.dbPath, segmentFolderName, fileName)
+	filePath := d.buildSegmentPath(info.Id)
 
 	logger := d.log.With().
-		Str("sid", fileName).
+		Str("sid", filePath).
 		Str("table", info.TableName).
 		Uint64("partition", info.PartitionId).Logger()
 
@@ -147,10 +166,28 @@ func (d defaultStorage) OpenSegment(info *SegmentInfo) Segment {
 
 }
 
-func (d defaultStorage) DeleteSegment(id uuid.UUID) {
-	panic("implement me")
+func (d *defaultStorage) DeleteSegment(id uuid.UUID) {
+	filepath := d.buildSegmentPathFromUUID(id)
+	err := os.Remove(filepath)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (d *defaultStorage) buildSegmentPath(id []byte) string {
+	fileName := buildSegmentFileName(id)
+	filePath := path.Join(d.dbPath, segmentFolderName, fileName)
+	return filePath
+}
+
+func (d *defaultStorage) buildSegmentPathFromUUID(id uuid.UUID) string {
+	return d.buildSegmentPath(id[:])
 }
 
 func buildSegmentFileName(id []byte) string {
 	return base64.RawURLEncoding.EncodeToString(id)
+}
+
+func buildSegmentFileNameFromUUID(id uuid.UUID) string {
+	return buildSegmentFileName(id[:])
 }

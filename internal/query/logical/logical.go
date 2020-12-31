@@ -1,10 +1,28 @@
 package logical
 
 import (
+	"encoding/gob"
 	"meerkat/internal/query/parser"
 )
 
 //go:generate protoc -I . -I ../../../build/proto/ --plugin ../../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./logical.proto
+
+func init() {
+	gob.Register(&Fragment{})
+	gob.Register(&SourceOp{})
+	gob.Register(&ExchangeInOp{})
+	gob.Register(&ExchangeOutOp{})
+	gob.Register(&OutputOp{})
+	gob.Register(&MergeOp{})
+	gob.Register(&BinaryExpr{})
+	gob.Register(&UnaryExpr{})
+	gob.Register(&CallExpr{})
+	gob.Register(&ColRefExpr{})
+	gob.Register(&LiteralExpr{})
+	gob.Register(&AggExpr{})
+	gob.Register(&ColumnExpr{})
+	gob.Register(&FilterOp{})
+}
 
 func ToLogical(query *parser.TabularStmt) []Node {
 	t := &transform{}

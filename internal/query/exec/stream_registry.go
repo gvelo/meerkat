@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	streamReadTimeout  = 2 * time.Second
-	streamWriteTimeout = 2 * time.Second
+	streamReadTimeout = 2 * time.Second
 )
 
 type vectorExchangeStream struct {
@@ -143,6 +142,7 @@ func (s *streamRegistry) RegisterStream(queryId uuid.UUID, streamId int64, strea
 		}
 		return nil
 	case <-timeOutTimer.C:
+		delete(s.registry, key)
 		return fmt.Errorf("timeout waiting for query execution %v", key)
 	}
 

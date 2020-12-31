@@ -14,6 +14,7 @@
 package exec
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"meerkat/internal/cluster"
@@ -34,21 +35,32 @@ type Executor interface {
 	Stop()
 }
 
-func NewExecutor(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry) Executor {
+func NewExecutor(
+	connReg cluster.ConnRegistry,
+	segReg storage.SegmentRegistry,
+	streamReg StreamRegistry,
+	cluster cluster.Cluster,
+) Executor {
+
 	return &executor{
-		connReg: connReg,
-		segReg:  segReg,
+		connReg:   connReg,
+		segReg:    segReg,
+		cluster:   cluster,
+		streamReg: streamReg,
 	}
+
 }
 
 type executor struct {
-	connReg cluster.ConnRegistry
-	segReg  storage.SegmentRegistry
+	connReg   cluster.ConnRegistry
+	segReg    storage.SegmentRegistry
+	streamReg StreamRegistry
+	cluster   cluster.Cluster
 }
 
 func (e executor) ExecuteQuery(query string, writer QueryOutputWriter) error {
 
-	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg)
+	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg, e.streamReg, e.cluster)
 
 	return coordinator.exec(query, writer)
 
@@ -77,6 +89,8 @@ type Server struct {
 }
 
 func (s *Server) Control(controlSrv Executor_ControlServer) error {
+
+	fmt.Println("new control stream")
 
 	nodeExec := NewNodeExec(s.connReg, s.segReg, s.streamReg, controlSrv)
 	nodeExec.Start()

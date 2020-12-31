@@ -14,75 +14,69 @@
 package storage
 
 import (
-	"encoding/base64"
-	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"os"
-	"path"
 	"sync"
 )
-
-const segmentFolderNameOld = "segments"
 
 type SegmentWriter interface {
 	Write(src SegmentSource)
 }
 
-func NewSegmentWriterPool(chanSize int, poolSize int, dbPath string) *SegmentWriterPool {
+type SegmentWriterPool struct {
+	poolSize    int
+	inChan      chan SegmentSource
+	wg          sync.WaitGroup
+	mu          sync.Mutex
+	isRunning   bool
+	segStorage  SegmentStorage
+	segRegistry SegmentRegistry
+	log         zerolog.Logger
+}
+
+func NewSegmentWriterPool(
+	chanSize int,
+	poolSize int,
+	segStore SegmentStorage,
+	segRegistry SegmentRegistry,
+) *SegmentWriterPool {
 	return &SegmentWriterPool{
-		poolSize: poolSize,
-		inChan:   make(chan SegmentSource, chanSize),
-		path:     path.Join(dbPath, segmentFolderNameOld),
-		log:      log.With().Str("src", "segmentWriterPool").Logger(),
+		poolSize:    poolSize,
+		inChan:      make(chan SegmentSource, chanSize),
+		segStorage:  segStore,
+		segRegistry: segRegistry,
+		log:         log.With().Str("src", "segmentWriterPool").Logger(),
 	}
 }
 
-type SegmentWriterPool struct {
-	poolSize int
-	inChan   chan SegmentSource
-	wg       sync.WaitGroup
-	mu       sync.Mutex
-	running  bool
-	path     string
-	log      zerolog.Logger
-}
-
-func (w *SegmentWriterPool) Start() error {
+func (w *SegmentWriterPool) Start() {
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.running {
-		return nil
+	if w.isRunning {
+		return
 	}
 
 	w.log.Info().Msg("start")
 
-	w.running = true
-
-	err := os.MkdirAll(w.path, 0770)
-
-	if err != nil {
-		return fmt.Errorf("could not create dir %v , %v", w.path, err)
-	}
+	w.isRunning = true
 
 	for i := 0; i < w.poolSize; i++ {
 
 		worker := &segmentWriterWorker{
-			id:     i,
-			inChan: w.inChan,
-			wg:     &w.wg,
-			path:   w.path,
-			log:    log.With().Str("src", "SegmentWriterWorker").Int("id", i).Logger(),
+			id:              i,
+			inChan:          w.inChan,
+			wg:              &w.wg,
+			segStorage:      w.segStorage,
+			segmentRegistry: w.segRegistry,
+			log:             log.With().Str("src", "SegmentWriterWorker").Int("id", i).Logger(),
 		}
 
 		w.wg.Add(1)
-		go func() { worker.start() }()
+		go worker.start()
 
 	}
-
-	return nil
 
 }
 
@@ -91,13 +85,13 @@ func (w *SegmentWriterPool) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if !w.running {
+	if !w.isRunning {
 		return
 	}
 
 	w.log.Info().Msg("stopping segment writer pool")
 
-	w.running = false
+	w.isRunning = false
 
 	close(w.inChan)
 	w.log.Info().Msg("waiting for workers to finish")
@@ -113,11 +107,12 @@ func (w *SegmentWriterPool) Write(src SegmentSource) {
 }
 
 type segmentWriterWorker struct {
-	id     int
-	inChan chan SegmentSource
-	wg     *sync.WaitGroup
-	path   string
-	log    zerolog.Logger
+	id              int
+	inChan          chan SegmentSource
+	wg              *sync.WaitGroup
+	segmentRegistry SegmentRegistry
+	segStorage      SegmentStorage
+	log             zerolog.Logger
 }
 
 // start worker
@@ -142,27 +137,28 @@ func (w *segmentWriterWorker) start() {
 
 func (w *segmentWriterWorker) writeSegment(src SegmentSource) {
 
-	// TODO(gvelo) handle panic from WriteSegment
+	defer func() {
+		if r := recover(); r != nil {
+			w.log.
+				Error().
+				Interface("error", r).
+				Str("sid", buildSegmentFileNameFromUUID(src.Info().Id)).
+				Msg("error writing segment")
+		}
+	}()
 
 	info := src.Info()
 
-	fileName := base64.RawURLEncoding.EncodeToString(info.Id)
-
-	filePath := path.Join(w.path, fileName)
-
 	logger := w.log.With().
-		Str("sid", fileName).
+		Str("sid", buildSegmentFileNameFromUUID(info.Id)).
 		Str("table", info.TableName).
 		Uint64("partition", info.PartitionId).Logger()
 
 	logger.Debug().Msg("writing segment")
 
-	WriteSegment(filePath, src)
+	segInfo := w.segStorage.WriteSegment(src)
 
-	// if err != nil {
-	// 	logger.Error().Err(err).Msg("error writing segment")
-	// 	return
-	// }
+	w.segmentRegistry.AddSegment(segInfo)
 
 	logger.Debug().Msg("segment successfully written")
 

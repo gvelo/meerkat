@@ -19,6 +19,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/hashicorp/serf/serf"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -92,12 +93,12 @@ func (d *defaultNodeManager) buildCancelCmd(err *ExecError) *ExecCmd {
 func (d *defaultNodeManager) sendQueryFragments(queryId uuid.UUID, fragments []*logical.Fragment) {
 
 	defer d.mu.Unlock()
-
-	msg := d.buildQueryMsg(queryId, fragments)
-
 	d.mu.Lock()
 
+	msg := d.buildQueryMsg(queryId, fragments)
+	fmt.Println("client len :", len(d.nodeClients))
 	for _, client := range d.nodeClients {
+		fmt.Println("sending query to :", client.nodeName)
 		client.sendQueryCmd(msg)
 	}
 
@@ -110,7 +111,7 @@ func (d *defaultNodeManager) buildQueryMsg(queryId uuid.UUID, fragments []*logic
 	err := enc.Encode(fragments)
 
 	if err != nil {
-		panic("cannot encode query fragments")
+		panic(fmt.Sprintf("cannot encode query fragments: %v", err))
 	}
 
 	return &ExecCmd{
@@ -262,6 +263,8 @@ func (n *nodeClient) close() {
 func NewCoordinatorExecutor(
 	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
+	streamReg StreamRegistry,
+	cluster cluster.Cluster,
 ) *coordinatorExecutor {
 
 	id := uuid.New()
@@ -273,6 +276,8 @@ func NewCoordinatorExecutor(
 		segReg:      segReg,
 		conReg:      connReg,
 		nodeManager: nodeManager,
+		streamReg:   streamReg,
+		cluster:     cluster,
 		execCtx:     execCtx,
 		log: log.With().
 			Str("component", "coordinatorExecutor").
@@ -290,6 +295,7 @@ type coordinatorExecutor struct {
 	conReg      cluster.ConnRegistry
 	nodeManager nodeManager
 	streamReg   StreamRegistry
+	cluster     cluster.Cluster
 	execCtx     ExecutionContext
 	outputOp    physical.OutputOp
 }
@@ -319,7 +325,11 @@ func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error
 	optPlan := logical.Optimize(logicalPlan)
 
 	// parallelize
-	fragments := logical.Parallelize(optPlan)
+	fragments := logical.Parallelize(
+		optPlan,
+		c.cluster.NodeName(),
+		buildNodeNames(c.cluster.LiveMembers()),
+	)
 
 	go c.handleCtxCancel()
 
@@ -336,6 +346,14 @@ func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error
 
 	return nil
 
+}
+
+func buildNodeNames(members []serf.Member) []string {
+	nodeNames := make([]string, len(members))
+	for i, member := range members {
+		nodeNames[i] = member.Name
+	}
+	return nodeNames
 }
 
 func (c *coordinatorExecutor) buildExecutableGraph(

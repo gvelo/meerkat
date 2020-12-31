@@ -39,13 +39,15 @@ type Meerkat struct {
 	grpcServer   *grpc.Server
 	cluster      cluster.Cluster
 	connRegistry cluster.ConnRegistry
-	//schema       schema.Schema
+	// schema       schema.Schema
 	apiServer         *rest.ApiServer
 	catalog           cluster.Catalog
 	Conf              config.Config
 	log               zerolog.Logger
 	segmentWriterPool *storage.SegmentWriterPool
 	bufReg            ingestion.BufferRegistry
+	segStorage        storage.SegmentStorage
+	segRegistry       storage.SegmentRegistry
 }
 
 func (m *Meerkat) Start(ctx context.Context) {
@@ -61,7 +63,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	var err error
 
-	//TODO(gvelo):make port configurable.
+	// TODO(gvelo):make port configurable.
 	m.listener, err = net.Listen("tcp", ":9191")
 
 	if err != nil {
@@ -103,19 +105,25 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Panic().Err(err).Msg("cannot create catalog")
 	}
 
-	//m.schema, err = schema.NewSchema(m.catalog)
+	// m.schema, err = schema.NewSchema(m.catalog)
 	//
-	//if err != nil {
+	// if err != nil {
 	//	m.log.Panic().Err(err).Msg("cannot create schema")
-	//}
+	// }
 
-	m.segmentWriterPool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
+	m.segStorage = storage.NewStorage(m.Conf.DBPath)
 
-	err = m.segmentWriterPool.Start()
+	m.segRegistry = storage.NewSegmentRegistry(m.Conf.DBPath, m.segStorage)
 
-	if err != nil {
-		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
-	}
+	m.segRegistry.Start()
+
+	m.segmentWriterPool = storage.NewSegmentWriterPool(1024,
+		10,
+		m.segStorage,
+		m.segRegistry,
+	)
+
+	m.segmentWriterPool.Start()
 
 	ingRcp := jsoningester.NewIngestRPC(m.connRegistry)
 
@@ -131,11 +139,16 @@ func (m *Meerkat) Start(ctx context.Context) {
 	m.bufReg.Start()
 
 	streamReg := exec.NewStreamRegistry()
-	execServer := exec.NewServer(streamReg)
+
+	execServer := exec.NewServer(m.connRegistry, m.segRegistry, streamReg)
+
 	exec.RegisterExecutorServer(m.grpcServer, execServer)
 
-	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, m.bufReg)
+	executor := exec.NewExecutor(m.connRegistry, m.segRegistry, streamReg, m.cluster)
 
+	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, m.bufReg, executor)
+
+	// TODO(gvelo) move all this ugly panic stuff to the component
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create rest server")
 	}
@@ -182,7 +195,7 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.segmentWriterPool.Stop()
 
-	//m.schema.Shutdown()
+	// m.schema.Shutdown()
 
 	err = m.catalog.Shutdown()
 
@@ -191,6 +204,8 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 	}
 
 	m.connRegistry.Shutdown()
+
+	m.segRegistry.Stop()
 
 	m.log.Info().Msg("meerkat server stopped")
 

@@ -38,9 +38,9 @@ func (f *Fragments) append(fragment *Fragment) {
 // Summary or  Join ).
 // The last fragment in the slice  always executed in the query coordinator
 // node.
-func Parallelize(outputNodes []Node) *Fragments {
+func Parallelize(outputNodes []Node, localNodeName string, nodeNames []string) *Fragments {
 
-	parallelizer := NewNaiveParallelizer()
+	parallelizer := NewNaiveParallelizer(localNodeName, nodeNames)
 
 	if len(outputNodes) > 1 {
 		panic("multiple outputNodes not supported yet")
@@ -55,16 +55,21 @@ func Parallelize(outputNodes []Node) *Fragments {
 
 }
 
-func NewNaiveParallelizer() *NaiveParallelizer {
+func NewNaiveParallelizer(localNodeName string, nodeNames []string) *NaiveParallelizer {
 	return &NaiveParallelizer{
+		localNodeName:  localNodeName,
+		nodeNames:      nodeNames,
 		fragments:      &Fragments{},
 		inParallelFlow: true,
 	}
 }
 
 type NaiveParallelizer struct {
+	localNodeName  string
+	nodeNames      []string
 	inParallelFlow bool
 	fragments      *Fragments
+	streamId       int64
 }
 
 func (p *NaiveParallelizer) VisitPre(n Node) Node { return n }
@@ -89,22 +94,37 @@ func (p *NaiveParallelizer) VisitPost(n Node) Node {
 func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 	if !p.inParallelFlow {
+
 		fragment := &Fragment{
 			IsParallel: false,
 			Outputs:    []Node{op},
 		}
+
 		p.fragments.append(fragment)
+
 		return op
+
 	}
 
-	exchange := &ExchangeOutOp{Child: op.Child}
+	streamMap := p.buildStreamMap()
+
+	exchange := &ExchangeOutOp{
+		Dst:       p.localNodeName,
+		StreamMap: streamMap,
+		Child:     op.Child,
+	}
+
 	fragment := &Fragment{
 		IsParallel: true,
 		Outputs:    []Node{exchange},
 	}
+
 	p.fragments.append(fragment)
 
-	merge := &MergeOp{}
+	exchangeIn := &ExchangeInOp{StreamMap: streamMap}
+
+	merge := &MergeOp{Child: exchangeIn}
+
 	op.Child = merge
 
 	outputFragment := &Fragment{
@@ -129,6 +149,25 @@ func (p *NaiveParallelizer) buildDistSummary(summaryOp *SummarizeOp) Node {
 	exchangeIn := &ExchangeInOp{}
 	summCollector := &SummaryCollector{Child: exchangeIn}
 	return summCollector
+}
+
+func (p *NaiveParallelizer) newStreamId() int64 {
+	p.streamId++
+	return p.streamId
+}
+
+func (p *NaiveParallelizer) buildStreamMap() map[string]int64 {
+
+	streamMap := make(map[string]int64, len(p.nodeNames)+1)
+
+	for _, name := range p.nodeNames {
+		streamMap[name] = p.newStreamId()
+	}
+
+	streamMap[p.localNodeName] = p.newStreamId()
+
+	return streamMap
+
 }
 
 func buildLocalSummary(summaryOp *SummarizeOp) Node {

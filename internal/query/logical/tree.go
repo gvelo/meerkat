@@ -228,12 +228,15 @@ func (n *SummarizeOp) Accept(v Visitor) {
 }
 
 type ExchangeOutOp struct {
-	Child Node
+	Dst       string
+	StreamMap map[string]int64
+	Child     Node
 }
 
 func (n *ExchangeOutOp) Accept(v Visitor) { n.Child = Walk(n.Child, v) }
 
 type ExchangeInOp struct {
+	StreamMap map[string]int64
 }
 
 func (n *ExchangeInOp) Accept(Visitor) {}
@@ -281,10 +284,12 @@ type LocalSummaryOp struct {
 func (n *LocalSummaryOp) Accept(v Visitor) { n.Child = Walk(n.Child, v) }
 
 type MergeOp struct {
+	Child Node
 }
 
 func (n *MergeOp) Accept(Visitor) {}
 
-// input columns ?
-// output columns ?
-// framgmensts
+// TODO(gvelo)
+var _ Node = &OutputOp{}
+var _ Node = &SourceOp{}
+var _ Node = &BinaryExpr{}

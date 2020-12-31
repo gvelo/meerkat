@@ -14,6 +14,7 @@
 package exec
 
 import (
+	"fmt"
 	"meerkat/internal/cluster"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/physical"
@@ -44,9 +45,23 @@ type executableGraphBuilder struct {
 }
 
 func (e *executableGraphBuilder) BuildCoordinatorGraph(writer QueryOutputWriter, outputs []*logical.Fragment) (physical.OutputOp, error) {
-	panic("implement me")
+	fmt.Println("BuildCoordinatorGraph : ", outputs)
+	return nil, nil
 }
 
 func (e *executableGraphBuilder) BuildNodeGraph(outputs []*logical.Fragment, outputWg *sync.WaitGroup) ([]physical.OutputOp, error) {
-	panic("implement me")
+	fmt.Println("BuildNodeGraph :", outputs)
+	return nil, nil
+}
+
+type GraphBuilder struct {
+	childs []physical.BatchOperator
+}
+
+func (g *GraphBuilder) VisitPre(n logical.Node) logical.Node {
+	panic("VisitPre implement me")
+}
+
+func (g *GraphBuilder) VisitPost(n logical.Node) logical.Node {
+	panic("VisitPre implement me")
 }
