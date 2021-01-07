@@ -27,7 +27,7 @@ const (
 type vectorExchangeStream struct {
 	server Executor_VectorExchangeServer
 	done   chan *ExecError
-	closed bool
+	closed bool // TODO(gvelo) seems like we are not using this.
 	mu     sync.Mutex
 }
 

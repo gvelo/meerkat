@@ -5,20 +5,41 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-func NewInt64ColumnReader(iterator storage.Int64Iterator) *Int64ColumnReader {
-	return &Int64ColumnReader{
+func NewColumnReaderOp(iterator storage.Iterator) *ColumnReaderOp {
+	return &ColumnReaderOp{
 		iterator: iterator,
 	}
 }
 
-type Int64ColumnReader struct {
-	iterator storage.Int64Iterator
+type ColumnReaderOp struct {
+	iterator storage.Iterator
 }
 
-func (c *Int64ColumnReader) Init()  {}
-func (c *Int64ColumnReader) Close() {}
+func (c *ColumnReaderOp) Init()  {}
+func (c *ColumnReaderOp) Close() {}
 
-func (c *Int64ColumnReader) Next() vector.Vector {
-	v := c.iterator.Next()
-	return &v
+func (c *ColumnReaderOp) Next() vector.Vector {
+
+	if c.iterator.HasNext() {
+		switch i := c.iterator.(type) {
+		case storage.Int64Iterator:
+			v := i.Next()
+			return &v
+		case storage.ByteSliceIterator:
+			v := i.Next()
+			return &v
+		default:
+			panic("unknown iterator")
+		}
+	}
+
+	// if we are at EOF return zero length vector.
+	// TODO(gvelo): the iterator semantic should be consistent with
+	// operators. Iterator.Next() should return a zero length vector
+	// to signal EOF
+
+	return &vector.ZeroVector{}
+
 }
+
+func (c *ColumnReaderOp) Accept(v Visitor) {}

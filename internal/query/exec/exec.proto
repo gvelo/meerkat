@@ -61,11 +61,13 @@ message ExecEvent {
 
 // Column represent a column in the vector batch
 message Column {
-  string             name    = 1;
-  int64              group   = 2;
-  int64              order   = 3;
+  string             name = 1;
+  int64              group = 2;
+  int64              order = 3;
   storage.ColumnType colType = 4;
-  bytes              vector  = 5;
+  bytes              vector = 5;
+  bytes              validity = 6;
+  bytes              offsets = 7;
 }
 
 // VectorBatch represents the group of vectors exchanged between nodes.
@@ -95,8 +97,8 @@ message ExecError{
 message VectorExchangeMsg{
   oneof msg {
     StreamHeader header = 1;
-    VectorBatch  vector = 2;
-    ExecError    error  = 3;
+    VectorBatch  vectorBatch = 2;
+    ExecError    error = 3;
   }
 }
 

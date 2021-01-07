@@ -227,19 +227,19 @@ func (n *SummarizeOp) Accept(v Visitor) {
 	n.Child = Walk(n.Child, v)
 }
 
-type ExchangeOutOp struct {
+type NodeOutOp struct {
 	Dst       string
 	StreamMap map[string]int64
 	Child     Node
 }
 
-func (n *ExchangeOutOp) Accept(v Visitor) { n.Child = Walk(n.Child, v) }
+func (n *NodeOutOp) Accept(v Visitor) { n.Child = Walk(n.Child, v) }
 
-type ExchangeInOp struct {
+type MergeSortOp struct {
 	StreamMap map[string]int64
 }
 
-func (n *ExchangeInOp) Accept(Visitor) {}
+func (n *MergeSortOp) Accept(Visitor) {}
 
 type HashExchangeOutOp struct {
 	Child Node

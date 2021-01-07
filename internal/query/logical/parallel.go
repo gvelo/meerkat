@@ -108,7 +108,7 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 	streamMap := p.buildStreamMap()
 
-	exchange := &ExchangeOutOp{
+	nodeOutput := &NodeOutOp{
 		Dst:       p.localNodeName,
 		StreamMap: streamMap,
 		Child:     op.Child,
@@ -116,14 +116,12 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 	fragment := &Fragment{
 		IsParallel: true,
-		Outputs:    []Node{exchange},
+		Outputs:    []Node{nodeOutput},
 	}
 
 	p.fragments.append(fragment)
 
-	exchangeIn := &ExchangeInOp{StreamMap: streamMap}
-
-	merge := &MergeOp{Child: exchangeIn}
+	merge := &MergeSortOp{StreamMap: streamMap}
 
 	op.Child = merge
 
@@ -140,13 +138,13 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 func (p *NaiveParallelizer) buildDistSummary(summaryOp *SummarizeOp) Node {
 	distSummary := &DistSummaryOp{Child: summaryOp.Child}
-	exchangeOut := &ExchangeOutOp{Child: distSummary}
+	exchangeOut := &NodeOutOp{Child: distSummary}
 	fragment := &Fragment{
 		IsParallel: true,
 		Outputs:    []Node{exchangeOut},
 	}
 	p.fragments.append(fragment)
-	exchangeIn := &ExchangeInOp{}
+	exchangeIn := &MergeSortOp{} // TODO: refactor to summarycollector ?
 	summCollector := &SummaryCollector{Child: exchangeIn}
 	return summCollector
 }

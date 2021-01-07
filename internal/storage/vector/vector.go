@@ -15,6 +15,8 @@
 
 package vector
 
+import "meerkat/internal/util/sliceutil"
+
 const (
 	log2WordSize = uint(6)
 	wordSize     = uint(64)
@@ -24,6 +26,8 @@ type Vector interface {
 	Len() int
 	Cap() int
 	HasNulls() bool
+	AsBytes() []byte
+	ValidityAsBytes() []byte
 }
 
 type Pool interface {
@@ -66,16 +70,24 @@ func (v *ByteSliceVector) SetLen(l int) {
 	v.l = l
 }
 
-func (v *ByteSliceVector) Data() []byte {
-	return v.buf
-}
-
-func (v *ByteSliceVector) Buf() []byte {
-	return v.buf
+func (v *ByteSliceVector) Buffer() []byte {
+	return v.buf[:v.l]
 }
 
 func (v *ByteSliceVector) Offsets() []int {
-	return v.offsets
+	return v.offsets[:v.l]
+}
+
+func (v *ByteSliceVector) AsBytes() []byte {
+	return v.buf[:v.l]
+}
+
+func (v *ByteSliceVector) OffsetsAsBytes() []byte {
+	return sliceutil.I2B(v.offsets[:v.l])
+}
+
+func (v *ByteSliceVector) ValidityAsBytes() []byte {
+	return sliceutil.U642B(v.valid[:v.l/8])
 }
 
 func (v *ByteSliceVector) IsValid(i int) bool {
@@ -113,7 +125,7 @@ func (v *ByteSliceVector) AppendNull() {
 		panic("vector out of bounds")
 	}
 
-	//v.offsets[v.l] = len(v.buf)
+	// v.offsets[v.l] = len(v.buf)
 	v.offsets = append(v.offsets, len(v.buf))
 
 	// TODO(gvelo) memset
@@ -189,7 +201,7 @@ func (p *defaultPool) GetNotNullableFloat64Vector() Float64Vector {
 }
 
 func (p *defaultPool) GetNotNullableByteSliceVector() ByteSliceVector {
-	//TODO: Check this, we should use a fixed segment to make faster the loading from disk,
+	// TODO: Check this, we should use a fixed segment to make faster the loading from disk,
 	// the issue with this approach would be, that we need to manage different batch sizes
 	// in numeric and byteslices vectors.
 	return ByteSliceVector{
@@ -253,4 +265,19 @@ func (*defaultPool) GetByteSliceVector() ByteSliceVector {
 
 func (*defaultPool) PutInt64Vector(vector Int64Vector) {
 	panic("implement me")
+}
+
+type ZeroVector struct {
+}
+
+func (v *ZeroVector) Len() int {
+	return 0
+}
+
+func (v *ZeroVector) Cap() int {
+	return 0
+}
+
+func (v *ZeroVector) HasNulls() bool {
+	return 0
 }

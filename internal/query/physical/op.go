@@ -27,6 +27,8 @@ type Operator interface {
 	// Close will cascade calling the Close method on all its
 	// children operators.
 	Close()
+
+	Accept(v Visitor)
 }
 
 type BatchOperator interface {
@@ -37,4 +39,19 @@ type BatchOperator interface {
 type ColumnOperator interface {
 	Operator
 	Next() vector.Vector
+}
+
+type OutputOp interface {
+	Run()
+}
+
+type Visitor interface {
+	VisitPre(n Operator) Operator
+	VisitPost(n Operator) Operator
+}
+
+func Walk(n Operator, v Visitor) Operator {
+	n = v.VisitPre(n)
+	n.Accept(v)
+	return v.VisitPost(n)
 }

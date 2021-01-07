@@ -10,8 +10,8 @@ import (
 func init() {
 	gob.Register(&Fragment{})
 	gob.Register(&SourceOp{})
-	gob.Register(&ExchangeInOp{})
-	gob.Register(&ExchangeOutOp{})
+	gob.Register(&MergeSortOp{})
+	gob.Register(&NodeOutOp{})
 	gob.Register(&OutputOp{})
 	gob.Register(&MergeOp{})
 	gob.Register(&BinaryExpr{})
