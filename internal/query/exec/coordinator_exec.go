@@ -297,7 +297,7 @@ type coordinatorExecutor struct {
 	streamReg   StreamRegistry
 	cluster     cluster.Cluster
 	execCtx     ExecutionContext
-	outputOp    physical.OutputOp
+	outputOp    physical.RunnableOp
 }
 
 func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error {
@@ -333,7 +333,7 @@ func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error
 
 	go c.handleCtxCancel()
 
-	go c.broadcastFragmentsToNodes(fragments.NodeFragments())
+	go c.sendFragmentsToNodes(fragments.NodeFragments())
 
 	err = c.buildExecutableGraph(writer, fragments.AllFragments())
 
@@ -361,7 +361,7 @@ func (c *coordinatorExecutor) buildExecutableGraph(
 	fragments []*logical.Fragment,
 ) error {
 
-	graphBuilder := NewExecutableGraphBuilder(c.conReg, c.segReg, c.streamReg)
+	graphBuilder := NewDAGBuilder(c.conReg, c.segReg, c.streamReg)
 
 	output, err := graphBuilder.BuildCoordinatorGraph(writer, fragments)
 
@@ -375,7 +375,7 @@ func (c *coordinatorExecutor) buildExecutableGraph(
 
 }
 
-func (c *coordinatorExecutor) broadcastFragmentsToNodes(fragments []*logical.Fragment) {
+func (c *coordinatorExecutor) sendFragmentsToNodes(fragments []*logical.Fragment) {
 	c.nodeManager.sendQueryFragments(c.id, fragments)
 }
 

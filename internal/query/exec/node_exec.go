@@ -31,7 +31,7 @@ type nodeExec struct {
 	segReg     storage.SegmentRegistry
 	execCtx    ExecutionContext
 	controlSrv Executor_ControlServer
-	outputOps  []physical.OutputOp
+	outputOps  []physical.RunnableOp
 	outputWg   *sync.WaitGroup
 	streamReg  StreamRegistry
 }
@@ -155,7 +155,7 @@ func decodePlan(query *ExecQuery) ([]*logical.Fragment, error) {
 
 func (n *nodeExec) buildExecutableGraph(fragments []*logical.Fragment) error {
 
-	builder := NewExecutableGraphBuilder(n.connReg, n.segReg, n.streamReg)
+	builder := NewDAGBuilder(n.connReg, n.segReg, n.streamReg)
 
 	var err error
 

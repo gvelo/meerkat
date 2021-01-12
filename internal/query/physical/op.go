@@ -41,7 +41,8 @@ type ColumnOperator interface {
 	Next() vector.Vector
 }
 
-type OutputOp interface {
+type RunnableOp interface {
+	Operator
 	Run()
 }
 

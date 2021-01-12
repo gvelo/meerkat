@@ -24,14 +24,19 @@ const (
 	streamReadTimeout = 2 * time.Second
 )
 
+type VectorExchangeStream interface {
+	Server() Executor_VectorExchangeServer
+	Close(err *ExecError)
+}
+
 type vectorExchangeStream struct {
 	server Executor_VectorExchangeServer
 	done   chan *ExecError
-	closed bool // TODO(gvelo) seems like we are not using this.
+	closed bool
 	mu     sync.Mutex
 }
 
-func NewVectorExchangeStream(server Executor_VectorExchangeServer, done chan *ExecError) *vectorExchangeStream {
+func NewVectorExchangeStream(server Executor_VectorExchangeServer, done chan *ExecError) VectorExchangeStream {
 	return &vectorExchangeStream{
 		server: server,
 		done:   done,

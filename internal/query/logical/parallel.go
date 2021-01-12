@@ -2,7 +2,7 @@ package logical
 
 type Fragment struct {
 	IsParallel bool
-	Outputs    []Node
+	Roots      []Node
 }
 
 // Fragments is the set of parallel execution fragments created by the
@@ -38,16 +38,16 @@ func (f *Fragments) append(fragment *Fragment) {
 // Summary or  Join ).
 // The last fragment in the slice  always executed in the query coordinator
 // node.
-func Parallelize(outputNodes []Node, localNodeName string, nodeNames []string) *Fragments {
+func Parallelize(rootNodes []Node, localNodeName string, nodeNames []string) *Fragments {
 
 	parallelizer := NewNaiveParallelizer(localNodeName, nodeNames)
 
-	if len(outputNodes) > 1 {
-		panic("multiple outputNodes not supported yet")
+	if len(rootNodes) > 1 {
+		panic("multiple rootNodes not supported yet")
 	}
 
 	// add a logical output to the plan
-	output := &OutputOp{Child: outputNodes[0]}
+	output := &OutputOp{Child: rootNodes[0]}
 
 	_ = Walk(output, parallelizer)
 
@@ -97,7 +97,7 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 		fragment := &Fragment{
 			IsParallel: false,
-			Outputs:    []Node{op},
+			Roots:      []Node{op},
 		}
 
 		p.fragments.append(fragment)
@@ -116,7 +116,7 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 	fragment := &Fragment{
 		IsParallel: true,
-		Outputs:    []Node{nodeOutput},
+		Roots:      []Node{nodeOutput},
 	}
 
 	p.fragments.append(fragment)
@@ -127,7 +127,7 @@ func (p *NaiveParallelizer) buildOutput(op *OutputOp) Node {
 
 	outputFragment := &Fragment{
 		IsParallel: false,
-		Outputs:    []Node{op},
+		Roots:      []Node{op},
 	}
 
 	p.fragments.append(outputFragment)
@@ -141,7 +141,7 @@ func (p *NaiveParallelizer) buildDistSummary(summaryOp *SummarizeOp) Node {
 	exchangeOut := &NodeOutOp{Child: distSummary}
 	fragment := &Fragment{
 		IsParallel: true,
-		Outputs:    []Node{exchangeOut},
+		Roots:      []Node{exchangeOut},
 	}
 	p.fragments.append(fragment)
 	exchangeIn := &MergeSortOp{} // TODO: refactor to summarycollector ?

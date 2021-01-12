@@ -15,39 +15,52 @@ type ExchangeInOp struct {
 	streamId          int64
 	queryId           uuid.UUID
 	vectorExchangeSrv exec.Executor_VectorExchangeServer
+	hasStream         bool
+	execCtx           exec.ExecutionContext
 }
 
 func NewExchangeInOp(
 	streamReg exec.StreamRegistry,
 	streamId int64,
 	queryId uuid.UUID,
-	vectorExchangeSrv exec.Executor_VectorExchangeServer,
 ) *ExchangeInOp {
 
 	return &ExchangeInOp{
-		streamReg:         streamReg,
-		streamId:          streamId,
-		queryId:           queryId,
-		vectorExchangeSrv: vectorExchangeSrv,
+		streamReg: streamReg,
+		streamId:  streamId,
+		queryId:   queryId,
 	}
 
 }
 
-func (e *ExchangeInOp) Init() {
+func (e *ExchangeInOp) Init()  {}
+func (e *ExchangeInOp) Close() {}
+
+func (e *ExchangeInOp) initStream() {
 
 	stream, err := e.streamReg.GetStream(e.queryId, e.streamId)
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("cannot init stream : %v", err))
 	}
 
 	e.vectorExchangeSrv = stream.Server()
 
+	go e.handleStreamClose(stream)
+
 }
 
-func (e *ExchangeInOp) Close() {}
+func (e *ExchangeInOp) handleStreamClose(stream exec.VectorExchangeStream) {
+	<-e.execCtx.Done()
+	stream.Close(e.execCtx.Err())
+}
 
 func (e *ExchangeInOp) Next() Batch {
+
+	if !e.hasStream {
+		e.initStream()
+		e.hasStream = true
+	}
 
 	msg, err := e.vectorExchangeSrv.Recv()
 
@@ -126,4 +139,20 @@ func buildVector(column *exec.Column) vector.Vector {
 
 	}
 
+}
+
+type LocalExchangeInOp struct {
+	streamId int64
+}
+
+func (op *LocalExchangeInOp) Init()            {}
+func (op *LocalExchangeInOp) Close()           {}
+func (op *LocalExchangeInOp) Accept(v Visitor) {}
+
+func (op *LocalExchangeInOp) Next() Batch {
+	panic("Next() called on LocalExchangeInOp")
+}
+
+func NewLocalExchangeInOp(streamId int64) *LocalExchangeInOp {
+	return &LocalExchangeInOp{streamId: streamId}
 }

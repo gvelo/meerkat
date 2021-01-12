@@ -190,6 +190,10 @@ func (n *ColumnExpr) Accept(v Visitor) { n.Expr = Walk(n.Expr, v) }
 
 type SourceOp struct {
 	TableName string
+	// partitionMap ( partition by node )
+	// interval
+	// columns
+	// filter exp
 }
 
 func (n *SourceOp) Accept(Visitor) {}
