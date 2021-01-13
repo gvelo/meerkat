@@ -3,7 +3,8 @@ package physical
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/storage"
 	"sync"
 )
@@ -14,9 +15,9 @@ type DAG interface {
 
 var _ DAG = &executableDAG{}
 
-// the root of the DAG. Handle operator lifecicle and acquired resources.
+// the root of the DAG. Handle operator lifecycle and acquired resources.
 type executableDAG struct {
-	execCtx       exec.ExecutionContext
+	execCtx       execbase.ExecutionContext
 	runnables     []RunnableOp
 	roots         []RunnableOp
 	queryId       uuid.UUID
@@ -27,7 +28,7 @@ type executableDAG struct {
 }
 
 func NewDAG(
-	execCtx exec.ExecutionContext,
+	execCtx execbase.ExecutionContext,
 	runnables []RunnableOp,
 	roots []RunnableOp,
 	queryId uuid.UUID,
@@ -58,7 +59,7 @@ func (ed *executableDAG) Run() {
 		go ed.runOp(runnable)
 	}
 
-	wg.Wait()
+	ed.wg.Wait()
 
 	// TODO(gvelo) close operators
 
@@ -73,19 +74,19 @@ func (ed *executableDAG) runOp(op RunnableOp) {
 	defer func() {
 		if r := recover(); r != nil {
 
-			if execErr, ok := r.(*exec.ExecError); ok {
+			if execErr, ok := r.(*execpb.ExecError); ok {
 				ed.execCtx.CancelWithExecError(execErr)
 				return
 			}
 
-			execErr := exec.ExtractExecError(r)
+			execErr := execbase.ExtractExecError(r)
 
 			if execErr != nil {
 				ed.execCtx.CancelWithExecError(execErr)
 				return
 			}
 
-			execErr = exec.NewExecError(
+			execErr = execbase.NewExecError(
 				fmt.Sprintf("Error executing query: %v", r),
 				ed.localNodeName,
 			)

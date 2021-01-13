@@ -11,16 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package execbase
 
-import "sync"
+import (
+	"meerkat/internal/query/execpb"
+	"sync"
+)
 
 type ExecutionContext interface {
 	Done() <-chan struct{}
 	Cancel()
-	CancelWithExecError(execError *ExecError)
-	CancelWithPropagation(err error, execError *ExecError)
-	Err() *ExecError
+	CancelWithExecError(execError *execpb.ExecError)
+	CancelWithPropagation(err error, execError *execpb.ExecError)
+	Err() *execpb.ExecError
 }
 
 func NewExecutionContext() ExecutionContext {
@@ -31,12 +34,12 @@ func NewExecutionContext() ExecutionContext {
 
 type executionContext struct {
 	mu        sync.Mutex
-	execError *ExecError
+	execError *execpb.ExecError
 	done      chan struct{}
 	canceled  bool
 }
 
-func (c *executionContext) CancelWithExecError(execError *ExecError) {
+func (c *executionContext) CancelWithExecError(execError *execpb.ExecError) {
 
 	defer c.mu.Unlock()
 
@@ -53,7 +56,7 @@ func (c *executionContext) CancelWithExecError(execError *ExecError) {
 
 }
 
-func (c *executionContext) CancelWithPropagation(err error, execError *ExecError) {
+func (c *executionContext) CancelWithPropagation(err error, execError *execpb.ExecError) {
 
 	e := ExtractExecError(err)
 
@@ -65,6 +68,6 @@ func (c *executionContext) CancelWithPropagation(err error, execError *ExecError
 
 }
 
-func (c *executionContext) Cancel()               { c.CancelWithExecError(nil) }
-func (c *executionContext) Done() <-chan struct{} { return c.done }
-func (c *executionContext) Err() *ExecError       { return c.execError }
+func (c *executionContext) Cancel()                { c.CancelWithExecError(nil) }
+func (c *executionContext) Done() <-chan struct{}  { return c.done }
+func (c *executionContext) Err() *execpb.ExecError { return c.execError }

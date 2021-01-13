@@ -11,15 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
-package meerkat.logical;
-option go_package = "meerkat/internal/query/logical";
+package execbase
 
-import "gogoproto/gogo.proto";
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/any.proto";
-
-message Plan {
-  repeated Stage stages = 1;
+type QueryOutputWriter interface {
+	Write([]byte) (int, error)
+	Flush()
+	CloseNotify() <-chan bool
 }
-

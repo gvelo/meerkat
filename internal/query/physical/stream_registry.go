@@ -11,11 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package physical
 
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"meerkat/internal/query/execpb"
 	"sync"
 	"time"
 )
@@ -25,29 +26,29 @@ const (
 )
 
 type VectorExchangeStream interface {
-	Server() Executor_VectorExchangeServer
-	Close(err *ExecError)
+	Server() execpb.Executor_VectorExchangeServer
+	Close(err *execpb.ExecError)
 }
 
 type vectorExchangeStream struct {
-	server Executor_VectorExchangeServer
-	done   chan *ExecError
+	server execpb.Executor_VectorExchangeServer
+	done   chan *execpb.ExecError
 	closed bool
 	mu     sync.Mutex
 }
 
-func NewVectorExchangeStream(server Executor_VectorExchangeServer, done chan *ExecError) *vectorExchangeStream {
+func NewVectorExchangeStream(server execpb.Executor_VectorExchangeServer, done chan *execpb.ExecError) *vectorExchangeStream {
 	return &vectorExchangeStream{
 		server: server,
 		done:   done,
 	}
 }
 
-func (v *vectorExchangeStream) Server() Executor_VectorExchangeServer {
+func (v *vectorExchangeStream) Server() execpb.Executor_VectorExchangeServer {
 	return v.server
 }
 
-func (v *vectorExchangeStream) Close(err *ExecError) {
+func (v *vectorExchangeStream) Close(err *execpb.ExecError) {
 
 	v.mu.Lock()
 	defer v.mu.Unlock()

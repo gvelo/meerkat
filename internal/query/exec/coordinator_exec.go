@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"meerkat/internal/cluster"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/parser"
 	"meerkat/internal/query/physical"
@@ -33,14 +35,14 @@ import (
 )
 
 type nodeManager interface {
-	sendCancel(err *ExecError)
+	sendCancel(err *execpb.ExecError)
 	sendQueryFragments(queryId uuid.UUID, fragments []*logical.Fragment)
 	Close()
 }
 
 func newNodeManager(
 	queryId uuid.UUID,
-	execCtx ExecutionContext,
+	execCtx execbase.ExecutionContext,
 	connRegistry cluster.ConnRegistry,
 ) nodeManager {
 
@@ -64,7 +66,7 @@ type defaultNodeManager struct {
 	nodeClients []*nodeClient
 }
 
-func (d *defaultNodeManager) sendCancel(err *ExecError) {
+func (d *defaultNodeManager) sendCancel(err *execpb.ExecError) {
 
 	defer d.mu.Unlock()
 
@@ -78,11 +80,11 @@ func (d *defaultNodeManager) sendCancel(err *ExecError) {
 
 }
 
-func (d *defaultNodeManager) buildCancelCmd(err *ExecError) *ExecCmd {
+func (d *defaultNodeManager) buildCancelCmd(err *execpb.ExecError) *execpb.ExecCmd {
 
-	return &ExecCmd{
-		Cmd: &ExecCmd_ExecCancel{
-			ExecCancel: &ExecCancel{
+	return &execpb.ExecCmd{
+		Cmd: &execpb.ExecCmd_ExecCancel{
+			ExecCancel: &execpb.ExecCancel{
 				Error: err,
 			},
 		},
@@ -104,7 +106,7 @@ func (d *defaultNodeManager) sendQueryFragments(queryId uuid.UUID, fragments []*
 
 }
 
-func (d *defaultNodeManager) buildQueryMsg(queryId uuid.UUID, fragments []*logical.Fragment) *ExecCmd {
+func (d *defaultNodeManager) buildQueryMsg(queryId uuid.UUID, fragments []*logical.Fragment) *execpb.ExecCmd {
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -114,9 +116,9 @@ func (d *defaultNodeManager) buildQueryMsg(queryId uuid.UUID, fragments []*logic
 		panic(fmt.Sprintf("cannot encode query fragments: %v", err))
 	}
 
-	return &ExecCmd{
-		Cmd: &ExecCmd_ExecQuery{
-			ExecQuery: &ExecQuery{
+	return &execpb.ExecCmd{
+		Cmd: &execpb.ExecCmd_ExecQuery{
+			ExecQuery: &execpb.ExecQuery{
 				Id:   queryId[:],
 				Plan: buf.Bytes(),
 			},
@@ -136,11 +138,11 @@ func (d *defaultNodeManager) Close() {
 
 }
 
-func newNodeClient(execCtx ExecutionContext, nodeName string, conn *grpc.ClientConn) *nodeClient {
+func newNodeClient(execCtx execbase.ExecutionContext, nodeName string, conn *grpc.ClientConn) *nodeClient {
 
 	return &nodeClient{
 		nodeName:   nodeName,
-		execClient: NewExecutorClient(conn),
+		execClient: execpb.NewExecutorClient(conn),
 		execCtx:    execCtx,
 	}
 
@@ -149,12 +151,12 @@ func newNodeClient(execCtx ExecutionContext, nodeName string, conn *grpc.ClientC
 type nodeClient struct {
 	mu            sync.Mutex
 	nodeName      string
-	execClient    ExecutorClient
-	controlClient Executor_ControlClient
-	execCtx       ExecutionContext
+	execClient    execpb.ExecutorClient
+	controlClient execpb.Executor_ControlClient
+	execCtx       execbase.ExecutionContext
 }
 
-func (n *nodeClient) sendCancelCmd(cmd *ExecCmd) {
+func (n *nodeClient) sendCancelCmd(cmd *execpb.ExecCmd) {
 
 	go func() {
 
@@ -184,7 +186,7 @@ func (n *nodeClient) sendCancelCmd(cmd *ExecCmd) {
 
 }
 
-func (n *nodeClient) sendQueryCmd(cmd *ExecCmd) {
+func (n *nodeClient) sendQueryCmd(cmd *execpb.ExecCmd) {
 
 	go func() {
 
@@ -195,7 +197,7 @@ func (n *nodeClient) sendQueryCmd(cmd *ExecCmd) {
 
 		if err != nil {
 
-			n.execCtx.CancelWithPropagation(err, NewExecError(
+			n.execCtx.CancelWithPropagation(err, execbase.NewExecError(
 				fmt.Sprintf("cannot open control stream to node %s [%s]", n.nodeName, err),
 				"",
 			))
@@ -211,7 +213,7 @@ func (n *nodeClient) sendQueryCmd(cmd *ExecCmd) {
 
 		if err != nil {
 
-			n.execCtx.CancelWithPropagation(err, NewExecError(
+			n.execCtx.CancelWithPropagation(err, execbase.NewExecError(
 				fmt.Sprintf("cannot send query to node %s [%s]", n.nodeName, err),
 				"",
 			))
@@ -236,10 +238,10 @@ func (n *nodeClient) handleStream() {
 				return
 			}
 
-			execErr := ExtractExecError(err)
+			execErr := execbase.ExtractExecError(err)
 
 			if execErr == nil {
-				execErr = NewExecError(
+				execErr = execbase.NewExecError(
 					fmt.Sprintf("error reading from control stream : %v", err),
 					"", // TODO(gvelo): will be moved to execCtx
 				)
@@ -251,10 +253,10 @@ func (n *nodeClient) handleStream() {
 		}
 
 		switch event := execEvent.Event.(type) {
-		case *ExecEvent_ExecOk:
+		case *execpb.ExecEvent_ExecOk:
 			_ = event
 			// do nothing for now, just log
-		case *ExecEvent_ExecStats:
+		case *execpb.ExecEvent_ExecStats:
 			_ = event
 			// do nothing for now, just log
 		}
@@ -272,12 +274,12 @@ func (n *nodeClient) close() {
 func NewCoordinatorExecutor(
 	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
-	streamReg StreamRegistry,
+	streamReg physical.StreamRegistry,
 	cluster cluster.Cluster,
 ) *coordinatorExecutor {
 
 	id := uuid.New()
-	execCtx := NewExecutionContext()
+	execCtx := execbase.NewExecutionContext()
 	nodeManager := newNodeManager(id, execCtx, connReg)
 
 	exec := &coordinatorExecutor{
@@ -303,13 +305,13 @@ type coordinatorExecutor struct {
 	segReg      storage.SegmentRegistry
 	conReg      cluster.ConnRegistry
 	nodeManager nodeManager
-	streamReg   StreamRegistry
+	streamReg   physical.StreamRegistry
 	cluster     cluster.Cluster
-	execCtx     ExecutionContext
+	execCtx     execbase.ExecutionContext
 	outputOp    physical.RunnableOp
 }
 
-func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error {
+func (c *coordinatorExecutor) exec(query string, writer execbase.QueryOutputWriter) error {
 
 	defer c.execCtx.Cancel()
 
@@ -366,11 +368,11 @@ func buildNodeNames(members []serf.Member) []string {
 }
 
 func (c *coordinatorExecutor) buildDAG(
-	writer QueryOutputWriter,
+	writer execbase.QueryOutputWriter,
 	fragments []*logical.Fragment,
 ) (physical.DAG, error) {
 
-	dagBuilder := NewDAGBuilder(
+	dagBuilder := physical.NewDAGBuilder(
 		c.conReg,
 		c.segReg,
 		c.streamReg,
@@ -402,6 +404,6 @@ func (c *coordinatorExecutor) handleCtxCancel() {
 }
 
 func (c *coordinatorExecutor) Cancel(err error) {
-	execError := NewExecError(err.Error(), c.cluster.NodeName())
+	execError := execbase.NewExecError(err.Error(), c.cluster.NodeName())
 	c.execCtx.CancelWithExecError(execError)
 }

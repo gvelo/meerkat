@@ -4,24 +4,25 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"io"
-	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 	"meerkat/internal/util/sliceutil"
 )
 
 type ExchangeInOp struct {
-	streamReg         exec.StreamRegistry
+	streamReg         StreamRegistry
 	streamId          int64
 	queryId           uuid.UUID
-	vectorExchangeSrv exec.Executor_VectorExchangeServer
-	stream            exec.VectorExchangeStream
+	vectorExchangeSrv execpb.Executor_VectorExchangeServer
+	stream            VectorExchangeStream
 	hasStream         bool
-	execCtx           exec.ExecutionContext
+	execCtx           execbase.ExecutionContext
 }
 
 func NewExchangeInOp(
-	streamReg exec.StreamRegistry,
+	streamReg StreamRegistry,
 	streamId int64,
 	queryId uuid.UUID,
 ) *ExchangeInOp {
@@ -80,9 +81,9 @@ func (e *ExchangeInOp) Next() Batch {
 
 	switch m := msg.GetMsg().(type) {
 
-	case *exec.VectorExchangeMsg_Error:
+	case *execpb.VectorExchangeMsg_Error:
 		panic(m.Error)
-	case *exec.VectorExchangeMsg_VectorBatch:
+	case *execpb.VectorExchangeMsg_VectorBatch:
 		return buildBatch(m.VectorBatch)
 	default:
 		panic(fmt.Errorf("unexpected message type: %v", m))
@@ -93,7 +94,7 @@ func (e *ExchangeInOp) Next() Batch {
 
 func (e *ExchangeInOp) Accept(v Visitor) {}
 
-func buildBatch(batchMsg *exec.VectorBatch) Batch {
+func buildBatch(batchMsg *execpb.VectorBatch) Batch {
 
 	columns := make(map[string]Col)
 
@@ -115,7 +116,7 @@ func buildBatch(batchMsg *exec.VectorBatch) Batch {
 
 }
 
-func buildVector(column *exec.Column) vector.Vector {
+func buildVector(column *execpb.Column) vector.Vector {
 
 	var validity []uint64
 

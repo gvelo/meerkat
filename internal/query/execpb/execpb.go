@@ -11,19 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logical
+package execpb
 
-// Optimize rewrite and optimize the logical tree.
-// Currently a very small set of heuristic rules
-// is supported.
-//
-// - fold constant
-// - evaluate functions with constant arguments ie. ago(1h)
-// - capture/freeze timestamps
-// - pushdown predicates or filters.
-// = collapse filter
-func Optimize(logicalTree []Node) []Node {
-
-	// do nothing for now
-	return logicalTree
-}
+//go:generate protoc -I . -I ../../../build/proto/ -I ../../../internal/storage/ --plugin ../../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./exec.proto

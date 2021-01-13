@@ -11,15 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package physical
 
 import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/cluster"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/query/logical"
-	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
 )
 
@@ -27,9 +28,9 @@ type DAGBuilder interface {
 	BuildDAG(
 		fragments []*logical.Fragment,
 		queryId uuid.UUID,
-		writer QueryOutputWriter,
-		execCtx ExecutionContext,
-	) (physical.DAG, error)
+		writer execbase.QueryOutputWriter,
+		execCtx execbase.ExecutionContext,
+	) (DAG, error)
 }
 
 func NewDAGBuilder(
@@ -58,14 +59,14 @@ type dagBuilder struct {
 func (e *dagBuilder) BuildDAG(
 	fragments []*logical.Fragment,
 	queryId uuid.UUID,
-	writer QueryOutputWriter,
-	execCtx ExecutionContext,
-) (physical.DAG, error) {
+	writer execbase.QueryOutputWriter,
+	execCtx execbase.ExecutionContext,
+) (DAG, error) {
 
 	var segments []storage.Segment
-	var roots []physical.RunnableOp
-	var runnables []physical.RunnableOp
-	localStreamMap := make(map[int64]physical.BatchOperator)
+	var roots []RunnableOp
+	var runnables []RunnableOp
+	localStreamMap := make(map[int64]BatchOperator)
 
 	for _, fragment := range fragments {
 
@@ -76,7 +77,7 @@ func (e *dagBuilder) BuildDAG(
 			connReg:        e.connReg,
 			streamReg:      e.streamReg,
 			segReg:         e.segReg,
-			localStreamMap: make(map[int64]physical.BatchOperator),
+			localStreamMap: make(map[int64]BatchOperator),
 		}
 
 		if len(fragment.Roots) > 1 {
@@ -102,10 +103,10 @@ func (e *dagBuilder) BuildDAG(
 	streamVisitor := newStreamRewriteVisitor(localStreamMap)
 
 	for _, rootOp := range roots {
-		physical.Walk(rootOp, streamVisitor)
+		Walk(rootOp, streamVisitor)
 	}
 
-	dag := physical.NewDAG(
+	dag := NewDAG(
 		execCtx,
 		runnables,
 		roots,
@@ -120,9 +121,9 @@ func (e *dagBuilder) BuildDAG(
 }
 
 type dagBuilderVisitor struct {
-	child         []physical.BatchOperator
-	roots         []physical.RunnableOp
-	outputWriter  QueryOutputWriter
+	child         []BatchOperator
+	roots         []RunnableOp
+	outputWriter  execbase.QueryOutputWriter
 	queryId       uuid.UUID
 	localNodeName string
 	connReg       cluster.ConnRegistry
@@ -130,9 +131,9 @@ type dagBuilderVisitor struct {
 	segReg        storage.SegmentRegistry
 	// localStreamMap map local streams to the output operator. This operator
 	// will be used as input operator for local streams instead of a ExchangeInOp
-	localStreamMap map[int64]physical.BatchOperator
+	localStreamMap map[int64]BatchOperator
 	segments       []storage.Segment
-	runnableOps    []physical.RunnableOp
+	runnableOps    []RunnableOp
 }
 
 func (g *dagBuilderVisitor) VisitPre(n logical.Node) logical.Node { return n }
@@ -142,7 +143,7 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 	switch node := n.(type) {
 	case *logical.OutputOp:
 		g.assertSingleInput()
-		jsonOutputOp := physical.NewJsonOutputOp(g.child[0], g.outputWriter)
+		jsonOutputOp := NewJsonOutputOp(g.child[0], g.outputWriter)
 		g.roots = append(g.roots, jsonOutputOp)
 		g.runnableOps = append(g.runnableOps, jsonOutputOp)
 	case *logical.SourceOp:
@@ -150,7 +151,7 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 		// TODO(gvelo) call Segments() with real params
 		g.segments = g.segReg.Segments(nil, "", "")
 
-		var child []physical.BatchOperator
+		var child []BatchOperator
 
 		for _, segment := range g.segments {
 			op := buildBatchOp(segment) // TODO(gvelo) add columns and filter exp
@@ -161,11 +162,11 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 	case *logical.NodeOutOp:
 
-		var input physical.BatchOperator
+		var input BatchOperator
 
 		if len(g.child) > 1 {
 			// TODO(gvelo) user merge sort op
-			input = physical.NewMergeOp(g.child)
+			input = NewMergeOp(g.child)
 
 		} else {
 			input = g.child[0]
@@ -193,9 +194,9 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 				panic(fmt.Sprintf("cannot found grpc client conn for node %v", node.Dst))
 			}
 
-			client := NewExecutorClient(conn)
+			client := execpb.NewExecutorClient(conn)
 
-			exchangeOutOp := physical.NewExchangeOutOp(
+			exchangeOutOp := NewExchangeOutOp(
 				input,
 				client,
 				g.queryId,
@@ -210,25 +211,25 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 	case *logical.MergeSortOp:
 
-		var inputs []physical.BatchOperator
+		var inputs []BatchOperator
 
 		for srcNodeName, streamId := range node.StreamMap {
 
-			var op physical.BatchOperator
+			var op BatchOperator
 
 			if srcNodeName == g.localNodeName {
-				op = physical.NewLocalExchangeInOp(streamId)
+				op = NewLocalExchangeInOp(streamId)
 			} else {
-				op = physical.NewExchangeInOp(g.streamReg, streamId, g.queryId)
+				op = NewExchangeInOp(g.streamReg, streamId, g.queryId)
 			}
 
 			inputs = append(inputs, op)
 
 		}
 
-		mergeOp := physical.NewMergeOp(inputs)
+		mergeOp := NewMergeOp(inputs)
 
-		g.child = []physical.BatchOperator{mergeOp}
+		g.child = []BatchOperator{mergeOp}
 
 	default:
 		panic("unknown operator")
@@ -245,11 +246,11 @@ func (g *dagBuilderVisitor) assertSingleInput() {
 	}
 }
 
-func buildBatchOp(segment storage.Segment) physical.BatchOperator {
+func buildBatchOp(segment storage.Segment) BatchOperator {
 
 	info := segment.Info()
 
-	var input []physical.ColumnOperator
+	var input []ColumnOperator
 	var colNames []string
 
 	for _, columnInfo := range info.Columns {
@@ -270,11 +271,11 @@ func buildBatchOp(segment storage.Segment) physical.BatchOperator {
 
 		}
 
-		op := physical.NewColumnReaderOp(iter)
+		op := NewColumnReaderOp(iter)
 		input = append(input, op)
 	}
 
-	batchBuilder := physical.NewBatchBuilderOp(input, colNames)
+	batchBuilder := NewBatchBuilderOp(input, colNames)
 
 	return batchBuilder
 
@@ -283,19 +284,19 @@ func buildBatchOp(segment storage.Segment) physical.BatchOperator {
 // streamRewriteVisitor rewrite the operator DAG replacing the LocalExchangeInOp
 // by the local output operator.
 type streamRewriteVisitor struct {
-	localStreamMap [int64]physical.BatchOperator
+	localStreamMap map[int64]BatchOperator
 }
 
-func newStreamRewriteVisitor(localStreamMap [int64]physical.BatchOperator) *streamRewriteVisitor {
+func newStreamRewriteVisitor(localStreamMap map[int64]BatchOperator) *streamRewriteVisitor {
 	return &streamRewriteVisitor{localStreamMap: localStreamMap}
 }
 
-func (s *streamRewriteVisitor) VisitPre(n physical.Operator) physical.Operator { return n }
+func (s *streamRewriteVisitor) VisitPre(n Operator) Operator { return n }
 
-func (s *streamRewriteVisitor) VisitPost(n physical.Operator) physical.Operator {
+func (s *streamRewriteVisitor) VisitPost(n Operator) Operator {
 
 	switch op := n.(type) {
-	case *physical.LocalExchangeInOp:
+	case *LocalExchangeInOp:
 
 		localOutputOp := s.localStreamMap[op.streamId]
 

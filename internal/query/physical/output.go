@@ -2,17 +2,17 @@ package physical
 
 import (
 	"encoding/json"
-	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execbase"
 	"meerkat/internal/storage/vector"
 )
 
 type JsonOutputOp struct {
 	input   BatchOperator
-	writer  exec.QueryOutputWriter
+	writer  execbase.QueryOutputWriter
 	encoder *json.Encoder
 }
 
-func NewJsonOutputOp(input BatchOperator, writer exec.QueryOutputWriter) *JsonOutputOp {
+func NewJsonOutputOp(input BatchOperator, writer execbase.QueryOutputWriter) *JsonOutputOp {
 	return &JsonOutputOp{
 		input:   input,
 		writer:  writer,

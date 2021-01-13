@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/storage/vector"
 )
 
 type ExchangeOutOp struct {
 	input         BatchOperator
-	execClient    exec.ExecutorClient
+	execClient    execpb.ExecutorClient
 	queryId       uuid.UUID
 	streamId      int64
 	localNodeName string
@@ -18,7 +19,7 @@ type ExchangeOutOp struct {
 
 func NewExchangeOutOp(
 	input BatchOperator,
-	execClient exec.ExecutorClient,
+	execClient execpb.ExecutorClient,
 	queryId uuid.UUID,
 	streamId int64,
 	localNodeName string,
@@ -46,9 +47,9 @@ func (e *ExchangeOutOp) Run() {
 		panic(err)
 	}
 
-	headerMsg := &exec.VectorExchangeMsg{
-		Msg: &exec.VectorExchangeMsg_Header{
-			Header: &exec.StreamHeader{
+	headerMsg := &execpb.VectorExchangeMsg{
+		Msg: &execpb.VectorExchangeMsg_Header{
+			Header: &execpb.StreamHeader{
 				QueryId:  e.queryId[:],
 				StreamId: e.streamId,
 			},
@@ -68,17 +69,17 @@ func (e *ExchangeOutOp) Run() {
 		if err != nil {
 
 			// extract the execError to propagate it over the stream.
-			execErr := exec.ExtractExecError(err)
+			execErr := execbase.ExtractExecError(err)
 
 			if execErr == nil {
-				execErr = exec.NewExecError(
+				execErr = execbase.NewExecError(
 					fmt.Sprintf("error executing query : %v", err),
 					e.localNodeName,
 				)
 			}
 
-			vectorMsg := &exec.VectorExchangeMsg{
-				Msg: &exec.VectorExchangeMsg_Error{
+			vectorMsg := &execpb.VectorExchangeMsg{
+				Msg: &execpb.VectorExchangeMsg_Error{
 					Error: execErr,
 				},
 			}
@@ -105,16 +106,16 @@ func (e *ExchangeOutOp) Run() {
 			return
 		}
 
-		vectorMsg := &exec.VectorExchangeMsg{
-			Msg: &exec.VectorExchangeMsg_VectorBatch{
-				Vector: &exec.VectorBatch{
+		vectorMsg := &execpb.VectorExchangeMsg{
+			Msg: &execpb.VectorExchangeMsg_VectorBatch{
+				VectorBatch: &execpb.VectorBatch{
 					Len:     int64(v.Len),
 					Columns: buildColumns(v),
 				},
 			},
 		}
 
-		err := vectorExchangeClient.Send(vectorMsg)
+		err = vectorExchangeClient.Send(vectorMsg)
 
 		if err != nil {
 			panic(err)
@@ -132,19 +133,22 @@ func (e *ExchangeOutOp) safeNext() (batch Batch, err interface{}) {
 	}()
 
 	batch = e.input.Next()
+
+	return
+
 }
 
 func (e *ExchangeOutOp) Accept(v Visitor) {
 	e.input = Walk(e.input, v).(BatchOperator)
 }
 
-func buildColumns(batch Batch) []*exec.Column {
+func buildColumns(batch Batch) []*execpb.Column {
 
-	columns := make([]*exec.Column, len(batch.Columns))
+	columns := make([]*execpb.Column, len(batch.Columns))
 
 	for name, col := range batch.Columns {
 
-		colProto := &exec.Column{
+		colProto := &execpb.Column{
 			Name:     name,
 			Group:    col.Group,
 			Order:    col.Order,

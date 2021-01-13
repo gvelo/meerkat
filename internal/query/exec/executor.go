@@ -18,19 +18,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"meerkat/internal/cluster"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
+	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
 )
 
-//go:generate protoc -I . -I ../../../build/proto/ -I ../../../internal/storage/ --plugin ../../../build/protoc-gen-gogofaster --gogofaster_out=plugins=grpc,paths=source_relative:.  ./exec.proto
-
-type QueryOutputWriter interface {
-	Write([]byte) (int, error)
-	Flush()
-	CloseNotify() <-chan bool
-}
-
 type Executor interface {
-	ExecuteQuery(query string, writer QueryOutputWriter) error
+	ExecuteQuery(query string, writer execbase.QueryOutputWriter) error
 	CancelQuery(queryId uuid.UUID)
 	Stop()
 }
@@ -38,7 +33,7 @@ type Executor interface {
 func NewExecutor(
 	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
-	streamReg StreamRegistry,
+	streamReg physical.StreamRegistry,
 	cluster cluster.Cluster,
 ) Executor {
 
@@ -54,11 +49,11 @@ func NewExecutor(
 type executor struct {
 	connReg   cluster.ConnRegistry
 	segReg    storage.SegmentRegistry
-	streamReg StreamRegistry
+	streamReg physical.StreamRegistry
 	cluster   cluster.Cluster
 }
 
-func (e executor) ExecuteQuery(query string, writer QueryOutputWriter) error {
+func (e executor) ExecuteQuery(query string, writer execbase.QueryOutputWriter) error {
 
 	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg, e.streamReg, e.cluster)
 
@@ -74,7 +69,7 @@ func (e *executor) Stop() {
 	panic("implement me")
 }
 
-func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg StreamRegistry, localNodeName string) *Server {
+func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg physical.StreamRegistry, localNodeName string) *Server {
 	return &Server{
 		streamReg:     streamReg,
 		connReg:       connReg,
@@ -84,13 +79,13 @@ func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, str
 }
 
 type Server struct {
-	streamReg     StreamRegistry
+	streamReg     physical.StreamRegistry
 	connReg       cluster.ConnRegistry
 	segReg        storage.SegmentRegistry
 	localNodeName string
 }
 
-func (s *Server) Control(controlSrv Executor_ControlServer) error {
+func (s *Server) Control(controlSrv execpb.Executor_ControlServer) error {
 
 	fmt.Println("new control stream")
 
@@ -102,14 +97,14 @@ func (s *Server) Control(controlSrv Executor_ControlServer) error {
 	execErr := nodeExec.ExecutionContext().Err()
 
 	if execErr != nil {
-		return execErr.Err()
+		return execbase.BuildGRPCError(execErr)
 	}
 
 	return nil
 
 }
 
-func (s *Server) VectorExchange(vectorServer Executor_VectorExchangeServer) error {
+func (s *Server) VectorExchange(vectorServer execpb.Executor_VectorExchangeServer) error {
 
 	msg, err := vectorServer.Recv()
 
@@ -117,7 +112,7 @@ func (s *Server) VectorExchange(vectorServer Executor_VectorExchangeServer) erro
 		return err
 	}
 
-	headerMsg, ok := msg.Msg.(*VectorExchangeMsg_Header)
+	headerMsg, ok := msg.Msg.(*execpb.VectorExchangeMsg_Header)
 
 	if !ok {
 		return errors.New("invalid stream header")
@@ -129,9 +124,9 @@ func (s *Server) VectorExchange(vectorServer Executor_VectorExchangeServer) erro
 		return err
 	}
 
-	ch := make(chan *ExecError, 1)
+	ch := make(chan *execpb.ExecError, 1)
 
-	stream := NewVectorExchangeStream(vectorServer, ch)
+	stream := physical.NewVectorExchangeStream(vectorServer, ch)
 
 	err = s.streamReg.RegisterStream(queryId, headerMsg.Header.StreamId, stream)
 
@@ -142,7 +137,7 @@ func (s *Server) VectorExchange(vectorServer Executor_VectorExchangeServer) erro
 	execErr := <-ch
 
 	if execErr != nil {
-		return execErr.Err()
+		return execbase.BuildGRPCError(execErr)
 	}
 
 	return nil

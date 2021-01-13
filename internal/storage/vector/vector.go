@@ -279,5 +279,13 @@ func (v *ZeroVector) Cap() int {
 }
 
 func (v *ZeroVector) HasNulls() bool {
-	return 0
+	return false
+}
+
+func (v *ZeroVector) AsBytes() []byte {
+	panic("not implemented")
+}
+
+func (v *ZeroVector) ValidityAsBytes() []byte {
+	panic("not implemented")
 }

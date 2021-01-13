@@ -20,6 +20,8 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"meerkat/internal/cluster"
+	"meerkat/internal/query/execbase"
+	"meerkat/internal/query/execpb"
 	"meerkat/internal/query/logical"
 	"meerkat/internal/query/physical"
 	"meerkat/internal/storage"
@@ -28,25 +30,25 @@ import (
 type nodeExec struct {
 	connReg       cluster.ConnRegistry
 	segReg        storage.SegmentRegistry
-	execCtx       ExecutionContext
-	controlSrv    Executor_ControlServer
+	execCtx       execbase.ExecutionContext
+	controlSrv    execpb.Executor_ControlServer
 	dag           physical.DAG
-	streamReg     StreamRegistry
+	streamReg     physical.StreamRegistry
 	localNodeName string
 }
 
 func NewNodeExec(
 	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
-	streamReg StreamRegistry,
-	controlSrv Executor_ControlServer,
+	streamReg physical.StreamRegistry,
+	controlSrv execpb.Executor_ControlServer,
 	localNodeName string,
 ) *nodeExec {
 	return &nodeExec{
 		connReg:       connReg,
 		segReg:        segReg,
 		controlSrv:    controlSrv,
-		execCtx:       NewExecutionContext(),
+		execCtx:       execbase.NewExecutionContext(),
 		streamReg:     streamReg,
 		localNodeName: localNodeName,
 	}
@@ -72,7 +74,7 @@ func (n *nodeExec) handleControlStream() {
 
 		if err != nil {
 			n.execCtx.CancelWithPropagation(err,
-				NewExecError(
+				execbase.NewExecError(
 					fmt.Sprintf("error receiving on control stream: %v  ", err),
 					"",
 				))
@@ -80,24 +82,24 @@ func (n *nodeExec) handleControlStream() {
 		}
 
 		switch cmd := execCmd.Cmd.(type) {
-		case *ExecCmd_ExecQuery:
+		case *execpb.ExecCmd_ExecQuery:
 			go n.execQuery(cmd.ExecQuery)
-		case *ExecCmd_ExecCancel:
+		case *execpb.ExecCmd_ExecCancel:
 			n.execCtx.CancelWithExecError(cmd.ExecCancel.Error)
 			return
 		default:
-			n.execCtx.CancelWithExecError(NewExecError("unknown exec command"))
+			n.execCtx.CancelWithExecError(execbase.NewExecError("unknown exec command", ""))
 			return
 
 		}
 	}
 }
 
-func (n *nodeExec) ExecutionContext() ExecutionContext {
+func (n *nodeExec) ExecutionContext() execbase.ExecutionContext {
 	return n.execCtx
 }
 
-func (n *nodeExec) execQuery(query *ExecQuery) {
+func (n *nodeExec) execQuery(query *execpb.ExecQuery) {
 
 	fmt.Println("execQuery(query *ExecQuery)", query)
 
@@ -107,7 +109,7 @@ func (n *nodeExec) execQuery(query *ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			NewExecError(fmt.Sprintf("cannot unmarshal query id: %v", err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query id: %v", err), n.localNodeName))
 		return
 	}
 
@@ -117,7 +119,7 @@ func (n *nodeExec) execQuery(query *ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			NewExecError(fmt.Sprintf("cannot unmarshal query plan on query: %v : %v", id, err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query plan on query: %v : %v", id, err), n.localNodeName))
 		return
 	}
 
@@ -125,7 +127,7 @@ func (n *nodeExec) execQuery(query *ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			NewExecError(fmt.Sprintf("cannot build ejecutable graph on query: %v : %v", id, err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot build ejecutable graph on query: %v : %v", id, err), n.localNodeName))
 		return
 	}
 
@@ -135,7 +137,7 @@ func (n *nodeExec) execQuery(query *ExecQuery) {
 
 }
 
-func decodePlan(query *ExecQuery) ([]*logical.Fragment, error) {
+func decodePlan(query *execpb.ExecQuery) ([]*logical.Fragment, error) {
 
 	reader := bytes.NewReader(query.Plan)
 
@@ -157,7 +159,7 @@ func (n *nodeExec) buildDAG(fragments []*logical.Fragment, queryId []byte) error
 		return err
 	}
 
-	builder := NewDAGBuilder(n.connReg, n.segReg, n.streamReg, n.localNodeName)
+	builder := physical.NewDAGBuilder(n.connReg, n.segReg, n.streamReg, n.localNodeName)
 
 	n.dag, err = builder.BuildDAG(fragments, id, nil, n.execCtx)
 

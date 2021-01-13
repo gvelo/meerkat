@@ -24,6 +24,8 @@ import (
 	"meerkat/internal/ingestion"
 	"meerkat/internal/jsoningester"
 	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execpb"
+	"meerkat/internal/query/physical"
 	"meerkat/internal/rest"
 	"meerkat/internal/storage"
 	"net"
@@ -138,11 +140,11 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	m.bufReg.Start()
 
-	streamReg := exec.NewStreamRegistry()
+	streamReg := physical.NewStreamRegistry()
 
 	execServer := exec.NewServer(m.connRegistry, m.segRegistry, streamReg, m.cluster.NodeName())
 
-	exec.RegisterExecutorServer(m.grpcServer, execServer)
+	execpb.RegisterExecutorServer(m.grpcServer, execServer)
 
 	executor := exec.NewExecutor(m.connRegistry, m.segRegistry, streamReg, m.cluster)
 

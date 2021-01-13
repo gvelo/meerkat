@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exec
+package execbase
 
 import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
+	"meerkat/internal/query/execpb"
 	"runtime/debug"
 )
 import "github.com/gogo/status"
 
 // ExtractExecError extract an ExecError from an error returned from the
 // grpc api. Return nil the error doesn't carry an ExecError.
-func ExtractExecError(err interface{}) *ExecError {
+func ExtractExecError(err interface{}) *execpb.ExecError {
 
 	if se, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
 
@@ -32,7 +33,7 @@ func ExtractExecError(err interface{}) *ExecError {
 			return nil
 		}
 
-		if execError, ok := st.Details()[0].(*ExecError); ok {
+		if execError, ok := st.Details()[0].(*execpb.ExecError); ok {
 			return execError
 		}
 
@@ -44,21 +45,19 @@ func ExtractExecError(err interface{}) *ExecError {
 
 }
 
-func NewExecError(detail string, nodeName string) *ExecError {
+func NewExecError(detail string, nodeName string) *execpb.ExecError {
 	id := uuid.New()
-	return &ExecError{
+	return &execpb.ExecError{
 		Id:       id[:],
 		Detail:   detail,
 		NodeName: nodeName,
-		Stack:    debug.Stack(), // TODO(gvelo): get a better stacktrace (ie. from pkg/errors )
+		Stack:    string(debug.Stack()), // TODO(gvelo): get a better stacktrace (ie. from pkg/errors )
 	}
 }
 
-// Err return a grpc error that should be used as a
-// return value from a grpc method
-func (m *ExecError) Err() error {
+func BuildGRPCError(execError *execpb.ExecError) error {
 
-	st, err := status.New(codes.Canceled, m.Detail).WithDetails(m)
+	st, err := status.New(codes.Canceled, execError.Detail).WithDetails(execError)
 
 	if err != nil {
 		panic(err)
