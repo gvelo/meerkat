@@ -15,6 +15,7 @@ type ExchangeInOp struct {
 	streamId          int64
 	queryId           uuid.UUID
 	vectorExchangeSrv exec.Executor_VectorExchangeServer
+	stream            exec.VectorExchangeStream
 	hasStream         bool
 	execCtx           exec.ExecutionContext
 }
@@ -44,15 +45,16 @@ func (e *ExchangeInOp) initStream() {
 		panic(fmt.Sprintf("cannot init stream : %v", err))
 	}
 
+	e.stream = stream
 	e.vectorExchangeSrv = stream.Server()
 
-	go e.handleStreamClose(stream)
+	go e.handleStreamClose()
 
 }
 
-func (e *ExchangeInOp) handleStreamClose(stream exec.VectorExchangeStream) {
+func (e *ExchangeInOp) handleStreamClose() {
 	<-e.execCtx.Done()
-	stream.Close(e.execCtx.Err())
+	e.stream.Close(e.execCtx.Err())
 }
 
 func (e *ExchangeInOp) Next() Batch {
@@ -65,6 +67,7 @@ func (e *ExchangeInOp) Next() Batch {
 	msg, err := e.vectorExchangeSrv.Recv()
 
 	if err == io.EOF {
+		e.stream.Close(nil)
 		return Batch{
 			Len:     0,
 			Columns: nil,

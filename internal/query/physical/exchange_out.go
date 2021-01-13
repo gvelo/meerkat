@@ -2,38 +2,42 @@ package physical
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/query/exec"
 	"meerkat/internal/storage/vector"
 )
 
-type ExchangeOut struct {
-	input      BatchOperator
-	execClient exec.ExecutorClient
-	queryId    uuid.UUID
-	streamId   int64
+type ExchangeOutOp struct {
+	input         BatchOperator
+	execClient    exec.ExecutorClient
+	queryId       uuid.UUID
+	streamId      int64
+	localNodeName string
 }
 
-func NewExchangeOut(
+func NewExchangeOutOp(
 	input BatchOperator,
 	execClient exec.ExecutorClient,
 	queryId uuid.UUID,
 	streamId int64,
-) *ExchangeOut {
+	localNodeName string,
+) *ExchangeOutOp {
 
-	return &ExchangeOut{
-		input:      input,
-		execClient: execClient,
-		queryId:    queryId,
-		streamId:   streamId,
+	return &ExchangeOutOp{
+		input:         input,
+		execClient:    execClient,
+		queryId:       queryId,
+		streamId:      streamId,
+		localNodeName: localNodeName,
 	}
 
 }
 
-func (e *ExchangeOut) Init()  { e.input.Init() }
-func (e *ExchangeOut) Close() { e.input.Close() }
+func (e *ExchangeOutOp) Init()  { e.input.Init() }
+func (e *ExchangeOutOp) Close() { e.input.Close() }
 
-func (e *ExchangeOut) Run() {
+func (e *ExchangeOutOp) Run() {
 
 	// TODO(gvelo) use a execCtx child here
 	vectorExchangeClient, err := e.execClient.VectorExchange(context.TODO(), nil)
@@ -59,10 +63,36 @@ func (e *ExchangeOut) Run() {
 
 	for {
 
-		// TODO(gvelo) if we get a panic signal we should send a
-		// VectorExchangeMsg_Error
+		v, err := e.safeNext()
 
-		v := e.input.Next()
+		if err != nil {
+
+			// extract the execError to propagate it over the stream.
+			execErr := exec.ExtractExecError(err)
+
+			if execErr == nil {
+				execErr = exec.NewExecError(
+					fmt.Sprintf("error executing query : %v", err),
+					e.localNodeName,
+				)
+			}
+
+			vectorMsg := &exec.VectorExchangeMsg{
+				Msg: &exec.VectorExchangeMsg_Error{
+					Error: execErr,
+				},
+			}
+
+			err := vectorExchangeClient.Send(vectorMsg)
+
+			if err != nil {
+				// TODO(gvelo): nothing we can do here , just log properly
+				fmt.Println(err)
+			}
+
+			panic(execErr)
+
+		}
 
 		if v.Len == 0 {
 
@@ -93,7 +123,18 @@ func (e *ExchangeOut) Run() {
 	}
 }
 
-func (e *ExchangeOut) Accept(v Visitor) {
+func (e *ExchangeOutOp) safeNext() (batch Batch, err interface{}) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+
+	batch = e.input.Next()
+}
+
+func (e *ExchangeOutOp) Accept(v Visitor) {
 	e.input = Walk(e.input, v).(BatchOperator)
 }
 

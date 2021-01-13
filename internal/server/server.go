@@ -140,7 +140,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	streamReg := exec.NewStreamRegistry()
 
-	execServer := exec.NewServer(m.connRegistry, m.segRegistry, streamReg)
+	execServer := exec.NewServer(m.connRegistry, m.segRegistry, streamReg, m.cluster.NodeName())
 
 	exec.RegisterExecutorServer(m.grpcServer, execServer)
 

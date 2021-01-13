@@ -28,6 +28,7 @@ func (o *JsonOutputOp) Run() {
 
 	for {
 
+		// TODO(gvelo) handle panic
 		batch := o.input.Next()
 
 		if batch.Len == 0 {

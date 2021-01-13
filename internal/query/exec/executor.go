@@ -74,25 +74,27 @@ func (e *executor) Stop() {
 	panic("implement me")
 }
 
-func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg StreamRegistry) *Server {
+func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg StreamRegistry, localNodeName string) *Server {
 	return &Server{
-		streamReg: streamReg,
-		connReg:   connReg,
-		segReg:    segReg,
+		streamReg:     streamReg,
+		connReg:       connReg,
+		segReg:        segReg,
+		localNodeName: localNodeName,
 	}
 }
 
 type Server struct {
-	streamReg StreamRegistry
-	connReg   cluster.ConnRegistry
-	segReg    storage.SegmentRegistry
+	streamReg     StreamRegistry
+	connReg       cluster.ConnRegistry
+	segReg        storage.SegmentRegistry
+	localNodeName string
 }
 
 func (s *Server) Control(controlSrv Executor_ControlServer) error {
 
 	fmt.Println("new control stream")
 
-	nodeExec := NewNodeExec(s.connReg, s.segReg, s.streamReg, controlSrv)
+	nodeExec := NewNodeExec(s.connReg, s.segReg, s.streamReg, controlSrv, s.localNodeName)
 	nodeExec.Start()
 
 	<-nodeExec.ExecutionContext().Done()

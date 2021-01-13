@@ -55,7 +55,7 @@ func (c *executionContext) CancelWithExecError(execError *ExecError) {
 
 func (c *executionContext) CancelWithPropagation(err error, execError *ExecError) {
 
-	e := extractExecError(err)
+	e := ExtractExecError(err)
 
 	if e == nil {
 		e = execError
@@ -65,6 +65,6 @@ func (c *executionContext) CancelWithPropagation(err error, execError *ExecError
 
 }
 
-func (c *executionContext) Cancel() { c.CancelWithExecError(nil) }
+func (c *executionContext) Cancel()               { c.CancelWithExecError(nil) }
 func (c *executionContext) Done() <-chan struct{} { return c.done }
 func (c *executionContext) Err() *ExecError       { return c.execError }

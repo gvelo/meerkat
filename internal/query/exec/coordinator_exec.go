@@ -195,8 +195,9 @@ func (n *nodeClient) sendQueryCmd(cmd *ExecCmd) {
 
 		if err != nil {
 
-			n.execCtx.CancelWithPropagation(err, newExecError(
+			n.execCtx.CancelWithPropagation(err, NewExecError(
 				fmt.Sprintf("cannot open control stream to node %s [%s]", n.nodeName, err),
+				"",
 			))
 
 			return
@@ -210,8 +211,9 @@ func (n *nodeClient) sendQueryCmd(cmd *ExecCmd) {
 
 		if err != nil {
 
-			n.execCtx.CancelWithPropagation(err, newExecError(
+			n.execCtx.CancelWithPropagation(err, NewExecError(
 				fmt.Sprintf("cannot send query to node %s [%s]", n.nodeName, err),
+				"",
 			))
 
 			return
@@ -234,9 +236,16 @@ func (n *nodeClient) handleStream() {
 				return
 			}
 
-			n.execCtx.CancelWithPropagation(err, newExecError(
-				fmt.Sprintf("error reading from control stream from node %s [%s]", n.nodeName, err),
-			))
+			execErr := ExtractExecError(err)
+
+			if execErr == nil {
+				execErr = NewExecError(
+					fmt.Sprintf("error reading from control stream : %v", err),
+					"", // TODO(gvelo): will be moved to execCtx
+				)
+			}
+
+			n.execCtx.CancelWithExecError(execErr)
 
 			return
 		}
@@ -335,14 +344,14 @@ func (c *coordinatorExecutor) exec(query string, writer QueryOutputWriter) error
 
 	go c.sendFragmentsToNodes(fragments.NodeFragments())
 
-	err = c.buildExecutableGraph(writer, fragments.AllFragments())
+	dag, err := c.buildDAG(writer, fragments.AllFragments())
 
 	if err != nil {
 		c.Cancel(err)
 		return err
 	}
 
-	c.outputOp.Run()
+	dag.Run()
 
 	return nil
 
@@ -356,22 +365,25 @@ func buildNodeNames(members []serf.Member) []string {
 	return nodeNames
 }
 
-func (c *coordinatorExecutor) buildExecutableGraph(
+func (c *coordinatorExecutor) buildDAG(
 	writer QueryOutputWriter,
 	fragments []*logical.Fragment,
-) error {
+) (physical.DAG, error) {
 
-	graphBuilder := NewDAGBuilder(c.conReg, c.segReg, c.streamReg)
+	dagBuilder := NewDAGBuilder(
+		c.conReg,
+		c.segReg,
+		c.streamReg,
+		c.cluster.NodeName(),
+	)
 
-	output, err := graphBuilder.BuildCoordinatorGraph(writer, fragments)
+	dag, err := dagBuilder.BuildDAG(fragments, c.id, writer, c.execCtx)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	c.outputOp = output
-
-	return nil
+	return dag, nil
 
 }
 
@@ -390,6 +402,6 @@ func (c *coordinatorExecutor) handleCtxCancel() {
 }
 
 func (c *coordinatorExecutor) Cancel(err error) {
-	execError := newExecError(err.Error())
+	execError := NewExecError(err.Error(), c.cluster.NodeName())
 	c.execCtx.CancelWithExecError(execError)
 }

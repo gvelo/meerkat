@@ -112,6 +112,7 @@ func (e *dagBuilder) BuildDAG(
 		queryId,
 		segments,
 		e.segReg,
+		e.localNodeName,
 	)
 
 	return dag, nil
@@ -194,7 +195,13 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 			client := NewExecutorClient(conn)
 
-			exchangeOutOp := physical.NewExchangeOut(input, client, g.queryId, streamId)
+			exchangeOutOp := physical.NewExchangeOutOp(
+				input,
+				client,
+				g.queryId,
+				streamId,
+				g.localNodeName,
+			)
 
 			g.roots = append(g.roots, exchangeOutOp)
 			g.runnableOps = append(g.runnableOps, exchangeOutOp)

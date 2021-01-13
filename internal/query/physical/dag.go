@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	"meerkat/internal/query/exec"
 	"meerkat/internal/storage"
-	"runtime/debug"
 	"sync"
 )
 
@@ -17,13 +16,14 @@ var _ DAG = &executableDAG{}
 
 // the root of the DAG. Handle operator lifecicle and acquired resources.
 type executableDAG struct {
-	execCtx   exec.ExecutionContext
-	runnables []RunnableOp
-	roots     []RunnableOp
-	queryId   uuid.UUID
-	wg        *sync.WaitGroup
-	segments  []storage.Segment
-	segReg    storage.SegmentRegistry
+	execCtx       exec.ExecutionContext
+	runnables     []RunnableOp
+	roots         []RunnableOp
+	queryId       uuid.UUID
+	wg            *sync.WaitGroup
+	segments      []storage.Segment
+	segReg        storage.SegmentRegistry
+	localNodeName string
 }
 
 func NewDAG(
@@ -33,16 +33,18 @@ func NewDAG(
 	queryId uuid.UUID,
 	segments []storage.Segment,
 	segReg storage.SegmentRegistry,
+	localNodeName string,
 ) *executableDAG {
 
 	return &executableDAG{
-		execCtx:   execCtx,
-		runnables: runnables,
-		roots:     roots,
-		queryId:   queryId,
-		wg:        &sync.WaitGroup{},
-		segments:  segments,
-		segReg:    segReg,
+		execCtx:       execCtx,
+		runnables:     runnables,
+		roots:         roots,
+		queryId:       queryId,
+		wg:            &sync.WaitGroup{},
+		segments:      segments,
+		segReg:        segReg,
+		localNodeName: localNodeName,
 	}
 
 }
@@ -70,16 +72,26 @@ func (ed *executableDAG) runOp(op RunnableOp) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			// TODO(gvelo) log propertly
-			// handle all errors here .. ( check remote error etc .. )
-			// no need to pass a cancel func to all the gorutines
-			//
-			debug.PrintStack()
-			error := fmt.Errorf("error executing query : %v", r)
-			ed.execCtx.CancelWithPropagation(error, &exec.ExecError{
-				Id:     ed.queryId[:],
-				Detail: fmt.Sprintf("error on operator %T", ed),
-			})
+
+			if execErr, ok := r.(*exec.ExecError); ok {
+				ed.execCtx.CancelWithExecError(execErr)
+				return
+			}
+
+			execErr := exec.ExtractExecError(r)
+
+			if execErr != nil {
+				ed.execCtx.CancelWithExecError(execErr)
+				return
+			}
+
+			execErr = exec.NewExecError(
+				fmt.Sprintf("Error executing query: %v", r),
+				ed.localNodeName,
+			)
+
+			ed.execCtx.CancelWithExecError(execErr)
+
 		}
 	}()
 

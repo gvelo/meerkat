@@ -16,12 +16,13 @@ package exec
 import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
+	"runtime/debug"
 )
 import "github.com/gogo/status"
 
-// extractExecError extract an ExecError from an error returned from the
+// ExtractExecError extract an ExecError from an error returned from the
 // grpc api. Return nil the error doesn't carry an ExecError.
-func extractExecError(err error) *ExecError {
+func ExtractExecError(err interface{}) *ExecError {
 
 	if se, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
 
@@ -43,14 +44,18 @@ func extractExecError(err error) *ExecError {
 
 }
 
-func newExecError(detail string) *ExecError {
+func NewExecError(detail string, nodeName string) *ExecError {
 	id := uuid.New()
 	return &ExecError{
-		Id:     id[:],
-		Detail: detail,
+		Id:       id[:],
+		Detail:   detail,
+		NodeName: nodeName,
+		Stack:    debug.Stack(), // TODO(gvelo): get a better stacktrace (ie. from pkg/errors )
 	}
 }
 
+// Err return a grpc error that should be used as a
+// return value from a grpc method
 func (m *ExecError) Err() error {
 
 	st, err := status.New(codes.Canceled, m.Detail).WithDetails(m)

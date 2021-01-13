@@ -87,9 +87,10 @@ message StreamHeader{
 message ExecError{
   // id is an uuid used to trace errors across nodes. ie to identify
   // root causes of cancellations.
-  bytes     id     = 1;
+  bytes     id = 1;
   string    detail = 3;
-  // TODO(gvelo) srcNode ? stacktrace ? stream ?
+  string    nodeName = 4;
+  string    stack = 5;
 }
 
 // VectorExchangeMsg are the type of messages flowing through

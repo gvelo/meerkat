@@ -36,7 +36,7 @@ type vectorExchangeStream struct {
 	mu     sync.Mutex
 }
 
-func NewVectorExchangeStream(server Executor_VectorExchangeServer, done chan *ExecError) VectorExchangeStream {
+func NewVectorExchangeStream(server Executor_VectorExchangeServer, done chan *ExecError) *vectorExchangeStream {
 	return &vectorExchangeStream{
 		server: server,
 		done:   done,
