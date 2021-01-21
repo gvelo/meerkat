@@ -71,7 +71,7 @@ func (f *fakeFloatColumn) Stats() *storage.Stats {
 	panic("implement me")
 }
 
-func (f *fakeFloatColumn) Index() storage.FloatIndex {
+func (f *fakeFloatColumn) Index() storage.Float64Index {
 	panic("implement me")
 }
 

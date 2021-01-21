@@ -103,7 +103,8 @@ func (p *Partition) column(name string) *column {
 	p.colIdx++
 
 	col := &column{
-		idx: p.colIdx,
+		idx:         p.colIdx,
+		keepParsing: true,
 	}
 
 	p.columns[name] = col
@@ -201,12 +202,12 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 			case json.Number:
 				s := string(v)
 				if col.keepParsing {
-					_, err := strconv.ParseFloat(s, 64)
+					_, err := strconv.Atoi(s)
 					if err != nil {
 						col.keepParsing = false
 						col.colType = storage.ColumnType_STRING
 					} else {
-						col.colType = storage.ColumnType_FLOAT64
+						col.colType = storage.ColumnType_INT64
 					}
 
 				}

@@ -129,17 +129,37 @@ func (d *defaultStorage) WriteSegment(src SegmentSource) *SegmentInfo {
 
 	// TODO(gvelo) build SegmentInfo
 
+	var colInfos []*ColumnInfo
+
+	for _, srcCol := range srcInfo.Columns {
+
+		colInfo := &ColumnInfo{
+			Name:           srcCol.Name,
+			ColumnType:     srcCol.ColumnType,
+			IndexType:      srcCol.IndexType,
+			Encoding:       Encoding_PLAIN,
+			Nullable:       srcCol.Nullable,
+			Len:            srcCol.Len,
+			Cardinality:    0,
+			SizeOnDisk:     0,
+			CompressedSize: 0,
+			NullCount:      0,
+		}
+
+		colInfos = append(colInfos, colInfo)
+	}
+
 	segInfo := &SegmentInfo{
 		Id:           srcInfo.Id[:],
 		DatabaseName: srcInfo.DatabaseName,
-		TableName:    srcInfo.DatabaseName,
+		TableName:    srcInfo.TableName,
 		PartitionId:  srcInfo.PartitionId,
 		Len:          srcInfo.Len,
 		Interval: &Interval{
 			From: srcInfo.Interval.From,
 			To:   srcInfo.Interval.To,
 		},
-		Columns: nil,
+		Columns: colInfos,
 	}
 
 	return segInfo

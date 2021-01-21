@@ -28,6 +28,9 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
+var _ Int64Column = &int64Column{}
+var _ Float64Column = &float64Column{}
+
 type int64Column struct {
 	b              []byte
 	valid          *roaring.Bitmap

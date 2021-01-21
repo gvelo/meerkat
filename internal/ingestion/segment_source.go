@@ -1,6 +1,7 @@
 package ingestion
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/colval"
@@ -117,7 +118,7 @@ func (s *SegmentSource) createSrc(buf *ByteSliceSparseBuffer, columnType storage
 	case storage.ColumnType_STRING:
 		return NewByteSliceDynamicSrc(denseBuf, blockSize, s.perm)
 	default:
-		panic("unknown column type")
+		panic(fmt.Sprintf("unknown column type: %v ", columnType))
 	}
 
 }

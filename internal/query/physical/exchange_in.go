@@ -25,12 +25,14 @@ func NewExchangeInOp(
 	streamReg StreamRegistry,
 	streamId int64,
 	queryId uuid.UUID,
+	execCtx execbase.ExecutionContext,
 ) *ExchangeInOp {
 
 	return &ExchangeInOp{
 		streamReg: streamReg,
 		streamId:  streamId,
 		queryId:   queryId,
+		execCtx:   execCtx,
 	}
 
 }

@@ -103,9 +103,7 @@ func (b *SegmentBuffer) run() {
 
 		case <-b.timer.C:
 
-			if b.buf.len > 0 {
-				b.flush()
-			}
+			b.flush()
 
 		}
 
@@ -122,6 +120,10 @@ func (b *SegmentBuffer) add(partition *Partition) {
 }
 
 func (b *SegmentBuffer) flush() {
+
+	if b.buf.len == 0 {
+		return
+	}
 
 	b.log.Debug().Int("rows", b.buf.len).Msg("flush")
 

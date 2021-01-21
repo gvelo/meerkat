@@ -78,6 +78,7 @@ func (e *dagBuilder) BuildDAG(
 			streamReg:      e.streamReg,
 			segReg:         e.segReg,
 			localStreamMap: make(map[int64]BatchOperator),
+			execCtx:        execCtx,
 		}
 
 		if len(fragment.Roots) > 1 {
@@ -134,6 +135,7 @@ type dagBuilderVisitor struct {
 	localStreamMap map[int64]BatchOperator
 	segments       []storage.Segment
 	runnableOps    []RunnableOp
+	execCtx        execbase.ExecutionContext
 }
 
 func (g *dagBuilderVisitor) VisitPre(n logical.Node) logical.Node { return n }
@@ -148,11 +150,14 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 		g.runnableOps = append(g.runnableOps, jsonOutputOp)
 	case *logical.SourceOp:
 
-		// TODO(gvelo) call Segments() with real params
+		// TODO(gvelo) call Segments() with actual params
 		g.segments = g.segReg.Segments(nil, "", "")
 
 		var child []BatchOperator
 
+		// TODO(gvelo) if there are no segments available, we should provide an
+		// virtual empty segment which always return a zero vector. Or fail with
+		// a table not found ?
 		for _, segment := range g.segments {
 			op := buildBatchOp(segment) // TODO(gvelo) add columns and filter exp
 			child = append(child, op)
@@ -220,7 +225,7 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 			if srcNodeName == g.localNodeName {
 				op = NewLocalExchangeInOp(streamId)
 			} else {
-				op = NewExchangeInOp(g.streamReg, streamId, g.queryId)
+				op = NewExchangeInOp(g.streamReg, streamId, g.queryId, g.execCtx)
 			}
 
 			inputs = append(inputs, op)
@@ -267,7 +272,7 @@ func buildBatchOp(segment storage.Segment) BatchOperator {
 		case storage.Float64Column:
 			iter = c.Iterator()
 		default:
-			panic("unknown column type")
+			panic(fmt.Sprintf("unknown column type : %T", col))
 
 		}
 

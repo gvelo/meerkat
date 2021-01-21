@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"fmt"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/vector"
 )
@@ -19,6 +20,8 @@ func (c *ColumnReaderOp) Init()  {}
 func (c *ColumnReaderOp) Close() {}
 
 func (c *ColumnReaderOp) Next() vector.Vector {
+
+	fmt.Println("ColumnReaderOp Next()")
 
 	if c.iterator.HasNext() {
 		switch i := c.iterator.(type) {

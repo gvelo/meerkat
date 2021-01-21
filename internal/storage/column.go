@@ -24,7 +24,7 @@ type Column interface {
 
 type Int64Column interface {
 	Column
-	Index() Int64Index
+	// Index() Int64Index
 	Reader() Int64ColumnReader
 	Iterator() Int64Iterator
 }
@@ -37,8 +37,8 @@ type Int64ColumnReader interface {
 
 type Float64Column interface {
 	Column
-	Index() FloatIndex
-	Read(pos []uint32) vector.Float64Vector
+	// Index() Float64Index
+	Reader() Float64ColumnReader
 	Iterator() Float64Iterator
 }
 
@@ -120,7 +120,7 @@ type Int64Index interface {
 	Le(i int64) *roaring.Bitmap
 }
 
-type FloatIndex interface {
+type Float64Index interface {
 	Eq(f float64) *roaring.Bitmap
 	Ne(f float64) *roaring.Bitmap
 	Gt(f float64) *roaring.Bitmap

@@ -16,6 +16,7 @@ package storage
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"runtime/debug"
 	"sync"
 )
 
@@ -139,6 +140,7 @@ func (w *segmentWriterWorker) writeSegment(src SegmentSource) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			debug.PrintStack()
 			w.log.
 				Error().
 				Interface("error", r).

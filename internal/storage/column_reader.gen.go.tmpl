@@ -22,6 +22,9 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
+var _ Int64Column = &int64Column{}
+var _ Float64Column = &float64Column{}
+
 {{range .}}
 
 type {{.type}}Column struct {

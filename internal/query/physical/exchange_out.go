@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"io"
 	"meerkat/internal/query/execbase"
 	"meerkat/internal/query/execpb"
 	"meerkat/internal/storage/vector"
@@ -41,7 +42,7 @@ func (e *ExchangeOutOp) Close() { e.input.Close() }
 func (e *ExchangeOutOp) Run() {
 
 	// TODO(gvelo) use a execCtx child here
-	vectorExchangeClient, err := e.execClient.VectorExchange(context.TODO(), nil)
+	vectorExchangeClient, err := e.execClient.VectorExchange(context.TODO())
 
 	if err != nil {
 		panic(err)
@@ -99,7 +100,7 @@ func (e *ExchangeOutOp) Run() {
 
 			_, err := vectorExchangeClient.CloseAndRecv() // EOF
 
-			if err != nil {
+			if err != nil && err != io.EOF {
 				panic(err) // TODO(gvelo) panic ?
 			}
 
@@ -144,7 +145,7 @@ func (e *ExchangeOutOp) Accept(v Visitor) {
 
 func buildColumns(batch Batch) []*execpb.Column {
 
-	columns := make([]*execpb.Column, len(batch.Columns))
+	columns := make([]*execpb.Column, 0, len(batch.Columns))
 
 	for name, col := range batch.Columns {
 

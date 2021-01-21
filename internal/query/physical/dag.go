@@ -6,6 +6,8 @@ import (
 	"meerkat/internal/query/execbase"
 	"meerkat/internal/query/execpb"
 	"meerkat/internal/storage"
+	"runtime/debug"
+	"strings"
 	"sync"
 )
 
@@ -54,8 +56,11 @@ func (ed *executableDAG) Run() {
 
 	// TODO(gvelo) init operators
 
+	ed.Dump()
+
 	for _, runnable := range ed.runnables {
 		ed.wg.Add(1)
+		fmt.Printf("running op %T \n", runnable)
 		go ed.runOp(runnable)
 	}
 
@@ -73,6 +78,8 @@ func (ed *executableDAG) runOp(op RunnableOp) {
 
 	defer func() {
 		if r := recover(); r != nil {
+
+			debug.PrintStack()
 
 			if execErr, ok := r.(*execpb.ExecError); ok {
 				ed.execCtx.CancelWithExecError(execErr)
@@ -96,10 +103,10 @@ func (ed *executableDAG) runOp(op RunnableOp) {
 		}
 	}()
 
-	ed.Run()
+	op.Run()
 }
 
-func (ed executableDAG) releaseSegments() {
+func (ed *executableDAG) releaseSegments() {
 
 	for _, segment := range ed.segments {
 		id, err := uuid.FromBytes(segment.Info().Id)
@@ -109,4 +116,25 @@ func (ed executableDAG) releaseSegments() {
 		ed.segReg.Release(id)
 	}
 
+}
+
+func (ed *executableDAG) Dump() {
+	v := &dagDumpVisitor{}
+	Walk(ed.roots[0], v)
+}
+
+type dagDumpVisitor struct {
+	ident int
+}
+
+func (d *dagDumpVisitor) VisitPre(n Operator) Operator {
+	d.ident += 10
+	sp := strings.Repeat(" ", d.ident)
+	fmt.Printf("%v %T \n", sp, n)
+	return n
+}
+
+func (d *dagDumpVisitor) VisitPost(n Operator) Operator {
+	d.ident -= 10
+	return n
 }
