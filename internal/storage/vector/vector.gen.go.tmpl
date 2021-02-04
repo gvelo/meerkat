@@ -69,6 +69,12 @@ func (v *{{.Name}}Vector ) Append{{.Name}}( i {{.Type}}) {
 	v.l = len(v.buf)
 }
 
+func (v *{{.Name}}Vector) AppendNull() {
+	// TODO(gvelo) memset
+	v.SetInvalid(v.l)
+	v.l++
+}
+
 func (v *{{.Name}}Vector) Buf() []{{.Type}} {
 	return v.buf
 }

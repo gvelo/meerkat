@@ -75,6 +75,12 @@ func (v *Int64Vector) AppendInt64(i int64) {
 	v.l = len(v.buf)
 }
 
+func (v *Int64Vector) AppendNull() {
+	// TODO(gvelo) memset
+	v.SetInvalid(v.l)
+	v.l++
+}
+
 func (v *Int64Vector) Buf() []int64 {
 	return v.buf
 }
@@ -157,6 +163,12 @@ func (v *Int32Vector) Append(i []int32) {
 func (v *Int32Vector) AppendInt32(i int32) {
 	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
+}
+
+func (v *Int32Vector) AppendNull() {
+	// TODO(gvelo) memset
+	v.SetInvalid(v.l)
+	v.l++
 }
 
 func (v *Int32Vector) Buf() []int32 {
@@ -243,6 +255,12 @@ func (v *Float64Vector) AppendFloat64(i float64) {
 	v.l = len(v.buf)
 }
 
+func (v *Float64Vector) AppendNull() {
+	// TODO(gvelo) memset
+	v.SetInvalid(v.l)
+	v.l++
+}
+
 func (v *Float64Vector) Buf() []float64 {
 	return v.buf
 }
@@ -325,6 +343,21 @@ func (v *BoolVector) Append(i []bool) {
 func (v *BoolVector) AppendBool(i bool) {
 	v.buf = append(v.buf[:v.l], i)
 	v.l = len(v.buf)
+}
+
+func (v *BoolVector) AppendNull() {
+	// when we need to append null in a vector that was created as
+	// a not null vector we must create a valid array and set the previous
+	// values as not null.
+	if !v.HasNulls() {
+		v.valid = make([]uint64, 8192*2)
+		for i := 0; i < v.l; i++ {
+			v.SetValid(i)
+		}
+	}
+	// TODO(gvelo) memset
+	v.SetInvalid(v.l)
+	v.l++
 }
 
 func (v *BoolVector) Buf() []bool {

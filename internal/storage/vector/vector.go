@@ -15,7 +15,9 @@
 
 package vector
 
-import "meerkat/internal/util/sliceutil"
+import (
+	"meerkat/internal/util/sliceutil"
+)
 
 const (
 	log2WordSize = uint(6)
@@ -28,9 +30,13 @@ type Vector interface {
 	HasNulls() bool
 	AsBytes() []byte
 	ValidityAsBytes() []byte
+	AppendNull()
+	IsValid(i int) bool
 }
 
 type Pool interface {
+	GetVector(t Vector, nullable bool) Vector
+	// TODO: remove all other gets.
 	GetInt64Vector() Int64Vector
 	GetInt32Vector() Int32Vector
 	GetFloat64Vector() Float64Vector
@@ -44,6 +50,8 @@ type Pool interface {
 	GetNotNullableInt32Vector() Int32Vector
 
 	PutInt64Vector(vector Int64Vector)
+	// TODO: we should release the vectors.
+	// Release(v Vector)
 }
 
 type ByteSliceVector struct {
@@ -179,6 +187,56 @@ func DefaultVectorPool() Pool {
 type defaultPool struct {
 }
 
+func (p *defaultPool) GetVector(t Vector, nullable bool) Vector {
+
+	switch t.(type) {
+	case *BoolVector:
+		if nullable {
+			v := p.GetBoolVector()
+			return &v
+		} else {
+			v := p.GetNotNullableBoolVector()
+			return &v
+		}
+		break
+	case *Int64Vector:
+		if nullable {
+			v := p.GetInt64Vector()
+			return &v
+		} else {
+			v := p.GetNotNullableInt64Vector()
+			return &v
+		}
+	case *Int32Vector:
+		if nullable {
+			v := p.GetInt32Vector()
+			return &v
+		} else {
+			v := p.GetNotNullableInt32Vector()
+			return &v
+		}
+	case *Float64Vector:
+		if nullable {
+			v := p.GetFloat64Vector()
+			return &v
+		} else {
+			v := p.GetNotNullableFloat64Vector()
+			return &v
+		}
+	case *ByteSliceVector:
+		if nullable {
+			v := p.GetByteSliceVector()
+			return &v
+		} else {
+			v := p.GetNotNullableFloat64Vector()
+			return &v
+		}
+	default:
+		panic("No vector found.")
+	}
+	return &ZeroVector{}
+}
+
 func (p *defaultPool) GetNotNullableInt32Vector() Int32Vector {
 	return Int32Vector{
 		valid: make([]uint64, 8192*2),
@@ -268,6 +326,14 @@ func (*defaultPool) PutInt64Vector(vector Int64Vector) {
 }
 
 type ZeroVector struct {
+}
+
+func (v *ZeroVector) AppendNull() {
+	panic("implement me")
+}
+
+func (v *ZeroVector) IsValid(i int) bool {
+	panic("implement me")
 }
 
 func (v *ZeroVector) Len() int {
