@@ -18,51 +18,50 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
-type BatchOperatorDummy struct {
-	b []Batch
-	i int
+type BatchOperatorTest struct {
+	batches []Batch
+	i       int
 }
 
-func (b BatchOperatorDummy) Init() {
+func NewBatchOperatorTest() *BatchOperatorTest {
+	return &BatchOperatorTest{}
+}
+
+func (b *BatchOperatorTest) Init() {
 	b.i = 0
 }
 
-func (b BatchOperatorDummy) Close() {
+func (b *BatchOperatorTest) Close() {
 	panic("implement me")
 }
 
-func (b BatchOperatorDummy) Accept(v Visitor) {
+func (b *BatchOperatorTest) Accept(v Visitor) {
 	panic("implement me")
 }
 
-func (b BatchOperatorDummy) Next() Batch {
-	if b.i < len(b.b) {
-		batch := b.b[b.i]
+func (b *BatchOperatorTest) Next() Batch {
+	if b.i < len(b.batches) {
+		batch := b.batches[b.i]
 		b.i++
 		return batch
 	}
 	return Batch{Len: 0}
 }
 
-func CreateBatchOp(vector [][]vector.Vector, types []storage.ColumnType, names []string) BatchOperator {
+func (b *BatchOperatorTest) AddBatch() {
+	b.batches = append(b.batches, NewBatch())
+}
 
-	b := make([]Batch, 0)
-	for i := 0; i < len(vector); i++ {
-
-		b = append(b, NewBatch())
-
-		for j := 0; j < len(vector[i]); j++ {
-
-			b[i].Columns[names[j]] = Col{
-				Group:      0,
-				Order:      1,
-				Vec:        vector[i][j],
-				ColumnType: types[j],
-			}
-
-		}
-		b[i].Len = vector[i][0].Len()
+func (b *BatchOperatorTest) AddColumn(vector vector.Vector, t storage.ColumnType, name string, g int64) {
+	if len(b.batches) == 0 {
+		panic("batch is null, you should use AddBatch, before call AddColumn")
 	}
-	bo := &BatchOperatorDummy{b, 0}
-	return bo
+	cb := int64(len(b.batches) - 1)
+	b.batches[cb].Columns[name] = Col{
+		Group:      g,
+		Order:      cb,
+		Vec:        vector,
+		ColumnType: t,
+	}
+	b.batches[cb].Len = vector.Len()
 }

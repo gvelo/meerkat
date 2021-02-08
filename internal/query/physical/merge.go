@@ -8,11 +8,11 @@ import (
 )
 
 type MergeOp struct {
-	heap       MinHeap
-	input      []BatchOperator
-	lists      []Batch
-	idxInList  []int
-	initilized bool
+	heap        MinHeap
+	input       []BatchOperator
+	lists       []Batch
+	idxInList   []int
+	initialized bool
 }
 
 // An Item is something we manage in a value queue.
@@ -41,9 +41,6 @@ func (h MinHeap) Swap(i, j int) {
 }
 
 func (h *MinHeap) Push(x interface{}) {
-	//n := len(*h)
-	//item := x.(*Item)
-	//item.index = n
 	*h = append(*h, x.(*Item))
 }
 
@@ -52,7 +49,6 @@ func (h *MinHeap) Pop() interface{} {
 	n := len(old)
 	item := old[0]
 	old[0] = nil // avoid memory leak
-	//item.index = -1 // for safety
 	*h = old[1:n]
 	return item
 }
@@ -73,11 +69,11 @@ func (h *MinHeap) update(item *Item, value int64) {
 
 func NewMergeOp(input []BatchOperator) *MergeOp {
 	return &MergeOp{
-		input:      input,
-		idxInList:  make([]int, len(input)),
-		lists:      make([]Batch, len(input)),
-		heap:       nil,
-		initilized: false,
+		input:       input,
+		idxInList:   make([]int, len(input)),
+		lists:       make([]Batch, len(input)),
+		heap:        nil,
+		initialized: false,
 	}
 
 }
@@ -85,13 +81,14 @@ func NewMergeOp(input []BatchOperator) *MergeOp {
 func (m *MergeOp) Init() {
 	// TODO(gvelo) Init() it is ok to call init multiple times so we need to
 	// track initialization state.
-	if !m.initilized {
+	// TODO(gvelo) Deberiamos lockear este flag, no entiendo el ciclo de vida.. y porque se llama 2 veces.
+	if !m.initialized {
 		for _, operator := range m.input {
 			operator.Init()
 		}
 		m.initHeap()
 	}
-	m.initilized = true
+	m.initialized = true
 }
 
 func (m *MergeOp) initHeap() {
@@ -126,7 +123,7 @@ func (m *MergeOp) Close() {
 	for _, operator := range m.input {
 		operator.Close()
 	}
-	m.initilized = false
+	m.initialized = false
 }
 
 func (m *MergeOp) Next() Batch {
@@ -142,6 +139,7 @@ func (m *MergeOp) Next() Batch {
 	}
 
 	// Build new dest batch
+	// TODO: aca copio el mismo batch, las cantidad de elementos inclusive, ver si esta ok ...
 	res := m.lists[maxIdx].Clone()
 
 	// while we have items in the heap
@@ -150,7 +148,7 @@ func (m *MergeOp) Next() Batch {
 		for i := 0; i < res.Len; i++ {
 
 			it := m.heap.Pop().(*Item)
-			println("inputIdx ", it.inputIdx, "value ", it.value, "m.idxInList[it.inputIdx] ", m.idxInList[it.inputIdx])
+			println("list ", it.inputIdx, "value ", it.value, "idxInList", m.idxInList[it.inputIdx])
 
 			m.copyRow(m.lists[it.inputIdx].Columns, m.idxInList[it.inputIdx], res.Columns)
 			m.idxInList[it.inputIdx]++
