@@ -19,7 +19,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/hashicorp/serf/serf"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -43,18 +42,19 @@ type nodeManager interface {
 func newNodeManager(
 	queryId uuid.UUID,
 	execCtx execbase.ExecutionContext,
-	connRegistry cluster.ConnRegistry,
+	cl cluster.Cluster,
 ) nodeManager {
 
 	manager := &defaultNodeManager{
 		queryId: queryId,
 	}
 
-	connRegistry.Range(func(nodeName string, conn *grpc.ClientConn) bool {
-		client := newNodeClient(execCtx, nodeName, conn)
+	clusterNodes := cl.Nodes([]string{cluster.Ready}, true)
+
+	for _, node := range clusterNodes {
+		client := newNodeClient(execCtx, node.Id(), node.ClientConn())
 		manager.nodeClients = append(manager.nodeClients, client)
-		return true
-	})
+	}
 
 	return manager
 
@@ -100,7 +100,7 @@ func (d *defaultNodeManager) sendQueryFragments(queryId uuid.UUID, fragments []*
 	msg := d.buildQueryMsg(queryId, fragments)
 	fmt.Println("client len :", len(d.nodeClients))
 	for _, client := range d.nodeClients {
-		fmt.Println("sending query to :", client.nodeName)
+		fmt.Println("sending query to :", client.nodeId)
 		client.sendQueryCmd(msg)
 	}
 
@@ -138,10 +138,10 @@ func (d *defaultNodeManager) Close() {
 
 }
 
-func newNodeClient(execCtx execbase.ExecutionContext, nodeName string, conn *grpc.ClientConn) *nodeClient {
+func newNodeClient(execCtx execbase.ExecutionContext, nodeId string, conn *grpc.ClientConn) *nodeClient {
 
 	return &nodeClient{
-		nodeName:   nodeName,
+		nodeId:     nodeId,
 		execClient: execpb.NewExecutorClient(conn),
 		execCtx:    execCtx,
 	}
@@ -150,7 +150,7 @@ func newNodeClient(execCtx execbase.ExecutionContext, nodeName string, conn *grp
 
 type nodeClient struct {
 	mu            sync.Mutex
-	nodeName      string
+	nodeId        string
 	execClient    execpb.ExecutorClient
 	controlClient execpb.Executor_ControlClient
 	execCtx       execbase.ExecutionContext
@@ -198,7 +198,7 @@ func (n *nodeClient) sendQueryCmd(cmd *execpb.ExecCmd) {
 		if err != nil {
 
 			n.execCtx.CancelWithPropagation(err, execbase.NewExecError(
-				fmt.Sprintf("cannot open control stream to node %s [%s]", n.nodeName, err),
+				fmt.Sprintf("cannot open control stream to node %s [%s]", n.nodeId, err),
 				"",
 			))
 
@@ -214,7 +214,7 @@ func (n *nodeClient) sendQueryCmd(cmd *execpb.ExecCmd) {
 		if err != nil {
 
 			n.execCtx.CancelWithPropagation(err, execbase.NewExecError(
-				fmt.Sprintf("cannot send query to node %s [%s]", n.nodeName, err),
+				fmt.Sprintf("cannot send query to node %s [%s]", n.nodeId, err),
 				"",
 			))
 
@@ -272,7 +272,6 @@ func (n *nodeClient) close() {
 }
 
 func NewCoordinatorExecutor(
-	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
 	cluster cluster.Cluster,
@@ -280,12 +279,11 @@ func NewCoordinatorExecutor(
 
 	id := uuid.New()
 	execCtx := execbase.NewExecutionContext()
-	nodeManager := newNodeManager(id, execCtx, connReg)
+	nodeManager := newNodeManager(id, execCtx, cluster)
 
 	exec := &coordinatorExecutor{
 		id:          id,
 		segReg:      segReg,
-		conReg:      connReg,
 		nodeManager: nodeManager,
 		streamReg:   streamReg,
 		cluster:     cluster,
@@ -303,7 +301,6 @@ type coordinatorExecutor struct {
 	id          uuid.UUID
 	log         zerolog.Logger
 	segReg      storage.SegmentRegistry
-	conReg      cluster.ConnRegistry
 	nodeManager nodeManager
 	streamReg   physical.StreamRegistry
 	cluster     cluster.Cluster
@@ -338,8 +335,8 @@ func (c *coordinatorExecutor) exec(query string, writer execbase.QueryOutputWrit
 	// parallelize
 	fragments := logical.Parallelize(
 		optPlan,
-		c.cluster.NodeName(),
-		buildNodeNames(c.cluster.LiveMembers()),
+		c.cluster.NodeId(),
+		nodeIds(c.cluster.Nodes([]string{cluster.Ready}, true)),
 	)
 
 	go c.handleCtxCancel()
@@ -359,12 +356,12 @@ func (c *coordinatorExecutor) exec(query string, writer execbase.QueryOutputWrit
 
 }
 
-func buildNodeNames(members []serf.Member) []string {
-	nodeNames := make([]string, len(members))
-	for i, member := range members {
-		nodeNames[i] = member.Name
+func nodeIds(nodes []cluster.Node) []string {
+	ids := make([]string, len(nodes))
+	for i, node := range nodes {
+		ids[i] = node.Id()
 	}
-	return nodeNames
+	return ids
 }
 
 func (c *coordinatorExecutor) buildDAG(
@@ -373,10 +370,10 @@ func (c *coordinatorExecutor) buildDAG(
 ) (physical.DAG, error) {
 
 	dagBuilder := physical.NewDAGBuilder(
-		c.conReg,
+		c.cluster,
 		c.segReg,
 		c.streamReg,
-		c.cluster.NodeName(),
+		c.cluster.NodeId(),
 	)
 
 	dag, err := dagBuilder.BuildDAG(fragments, c.id, writer, c.execCtx)
@@ -404,6 +401,6 @@ func (c *coordinatorExecutor) handleCtxCancel() {
 }
 
 func (c *coordinatorExecutor) Cancel(err error) {
-	execError := execbase.NewExecError(err.Error(), c.cluster.NodeName())
+	execError := execbase.NewExecError(err.Error(), c.cluster.NodeId())
 	c.execCtx.CancelWithExecError(execError)
 }

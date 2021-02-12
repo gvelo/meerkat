@@ -34,23 +34,23 @@ type DAGBuilder interface {
 }
 
 func NewDAGBuilder(
-	connReg cluster.ConnRegistry,
+	cluster cluster.Cluster,
 	segReg storage.SegmentRegistry,
 	streamReg StreamRegistry,
-	localNodeName string,
+	localNodeId string,
 ) DAGBuilder {
 
 	return &dagBuilder{
-		connReg:       connReg,
+		cluster:       cluster,
 		segReg:        segReg,
 		streamReg:     streamReg,
-		localNodeName: localNodeName,
+		localNodeName: localNodeId,
 	}
 
 }
 
 type dagBuilder struct {
-	connReg       cluster.ConnRegistry
+	cluster       cluster.Cluster // TODO(gvelo) remove
 	segReg        storage.SegmentRegistry
 	streamReg     StreamRegistry
 	localNodeName string
@@ -73,8 +73,8 @@ func (e *dagBuilder) BuildDAG(
 		builder := &dagBuilderVisitor{
 			outputWriter:   writer,
 			queryId:        queryId,
-			localNodeName:  e.localNodeName,
-			connReg:        e.connReg,
+			localNodeId:    e.localNodeName,
+			cluster:        e.cluster,
 			streamReg:      e.streamReg,
 			segReg:         e.segReg,
 			localStreamMap: make(map[int64]BatchOperator),
@@ -100,7 +100,6 @@ func (e *dagBuilder) BuildDAG(
 	}
 
 	// connect local output streams to local input streams
-
 	streamVisitor := newStreamRewriteVisitor(localStreamMap)
 
 	for _, rootOp := range roots {
@@ -122,14 +121,14 @@ func (e *dagBuilder) BuildDAG(
 }
 
 type dagBuilderVisitor struct {
-	child         []BatchOperator
-	roots         []RunnableOp
-	outputWriter  execbase.QueryOutputWriter
-	queryId       uuid.UUID
-	localNodeName string
-	connReg       cluster.ConnRegistry
-	streamReg     StreamRegistry
-	segReg        storage.SegmentRegistry
+	child        []BatchOperator
+	roots        []RunnableOp
+	outputWriter execbase.QueryOutputWriter
+	queryId      uuid.UUID
+	localNodeId  string
+	cluster      cluster.Cluster
+	streamReg    StreamRegistry
+	segReg       storage.SegmentRegistry
 	// localStreamMap map local streams to the output operator. This operator
 	// will be used as input operator for local streams instead of a ExchangeInOp
 	localStreamMap map[int64]BatchOperator
@@ -177,14 +176,14 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 			input = g.child[0]
 		}
 
-		streamId, found := node.StreamMap[g.localNodeName]
+		streamId, found := node.StreamMap[g.localNodeId]
 
 		if !found {
-			panic(fmt.Sprintf("cannot found stream id for node %v", g.localNodeName))
+			panic(fmt.Sprintf("cannot found stream id for node %v", g.localNodeId))
 		}
 
 		// output to local node
-		if node.Dst == g.localNodeName {
+		if node.Dst == g.localNodeId {
 
 			// we add the input op to the output stream map
 			// this operator will be used later as an input for a local
@@ -193,20 +192,20 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 		} else {
 
-			conn := g.connReg.ClientConn(node.Dst)
+			dstClusterNode := g.cluster.Node(node.Dst)
 
-			if conn == nil {
-				panic(fmt.Sprintf("cannot found grpc client conn for node %v", node.Dst))
+			if dstClusterNode == nil {
+				panic(fmt.Sprintf("cannot found node %v", node.Dst))
 			}
 
-			client := execpb.NewExecutorClient(conn)
+			client := execpb.NewExecutorClient(dstClusterNode.ClientConn())
 
 			exchangeOutOp := NewExchangeOutOp(
 				input,
 				client,
 				g.queryId,
 				streamId,
-				g.localNodeName,
+				g.localNodeId,
 			)
 
 			g.roots = append(g.roots, exchangeOutOp)
@@ -222,7 +221,7 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 			var op BatchOperator
 
-			if srcNodeName == g.localNodeName {
+			if srcNodeName == g.localNodeId {
 				op = NewLocalExchangeInOp(streamId)
 			} else {
 				op = NewExchangeInOp(g.streamReg, streamId, g.queryId, g.execCtx)

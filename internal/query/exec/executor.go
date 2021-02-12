@@ -31,14 +31,12 @@ type Executor interface {
 }
 
 func NewExecutor(
-	connReg cluster.ConnRegistry,
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
 	cluster cluster.Cluster,
 ) Executor {
 
 	return &executor{
-		connReg:   connReg,
 		segReg:    segReg,
 		cluster:   cluster,
 		streamReg: streamReg,
@@ -47,7 +45,6 @@ func NewExecutor(
 }
 
 type executor struct {
-	connReg   cluster.ConnRegistry
 	segReg    storage.SegmentRegistry
 	streamReg physical.StreamRegistry
 	cluster   cluster.Cluster
@@ -55,7 +52,7 @@ type executor struct {
 
 func (e executor) ExecuteQuery(query string, writer execbase.QueryOutputWriter) error {
 
-	coordinator := NewCoordinatorExecutor(e.connReg, e.segReg, e.streamReg, e.cluster)
+	coordinator := NewCoordinatorExecutor(e.segReg, e.streamReg, e.cluster)
 
 	return coordinator.exec(query, writer)
 
@@ -69,27 +66,27 @@ func (e *executor) Stop() {
 	panic("implement me")
 }
 
-func NewServer(connReg cluster.ConnRegistry, segReg storage.SegmentRegistry, streamReg physical.StreamRegistry, localNodeName string) *Server {
+func NewServer(cluster cluster.Cluster, segReg storage.SegmentRegistry, streamReg physical.StreamRegistry, localNodeName string) *Server {
 	return &Server{
-		streamReg:     streamReg,
-		connReg:       connReg,
-		segReg:        segReg,
-		localNodeName: localNodeName,
+		streamReg:   streamReg,
+		cluster:     cluster,
+		segReg:      segReg,
+		localNodeId: localNodeName,
 	}
 }
 
 type Server struct {
-	streamReg     physical.StreamRegistry
-	connReg       cluster.ConnRegistry
-	segReg        storage.SegmentRegistry
-	localNodeName string
+	streamReg   physical.StreamRegistry
+	cluster     cluster.Cluster
+	segReg      storage.SegmentRegistry
+	localNodeId string
 }
 
 func (s *Server) Control(controlSrv execpb.Executor_ControlServer) error {
 
 	fmt.Println("new control stream")
 
-	nodeExec := NewNodeExec(s.connReg, s.segReg, s.streamReg, controlSrv, s.localNodeName)
+	nodeExec := NewNodeExec(s.cluster, s.segReg, s.streamReg, controlSrv, s.localNodeId)
 	nodeExec.Start()
 
 	<-nodeExec.ExecutionContext().Done()
@@ -100,6 +97,7 @@ func (s *Server) Control(controlSrv execpb.Executor_ControlServer) error {
 		return execbase.BuildGRPCError(execErr)
 	}
 
+	// TODO(gvelo): check if we need to cancel the execCtx before return.
 	return nil
 
 }

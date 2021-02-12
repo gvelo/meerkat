@@ -289,8 +289,8 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
 	// TODO(gvelo) add a partition router.
 
-	m := ing.cluster.LiveMembers()
-	numOfPartitions := len(m) + 1 // num of members plus local node.
+	nodes := ing.cluster.Nodes([]string{cluster.Joining, cluster.Ready}, true)
+	numOfPartitions := len(nodes) + 1 // num of members plus local node.
 
 	parser := NewParser()
 
@@ -308,9 +308,9 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 		Partitions: pbTable.Partitions[:1],
 	})
 
-	for i, member := range m {
+	for i, node := range nodes {
 
-		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestion.IngestionRequest{
+		err := ing.rpc.SendRequest(context.TODO(), node.Id(), &ingestion.IngestionRequest{
 			Table: &ingestion.Table{
 				Name:       tableName,
 				Partitions: pbTable.Partitions[i+1 : i+2],

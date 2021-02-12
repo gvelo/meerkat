@@ -34,6 +34,10 @@ const (
 	catalogTagName = "catalog"
 )
 
+var (
+	readyStateFilter = []string{Ready}
+)
+
 type Catalog interface {
 	Set(entry Entry) bool
 	SetAll(entries []Entry) []Entry
@@ -436,7 +440,7 @@ func createCatalogReplicator(
 	}
 }
 
-//TODO(gvelo): split in broadcast & sync.
+// TODO(gvelo): split in broadcast & sync.
 type catalogReplicator struct {
 	cluster    Cluster
 	catalog    Catalog
@@ -464,7 +468,7 @@ func (cr *catalogReplicator) antiEntropy() {
 
 	cr.log.Info().Msg("starting catalog antientropy")
 
-	//TODO(gvelo): make sync frecuency configurable.
+	// TODO(gvelo): make sync frecuency configurable.
 	ticker := time.NewTicker(10 * time.Second)
 
 	for {
@@ -520,24 +524,27 @@ func (cr *catalogReplicator) updateCatalogVersion() {
 func (cr *catalogReplicator) sync() {
 
 	cr.log.Info().Msg("syncing catalog")
-	members := cr.cluster.LiveMembers()
+
+	nodes := cr.cluster.Nodes(readyStateFilter, true)
+
 	localVersion := cr.catalog.Hash()
+
 	diff := make(map[string]string)
 
 	cr.log.Info().Msgf("syncing catalog with local version %v", localVersion)
 
-	for _, m := range members {
+	for _, node := range nodes {
 
-		cr.log.Debug().Msgf("processing member [%v] %v with catalog version [%v]", m.Name, m.Addr, m.Tags[catalogTagName])
+		cr.log.Debug().Msgf("processing node [%v] %v with catalog version [%v]", node.Id(), node.Addr(), node.Tag(catalogTagName))
 
-		catalogVersion, ok := m.Tags[catalogTagName]
+		catalogVersion := node.Tag(catalogTagName)
 
-		if !ok {
+		if catalogVersion == "" {
 			continue
 		}
 
 		if localVersion != catalogVersion {
-			diff[catalogVersion] = m.Name
+			diff[catalogVersion] = node.Id()
 		}
 
 	}
