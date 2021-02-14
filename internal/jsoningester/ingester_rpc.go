@@ -10,14 +10,14 @@ type IngesterRpc interface {
 	SendRequest(ctx context.Context, member string, request *ingestion.IngestionRequest) error
 }
 
-func NewIngestRPC(cl cluster.Cluster) IngesterRpc {
+func NewIngestRPC(cl cluster.Manager) IngesterRpc {
 	return &ingestRpc{
 		cl: cl,
 	}
 }
 
 type ingestRpc struct {
-	cl cluster.Cluster
+	cl cluster.Manager
 }
 
 func (i ingestRpc) SendRequest(ctx context.Context, nodeId string, request *ingestion.IngestionRequest) error {

@@ -42,7 +42,7 @@ type nodeManager interface {
 func newNodeManager(
 	queryId uuid.UUID,
 	execCtx execbase.ExecutionContext,
-	cl cluster.Cluster,
+	cl cluster.Manager,
 ) nodeManager {
 
 	manager := &defaultNodeManager{
@@ -274,7 +274,7 @@ func (n *nodeClient) close() {
 func NewCoordinatorExecutor(
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
-	cluster cluster.Cluster,
+	cluster cluster.Manager,
 ) *coordinatorExecutor {
 
 	id := uuid.New()
@@ -286,7 +286,7 @@ func NewCoordinatorExecutor(
 		segReg:      segReg,
 		nodeManager: nodeManager,
 		streamReg:   streamReg,
-		cluster:     cluster,
+		nodeReg:     cluster,
 		execCtx:     execCtx,
 		log: log.With().
 			Str("component", "coordinatorExecutor").
@@ -303,7 +303,7 @@ type coordinatorExecutor struct {
 	segReg      storage.SegmentRegistry
 	nodeManager nodeManager
 	streamReg   physical.StreamRegistry
-	cluster     cluster.Cluster
+	nodeReg     cluster.NodeRegistry
 	execCtx     execbase.ExecutionContext
 	outputOp    physical.RunnableOp
 }
@@ -335,8 +335,8 @@ func (c *coordinatorExecutor) exec(query string, writer execbase.QueryOutputWrit
 	// parallelize
 	fragments := logical.Parallelize(
 		optPlan,
-		c.cluster.NodeId(),
-		nodeIds(c.cluster.Nodes([]string{cluster.Ready}, true)),
+		c.nodeReg.LocalNodeId(),
+		nodeIds(c.nodeReg.Nodes([]string{cluster.Ready}, true)),
 	)
 
 	go c.handleCtxCancel()
@@ -370,10 +370,9 @@ func (c *coordinatorExecutor) buildDAG(
 ) (physical.DAG, error) {
 
 	dagBuilder := physical.NewDAGBuilder(
-		c.cluster,
+		c.nodeReg,
 		c.segReg,
 		c.streamReg,
-		c.cluster.NodeId(),
 	)
 
 	dag, err := dagBuilder.BuildDAG(fragments, c.id, writer, c.execCtx)
@@ -401,6 +400,6 @@ func (c *coordinatorExecutor) handleCtxCancel() {
 }
 
 func (c *coordinatorExecutor) Cancel(err error) {
-	execError := execbase.NewExecError(err.Error(), c.cluster.NodeId())
+	execError := execbase.NewExecError(err.Error(), c.nodeReg.LocalNodeId())
 	c.execCtx.CancelWithExecError(execError)
 }

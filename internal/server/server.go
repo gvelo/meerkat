@@ -39,7 +39,7 @@ type Meerkat struct {
 	mu                sync.Mutex
 	listener          net.Listener
 	grpcServer        *grpc.Server
-	cluster           cluster.Cluster
+	clusterMgr        cluster.Manager
 	apiServer         *rest.ApiServer
 	catalog           cluster.Catalog
 	Conf              config.Config
@@ -79,26 +79,26 @@ func (m *Meerkat) Start(ctx context.Context) {
 		seeds = strings.Split(m.Conf.Seeds, ",")
 	}
 
-	m.cluster, err = cluster.NewCluster(m.Conf.GossipPort, seeds, m.Conf.DBPath)
+	m.clusterMgr, err = cluster.NewManager(m.Conf.GossipPort, seeds, m.Conf.DBPath)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create cluster")
 	}
 
-	err = m.cluster.Join()
+	err = m.clusterMgr.Join()
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot join cluster")
 	}
 
-	catalogRPC, err := cluster.NewCatalogRPC(m.cluster)
+	catalogRPC, err := cluster.NewCatalogRPC(m.clusterMgr)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create catalogRPC")
 		return
 	}
 
-	m.catalog, err = cluster.NewCatalog(m.grpcServer, m.Conf.DBPath, m.cluster, catalogRPC)
+	m.catalog, err = cluster.NewCatalog(m.grpcServer, m.Conf.DBPath, m.clusterMgr, catalogRPC)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create catalog")
@@ -124,7 +124,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	m.segmentWriterPool.Start()
 
-	ingRcp := jsoningester.NewIngestRPC(m.cluster)
+	ingRcp := jsoningester.NewIngestRPC(m.clusterMgr)
 
 	// TODO(gvelo): all this params should be externalized to conf.
 	m.bufReg = ingestion.NewBufferRegistry(1024,
@@ -139,15 +139,14 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	streamReg := physical.NewStreamRegistry()
 
-	execServer := exec.NewServer(m.cluster, m.segRegistry, streamReg, m.cluster.NodeId())
+	execServer := exec.NewServer(m.clusterMgr, m.segRegistry, streamReg)
 
 	execpb.RegisterExecutorServer(m.grpcServer, execServer)
 
-	executor := exec.NewExecutor(m.segRegistry, streamReg, m.cluster)
+	executor := exec.NewExecutor(m.segRegistry, streamReg, m.clusterMgr)
 
-	m.apiServer, err = rest.NewRestApi(m.cluster, ingRcp, m.bufReg, executor)
+	m.apiServer, err = rest.NewRestApi(m.clusterMgr, ingRcp, m.bufReg, executor)
 
-	// TODO(gvelo) move all this ugly panic stuff to the component
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create rest server")
 	}
@@ -167,7 +166,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Info().Msg("grpc server stopped")
 	}()
 
-	err = m.cluster.Ready()
+	err = m.clusterMgr.Ready()
 
 	m.log.Info().Msg("meerkat server started")
 
@@ -180,7 +179,7 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.log.Info().Msg("stopping meerkar server")
 
-	err := m.cluster.Leaving()
+	err := m.clusterMgr.Leaving()
 
 	if err != nil {
 		m.log.Error().Err(err).Msg("error leaving cluster")
@@ -206,7 +205,7 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.segRegistry.Stop()
 
-	err = m.cluster.Leave()
+	err = m.clusterMgr.Leave()
 
 	if err != nil {
 		m.log.Error().Err(err).Msg("error leaving cluster")

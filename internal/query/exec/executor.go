@@ -33,7 +33,7 @@ type Executor interface {
 func NewExecutor(
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
-	cluster cluster.Cluster,
+	cluster cluster.Manager,
 ) Executor {
 
 	return &executor{
@@ -47,7 +47,7 @@ func NewExecutor(
 type executor struct {
 	segReg    storage.SegmentRegistry
 	streamReg physical.StreamRegistry
-	cluster   cluster.Cluster
+	cluster   cluster.Manager
 }
 
 func (e executor) ExecuteQuery(query string, writer execbase.QueryOutputWriter) error {
@@ -66,27 +66,29 @@ func (e *executor) Stop() {
 	panic("implement me")
 }
 
-func NewServer(cluster cluster.Cluster, segReg storage.SegmentRegistry, streamReg physical.StreamRegistry, localNodeName string) *Server {
+func NewServer(
+	nodeReg cluster.NodeRegistry,
+	segReg storage.SegmentRegistry,
+	streamReg physical.StreamRegistry,
+) *Server {
 	return &Server{
-		streamReg:   streamReg,
-		cluster:     cluster,
-		segReg:      segReg,
-		localNodeId: localNodeName,
+		streamReg: streamReg,
+		nodeReg:   nodeReg,
+		segReg:    segReg,
 	}
 }
 
 type Server struct {
-	streamReg   physical.StreamRegistry
-	cluster     cluster.Cluster
-	segReg      storage.SegmentRegistry
-	localNodeId string
+	streamReg physical.StreamRegistry
+	nodeReg   cluster.NodeRegistry
+	segReg    storage.SegmentRegistry
 }
 
 func (s *Server) Control(controlSrv execpb.Executor_ControlServer) error {
 
 	fmt.Println("new control stream")
 
-	nodeExec := NewNodeExec(s.cluster, s.segReg, s.streamReg, controlSrv, s.localNodeId)
+	nodeExec := NewNodeExec(s.nodeReg, s.segReg, s.streamReg, controlSrv)
 	nodeExec.Start()
 
 	<-nodeExec.ExecutionContext().Done()

@@ -103,11 +103,19 @@ func (n *node) MarshalJSON() ([]byte, error) {
 
 }
 
-// Cluster is used to track cluster node membership and to inform
-// local state to other members node. It is a thin  wrapper around Serf.
-// TODO(gvelo): segregate the Cluster interface on NodeRegistry and
-// ClusterStateManager
-type Cluster interface {
+type NodeRegistry interface {
+	// Nodes return a list of nodes filtered by status.
+	// if excludeLocalNode is true the returned list will not contain the local
+	// node info.
+	Nodes(statusFilter []string, excludeLocalNode bool) []Node
+
+	Node(id string) Node
+
+	// Return the local node id
+	LocalNodeId() string
+}
+
+type StateManager interface {
 
 	// Join the cluster and transition to Joining state
 	Join() error
@@ -127,28 +135,26 @@ type Cluster interface {
 	// the local node. This will propagate the change to the rest of
 	// the cluster. Blocks until a the message is broadcast out.
 	SetTag(name string, value string) error
-
-	// Nodes return a list of nodes filtered by status.
-	// if excludeLocalNode is true the returned list will not contain the local
-	// node info.
-	Nodes(statusFilter []string, excludeLocalNode bool) []Node
-
-	Node(id string) Node
-
-	// Return the local node id
-	NodeId() string
 }
 
-// clusterConfig store local node info and last known nodes.
-type clusterConfig struct {
+// Manager is used to track cluster node membership and to inform
+// local state to other members node. It is a thin  wrapper around Serf.
+// ClusterStateManager
+type Manager interface {
+	NodeRegistry
+	StateManager
+}
+
+// config store local node info and last known nodes.
+type config struct {
 	Id    string
 	Nodes []net.IP
 }
 
-// NewCluster return a new cluster instance.
-func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
+// NewManager return a new Manager instance.
+func NewManager(port int, seeds []string, dbPath string) (Manager, error) {
 
-	c := &cluster{
+	c := &manager{
 		port:     port,
 		confPath: path.Join(dbPath, confFile),
 		seeds:    seeds,
@@ -189,11 +195,11 @@ func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
 
 }
 
-type cluster struct {
+type manager struct {
 	port     int
 	seeds    []string
 	log      zerolog.Logger
-	conf     clusterConfig
+	conf     config
 	confPath string
 	serf     *serf.Serf
 	hostname string
@@ -205,7 +211,7 @@ type cluster struct {
 	nodesMu  sync.Mutex
 }
 
-func (c *cluster) SetTag(name string, value string) error {
+func (c *manager) SetTag(name string, value string) error {
 
 	c.statusMu.Lock()
 	defer c.statusMu.Unlock()
@@ -223,7 +229,7 @@ func (c *cluster) SetTag(name string, value string) error {
 	return err
 }
 
-func (c *cluster) Nodes(statusFilter []string, excludeLocalNode bool) []Node {
+func (c *manager) Nodes(statusFilter []string, excludeLocalNode bool) []Node {
 
 	c.nodesMu.Lock()
 	defer c.nodesMu.Unlock()
@@ -246,7 +252,7 @@ func (c *cluster) Nodes(statusFilter []string, excludeLocalNode bool) []Node {
 
 }
 
-func (c *cluster) Node(id string) Node {
+func (c *manager) Node(id string) Node {
 
 	c.nodesMu.Lock()
 	defer c.nodesMu.Unlock()
@@ -254,7 +260,7 @@ func (c *cluster) Node(id string) Node {
 	return c.nodes[id]
 }
 
-func (c *cluster) Join() error {
+func (c *manager) Join() error {
 
 	c.statusMu.Lock()
 	defer c.statusMu.Unlock()
@@ -297,7 +303,7 @@ func (c *cluster) Join() error {
 
 }
 
-func (c *cluster) Ready() error {
+func (c *manager) Ready() error {
 
 	c.statusMu.Lock()
 	defer c.statusMu.Unlock()
@@ -320,7 +326,7 @@ func (c *cluster) Ready() error {
 
 }
 
-func (c *cluster) Leaving() error {
+func (c *manager) Leaving() error {
 
 	c.statusMu.Lock()
 	defer c.statusMu.Unlock()
@@ -343,7 +349,7 @@ func (c *cluster) Leaving() error {
 
 }
 
-func (c *cluster) Leave() error {
+func (c *manager) Leave() error {
 
 	c.statusMu.Lock()
 	defer c.statusMu.Unlock()
@@ -375,7 +381,7 @@ func (c *cluster) Leave() error {
 
 }
 
-func (c *cluster) initConfig() error {
+func (c *manager) initConfig() error {
 
 	err := c.loadConfig()
 
@@ -392,11 +398,11 @@ func (c *cluster) initConfig() error {
 
 }
 
-func (c *cluster) NodeId() string {
+func (c *manager) LocalNodeId() string {
 	return c.conf.Id
 }
 
-func (c *cluster) initSerf() error {
+func (c *manager) initSerf() error {
 
 	serfConf := serf.DefaultConfig()
 	serfConf.Init()
@@ -420,7 +426,7 @@ func (c *cluster) initSerf() error {
 
 }
 
-func (c *cluster) newNode() error {
+func (c *manager) newNode() error {
 
 	c.log.Info().Msgf("creating new node")
 
@@ -434,7 +440,7 @@ func (c *cluster) newNode() error {
 
 }
 
-func (c *cluster) loadConfig() error {
+func (c *manager) loadConfig() error {
 
 	c.log.Info().Msgf("loading cluster config from %v", c.confPath)
 
@@ -444,7 +450,7 @@ func (c *cluster) loadConfig() error {
 		return err
 	}
 
-	conf := clusterConfig{}
+	conf := config{}
 
 	err = json.Unmarshal(b, &conf)
 
@@ -458,7 +464,7 @@ func (c *cluster) loadConfig() error {
 
 }
 
-func (c *cluster) saveConfig() error {
+func (c *manager) saveConfig() error {
 
 	c.log.Info().Msgf("saving cluster configuration")
 
@@ -478,7 +484,7 @@ func (c *cluster) saveConfig() error {
 
 }
 
-func (c *cluster) handleSerfEvents() {
+func (c *manager) handleSerfEvents() {
 
 	c.log.Info().Msg("starting serf event dispatcher")
 
@@ -509,7 +515,7 @@ func (c *cluster) handleSerfEvents() {
 	}
 }
 
-func (c *cluster) addNodes(members []serf.Member) {
+func (c *manager) addNodes(members []serf.Member) {
 
 	for _, member := range members {
 
@@ -541,7 +547,7 @@ func (c *cluster) addNodes(members []serf.Member) {
 
 }
 
-func (c *cluster) updateNodes(members []serf.Member) {
+func (c *manager) updateNodes(members []serf.Member) {
 
 	c.nodesMu.Lock()
 	defer c.nodesMu.Unlock()
@@ -565,7 +571,7 @@ func (c *cluster) updateNodes(members []serf.Member) {
 
 }
 
-func (c *cluster) removeNodes(members []serf.Member) {
+func (c *manager) removeNodes(members []serf.Member) {
 
 	c.nodesMu.Lock()
 	defer c.nodesMu.Unlock()
@@ -593,7 +599,7 @@ func (c *cluster) removeNodes(members []serf.Member) {
 
 }
 
-func (c *cluster) createGrpcConn(addr net.IP) (*grpc.ClientConn, error) {
+func (c *manager) createGrpcConn(addr net.IP) (*grpc.ClientConn, error) {
 
 	// TODO(gvelo): add transport security.
 	// TODO(gvelo): externalize grpc port

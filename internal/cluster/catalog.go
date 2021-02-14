@@ -367,7 +367,7 @@ func (cs *catalogServer) SnapShot(ctx context.Context, snapshotRequest *Snapshot
 	return r, nil
 }
 
-func NewCatalog(grpcSrv *grpc.Server, path string, cluster Cluster, catalogRPC CatalogRPC) (Catalog, error) {
+func NewCatalog(grpcSrv *grpc.Server, path string, cluster Manager, catalogRPC CatalogRPC) (Catalog, error) {
 
 	c, err := createCatalog(path)
 
@@ -423,7 +423,7 @@ func createCatalog(dbPath string) (*catalog, error) {
 }
 
 func createCatalogReplicator(
-	cluster Cluster,
+	cluster Manager,
 	catalog Catalog,
 	replicaCh chan []Entry,
 	deltaCh chan []Entry,
@@ -442,7 +442,7 @@ func createCatalogReplicator(
 
 // TODO(gvelo): split in broadcast & sync.
 type catalogReplicator struct {
-	cluster    Cluster
+	cluster    Manager
 	catalog    Catalog
 	replicaCh  chan []Entry
 	deltaCh    chan []Entry

@@ -268,7 +268,7 @@ type Ingester interface {
 	Ingest(stream io.Reader, tableName string) []ParserError
 }
 
-func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg ingestion.BufferRegistry) Ingester {
+func NewIngester(rpc IngesterRpc, cluster cluster.Manager, bufferReg ingestion.BufferRegistry) Ingester {
 	return &ingester{
 		rpc:            rpc,
 		cluster:        cluster,
@@ -277,7 +277,7 @@ func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg ingestion.B
 }
 
 type ingester struct {
-	cluster        cluster.Cluster
+	cluster        cluster.Manager
 	rpc            IngesterRpc
 	localNodeName  string
 	indexBufferReg ingestion.BufferRegistry

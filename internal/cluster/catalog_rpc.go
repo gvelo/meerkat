@@ -33,10 +33,10 @@ type SnapshotResult struct {
 
 type catalogRPC struct {
 	log zerolog.Logger
-	cl  Cluster
+	cl  Manager
 }
 
-func NewCatalogRPC(cl Cluster) (CatalogRPC, error) {
+func NewCatalogRPC(cl Manager) (CatalogRPC, error) {
 
 	t := &catalogRPC{
 		log: log.With().Str("component", "catalogRPC").Logger(),
