@@ -31,8 +31,7 @@ type ApiServer struct {
 	server   *http.Server
 	log      zerolog.Logger
 	mu       sync.Mutex
-	cluster  cluster.Cluster
-	connReg  cluster.ConnRegistry
+	cluster  cluster.Manager
 	ingRpc   jsoningester.IngesterRpc
 	bufReg   ingestion.BufferRegistry
 	executor exec.Executor
@@ -55,8 +54,7 @@ const (
 )
 
 func NewRestApi(
-	cluster cluster.Cluster,
-	connReg cluster.ConnRegistry,
+	cluster cluster.Manager,
 	ingRpc jsoningester.IngesterRpc,
 	bufReg ingestion.BufferRegistry,
 	executor exec.Executor,
@@ -66,7 +64,6 @@ func NewRestApi(
 	server := &ApiServer{
 		router:   gin.Default(),
 		cluster:  cluster,
-		connReg:  connReg,
 		ingRpc:   ingRpc,
 		bufReg:   bufReg,
 		executor: executor,

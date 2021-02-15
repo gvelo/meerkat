@@ -10,26 +10,26 @@ type IngesterRpc interface {
 	SendRequest(ctx context.Context, member string, request *ingestion.IngestionRequest) error
 }
 
-func NewIngestRPC(connReg cluster.ConnRegistry) IngesterRpc {
+func NewIngestRPC(nodeReg cluster.NodeRegistry) IngesterRpc {
 	return &ingestRpc{
-		connReg: connReg,
+		nodeReg: nodeReg,
 	}
 }
 
 type ingestRpc struct {
-	connReg cluster.ConnRegistry
+	nodeReg cluster.NodeRegistry
 }
 
-func (i ingestRpc) SendRequest(ctx context.Context, member string, request *ingestion.IngestionRequest) error {
+func (i ingestRpc) SendRequest(ctx context.Context, nodeId string, request *ingestion.IngestionRequest) error {
 
-	c := i.connReg.ClientConn(member)
+	node := i.nodeReg.Node(nodeId)
 
-	if c == nil {
+	if node == nil {
 		// TODO(gvelo): handle
 		panic("member not found")
 	}
 
-	cl := ingestion.NewIngesterClient(c)
+	cl := ingestion.NewIngesterClient(node.ClientConn())
 	_, err := cl.Ingest(ctx, request)
 
 	return err

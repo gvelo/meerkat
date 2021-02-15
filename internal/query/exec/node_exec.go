@@ -28,29 +28,26 @@ import (
 )
 
 type nodeExec struct {
-	connReg       cluster.ConnRegistry
-	segReg        storage.SegmentRegistry
-	execCtx       execbase.ExecutionContext
-	controlSrv    execpb.Executor_ControlServer
-	dag           physical.DAG
-	streamReg     physical.StreamRegistry
-	localNodeName string
+	nodeReg    cluster.NodeRegistry
+	segReg     storage.SegmentRegistry
+	execCtx    execbase.ExecutionContext
+	controlSrv execpb.Executor_ControlServer
+	dag        physical.DAG
+	streamReg  physical.StreamRegistry
 }
 
 func NewNodeExec(
-	connReg cluster.ConnRegistry,
+	nodeReg cluster.NodeRegistry,
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
 	controlSrv execpb.Executor_ControlServer,
-	localNodeName string,
 ) *nodeExec {
 	return &nodeExec{
-		connReg:       connReg,
-		segReg:        segReg,
-		controlSrv:    controlSrv,
-		execCtx:       execbase.NewExecutionContext(),
-		streamReg:     streamReg,
-		localNodeName: localNodeName,
+		nodeReg:    nodeReg,
+		segReg:     segReg,
+		controlSrv: controlSrv,
+		execCtx:    execbase.NewExecutionContext(),
+		streamReg:  streamReg,
 	}
 }
 
@@ -109,7 +106,7 @@ func (n *nodeExec) execQuery(query *execpb.ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query id: %v", err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query id: %v", err), n.nodeReg.LocalNodeId()))
 		return
 	}
 
@@ -119,7 +116,7 @@ func (n *nodeExec) execQuery(query *execpb.ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query plan on query: %v : %v", id, err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot unmarshal query plan on query: %v : %v", id, err), n.nodeReg.LocalNodeId()))
 		return
 	}
 
@@ -127,7 +124,7 @@ func (n *nodeExec) execQuery(query *execpb.ExecQuery) {
 
 	if err != nil {
 		n.execCtx.CancelWithExecError(
-			execbase.NewExecError(fmt.Sprintf("cannot build ejecutable graph on query: %v : %v", id, err), n.localNodeName))
+			execbase.NewExecError(fmt.Sprintf("cannot build ejecutable graph on query: %v : %v", id, err), n.nodeReg.LocalNodeId()))
 		return
 	}
 
@@ -159,7 +156,7 @@ func (n *nodeExec) buildDAG(fragments []*logical.Fragment, queryId []byte) error
 		return err
 	}
 
-	builder := physical.NewDAGBuilder(n.connReg, n.segReg, n.streamReg, n.localNodeName)
+	builder := physical.NewDAGBuilder(n.nodeReg, n.segReg, n.streamReg)
 
 	n.dag, err = builder.BuildDAG(fragments, id, nil, n.execCtx)
 

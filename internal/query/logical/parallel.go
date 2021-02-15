@@ -51,9 +51,9 @@ func (f *Fragments) append(fragment *Fragment) {
 // Summary or  Join ).
 // The last fragment in the slice  always executed in the query coordinator
 // node.
-func Parallelize(rootNodes []Node, localNodeName string, nodeNames []string) *Fragments {
+func Parallelize(rootNodes []Node, localNodeId string, nodeNames []string) *Fragments {
 
-	parallelizer := NewNaiveParallelizer(localNodeName, nodeNames)
+	parallelizer := NewNaiveParallelizer(localNodeId, nodeNames)
 
 	if len(rootNodes) > 1 {
 		panic("multiple rootNodes not supported yet")

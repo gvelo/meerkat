@@ -34,26 +34,23 @@ type DAGBuilder interface {
 }
 
 func NewDAGBuilder(
-	connReg cluster.ConnRegistry,
+	nodeReg cluster.NodeRegistry,
 	segReg storage.SegmentRegistry,
 	streamReg StreamRegistry,
-	localNodeName string,
 ) DAGBuilder {
 
 	return &dagBuilder{
-		connReg:       connReg,
-		segReg:        segReg,
-		streamReg:     streamReg,
-		localNodeName: localNodeName,
+		nodeReg:   nodeReg,
+		segReg:    segReg,
+		streamReg: streamReg,
 	}
 
 }
 
 type dagBuilder struct {
-	connReg       cluster.ConnRegistry
-	segReg        storage.SegmentRegistry
-	streamReg     StreamRegistry
-	localNodeName string
+	nodeReg   cluster.NodeRegistry
+	segReg    storage.SegmentRegistry
+	streamReg StreamRegistry
 }
 
 func (e *dagBuilder) BuildDAG(
@@ -73,8 +70,7 @@ func (e *dagBuilder) BuildDAG(
 		builder := &dagBuilderVisitor{
 			outputWriter:   writer,
 			queryId:        queryId,
-			localNodeName:  e.localNodeName,
-			connReg:        e.connReg,
+			nodeReg:        e.nodeReg,
 			streamReg:      e.streamReg,
 			segReg:         e.segReg,
 			localStreamMap: make(map[int64]BatchOperator),
@@ -100,7 +96,6 @@ func (e *dagBuilder) BuildDAG(
 	}
 
 	// connect local output streams to local input streams
-
 	streamVisitor := newStreamRewriteVisitor(localStreamMap)
 
 	for _, rootOp := range roots {
@@ -114,7 +109,7 @@ func (e *dagBuilder) BuildDAG(
 		queryId,
 		segments,
 		e.segReg,
-		e.localNodeName,
+		e.nodeReg.LocalNodeId(),
 	)
 
 	return dag, nil
@@ -122,14 +117,13 @@ func (e *dagBuilder) BuildDAG(
 }
 
 type dagBuilderVisitor struct {
-	child         []BatchOperator
-	roots         []RunnableOp
-	outputWriter  execbase.QueryOutputWriter
-	queryId       uuid.UUID
-	localNodeName string
-	connReg       cluster.ConnRegistry
-	streamReg     StreamRegistry
-	segReg        storage.SegmentRegistry
+	child        []BatchOperator
+	roots        []RunnableOp
+	outputWriter execbase.QueryOutputWriter
+	queryId      uuid.UUID
+	nodeReg      cluster.NodeRegistry
+	streamReg    StreamRegistry
+	segReg       storage.SegmentRegistry
 	// localStreamMap map local streams to the output operator. This operator
 	// will be used as input operator for local streams instead of a ExchangeInOp
 	localStreamMap map[int64]BatchOperator
@@ -177,14 +171,14 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 			input = g.child[0]
 		}
 
-		streamId, found := node.StreamMap[g.localNodeName]
+		streamId, found := node.StreamMap[g.nodeReg.LocalNodeId()]
 
 		if !found {
-			panic(fmt.Sprintf("cannot found stream id for node %v", g.localNodeName))
+			panic(fmt.Sprintf("cannot found stream id for node %v", g.nodeReg.LocalNodeId()))
 		}
 
 		// output to local node
-		if node.Dst == g.localNodeName {
+		if node.Dst == g.nodeReg.LocalNodeId() {
 
 			// we add the input op to the output stream map
 			// this operator will be used later as an input for a local
@@ -193,20 +187,20 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 		} else {
 
-			conn := g.connReg.ClientConn(node.Dst)
+			dstClusterNode := g.nodeReg.Node(node.Dst)
 
-			if conn == nil {
-				panic(fmt.Sprintf("cannot found grpc client conn for node %v", node.Dst))
+			if dstClusterNode == nil {
+				panic(fmt.Sprintf("cannot found node %v", node.Dst))
 			}
 
-			client := execpb.NewExecutorClient(conn)
+			client := execpb.NewExecutorClient(dstClusterNode.ClientConn())
 
 			exchangeOutOp := NewExchangeOutOp(
 				input,
 				client,
 				g.queryId,
 				streamId,
-				g.localNodeName,
+				g.nodeReg.LocalNodeId(),
 			)
 
 			g.roots = append(g.roots, exchangeOutOp)
@@ -222,7 +216,7 @@ func (g *dagBuilderVisitor) VisitPost(n logical.Node) logical.Node {
 
 			var op BatchOperator
 
-			if srcNodeName == g.localNodeName {
+			if srcNodeName == g.nodeReg.LocalNodeId() {
 				op = NewLocalExchangeInOp(streamId)
 			} else {
 				op = NewExchangeInOp(g.streamReg, streamId, g.queryId, g.execCtx)
