@@ -103,7 +103,8 @@ func (p *Partition) column(name string) *column {
 	p.colIdx++
 
 	col := &column{
-		idx: p.colIdx,
+		idx:         p.colIdx,
+		keepParsing: true,
 	}
 
 	p.columns[name] = col
@@ -201,12 +202,12 @@ func (ing *Parser) Parse(reader io.Reader, tableName string, numOfPartitions int
 			case json.Number:
 				s := string(v)
 				if col.keepParsing {
-					_, err := strconv.ParseFloat(s, 64)
+					_, err := strconv.Atoi(s)
 					if err != nil {
 						col.keepParsing = false
 						col.colType = storage.ColumnType_STRING
 					} else {
-						col.colType = storage.ColumnType_FLOAT64
+						col.colType = storage.ColumnType_INT64
 					}
 
 				}
@@ -267,18 +268,17 @@ type Ingester interface {
 	Ingest(stream io.Reader, tableName string) []ParserError
 }
 
-func NewIngester(rpc IngesterRpc, cluster cluster.Cluster, bufferReg ingestion.BufferRegistry) Ingester {
+func NewIngester(rpc IngesterRpc, nodeReg cluster.NodeRegistry, bufferReg ingestion.BufferRegistry) Ingester {
 	return &ingester{
 		rpc:            rpc,
-		cluster:        cluster,
+		nodeReg:        nodeReg,
 		indexBufferReg: bufferReg,
 	}
 }
 
 type ingester struct {
-	cluster        cluster.Cluster
+	nodeReg        cluster.NodeRegistry
 	rpc            IngesterRpc
-	localNodeName  string
 	indexBufferReg ingestion.BufferRegistry
 }
 
@@ -288,8 +288,8 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 
 	// TODO(gvelo) add a partition router.
 
-	m := ing.cluster.LiveMembers()
-	numOfPartitions := len(m) + 1 // num of members plus local node.
+	nodes := ing.nodeReg.Nodes([]string{cluster.Joining, cluster.Ready}, true)
+	numOfPartitions := len(nodes) + 1 // num of members plus local node.
 
 	parser := NewParser()
 
@@ -307,9 +307,9 @@ func (ing *ingester) Ingest(stream io.Reader, tableName string) []ParserError {
 		Partitions: pbTable.Partitions[:1],
 	})
 
-	for i, member := range m {
+	for i, node := range nodes {
 
-		err := ing.rpc.SendRequest(context.TODO(), member.Name, &ingestion.IngestionRequest{
+		err := ing.rpc.SendRequest(context.TODO(), node.Id(), &ingestion.IngestionRequest{
 			Table: &ingestion.Table{
 				Name:       tableName,
 				Partitions: pbTable.Partitions[i+1 : i+2],

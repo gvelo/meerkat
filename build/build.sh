@@ -15,7 +15,8 @@ LDFLAGS="-X meerkat/internal/build.Version=$VERSION \
          -X meerkat/internal/build.Commit=$COMMIT"
 
 
-go build -race -ldflags "$LDFLAGS" meerkat/cmd/meerkat
+#go build -race -ldflags "$LDFLAGS" meerkat/cmd/meerkat
+go build -ldflags "$LDFLAGS" meerkat/cmd/meerkat
 
 
 

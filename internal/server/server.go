@@ -23,6 +23,9 @@ import (
 	"meerkat/internal/config"
 	"meerkat/internal/ingestion"
 	"meerkat/internal/jsoningester"
+	"meerkat/internal/query/exec"
+	"meerkat/internal/query/execpb"
+	"meerkat/internal/query/physical"
 	"meerkat/internal/rest"
 	"meerkat/internal/storage"
 	"net"
@@ -33,18 +36,18 @@ import (
 )
 
 type Meerkat struct {
-	mu           sync.Mutex
-	listener     net.Listener
-	grpcServer   *grpc.Server
-	cluster      cluster.Cluster
-	connRegistry cluster.ConnRegistry
-	//schema       schema.Schema
+	mu                sync.Mutex
+	listener          net.Listener
+	grpcServer        *grpc.Server
+	clusterMgr        cluster.Manager
 	apiServer         *rest.ApiServer
 	catalog           cluster.Catalog
 	Conf              config.Config
 	log               zerolog.Logger
 	segmentWriterPool *storage.SegmentWriterPool
 	bufReg            ingestion.BufferRegistry
+	segStorage        storage.SegmentStorage
+	segRegistry       storage.SegmentRegistry
 }
 
 func (m *Meerkat) Start(ctx context.Context) {
@@ -60,7 +63,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	var err error
 
-	//TODO(gvelo):make port configurable.
+	// TODO(gvelo):make port configurable.
 	m.listener, err = net.Listen("tcp", ":9191")
 
 	if err != nil {
@@ -76,47 +79,52 @@ func (m *Meerkat) Start(ctx context.Context) {
 		seeds = strings.Split(m.Conf.Seeds, ",")
 	}
 
-	m.cluster, err = cluster.NewCluster(m.Conf.GossipPort, seeds, m.Conf.DBPath)
+	m.clusterMgr, err = cluster.NewManager(m.Conf.GossipPort, seeds, m.Conf.DBPath)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create cluster")
 	}
 
-	m.connRegistry, err = cluster.NewConnRegistry(m.cluster)
+	err = m.clusterMgr.Join()
+
+	if err != nil {
+		m.log.Panic().Err(err).Msg("cannot join cluster")
+	}
+
+	catalogRPC, err := cluster.NewCatalogRPC(m.clusterMgr)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create catalogRPC")
 		return
 	}
 
-	catalogRPC, err := cluster.NewCatalogRPC(m.connRegistry)
-
-	if err != nil {
-		m.log.Panic().Err(err).Msg("cannot create catalogRPC")
-		return
-	}
-
-	m.catalog, err = cluster.NewCatalog(m.grpcServer, m.Conf.DBPath, m.cluster, catalogRPC)
+	m.catalog, err = cluster.NewCatalog(m.grpcServer, m.Conf.DBPath, m.clusterMgr, catalogRPC)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create catalog")
 	}
 
-	//m.schema, err = schema.NewSchema(m.catalog)
+	// m.schema, err = schema.NewSchema(m.catalog)
 	//
-	//if err != nil {
+	// if err != nil {
 	//	m.log.Panic().Err(err).Msg("cannot create schema")
-	//}
+	// }
 
-	m.segmentWriterPool = storage.NewSegmentWriterPool(1024, 10, m.Conf.DBPath)
+	m.segStorage = storage.NewStorage(m.Conf.DBPath)
 
-	err = m.segmentWriterPool.Start()
+	m.segRegistry = storage.NewSegmentRegistry(m.Conf.DBPath, m.segStorage)
 
-	if err != nil {
-		m.log.Panic().Err(err).Msg("cannot create segment writer pool")
-	}
+	m.segRegistry.Start()
 
-	ingRcp := jsoningester.NewIngestRPC(m.connRegistry)
+	m.segmentWriterPool = storage.NewSegmentWriterPool(1024,
+		10,
+		m.segStorage,
+		m.segRegistry,
+	)
+
+	m.segmentWriterPool.Start()
+
+	ingRcp := jsoningester.NewIngestRPC(m.clusterMgr)
 
 	// TODO(gvelo): all this params should be externalized to conf.
 	m.bufReg = ingestion.NewBufferRegistry(1024,
@@ -129,7 +137,15 @@ func (m *Meerkat) Start(ctx context.Context) {
 
 	m.bufReg.Start()
 
-	m.apiServer, err = rest.NewRestApi(m.cluster, m.connRegistry, ingRcp, m.bufReg)
+	streamReg := physical.NewStreamRegistry()
+
+	execServer := exec.NewServer(m.clusterMgr, m.segRegistry, streamReg)
+
+	execpb.RegisterExecutorServer(m.grpcServer, execServer)
+
+	executor := exec.NewExecutor(m.segRegistry, streamReg, m.clusterMgr)
+
+	m.apiServer, err = rest.NewRestApi(m.clusterMgr, ingRcp, m.bufReg, executor)
 
 	if err != nil {
 		m.log.Panic().Err(err).Msg("cannot create rest server")
@@ -150,7 +166,7 @@ func (m *Meerkat) Start(ctx context.Context) {
 		m.log.Info().Msg("grpc server stopped")
 	}()
 
-	m.cluster.Join()
+	err = m.clusterMgr.Ready()
 
 	m.log.Info().Msg("meerkat server started")
 
@@ -163,9 +179,13 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.log.Info().Msg("stopping meerkar server")
 
-	m.cluster.Shutdown()
+	err := m.clusterMgr.Leaving()
 
-	err := m.apiServer.Shutdown(ctx)
+	if err != nil {
+		m.log.Error().Err(err).Msg("error leaving cluster")
+	}
+
+	err = m.apiServer.Shutdown(ctx)
 
 	if err != nil {
 		m.log.Error().Err(err).Msg("error stopping api server")
@@ -177,15 +197,19 @@ func (m *Meerkat) Shutdown(ctx context.Context) {
 
 	m.segmentWriterPool.Stop()
 
-	//m.schema.Shutdown()
-
 	err = m.catalog.Shutdown()
 
 	if err != nil {
 		m.log.Error().Err(err).Msg("error stopping catalog")
 	}
 
-	m.connRegistry.Shutdown()
+	m.segRegistry.Stop()
+
+	err = m.clusterMgr.Leave()
+
+	if err != nil {
+		m.log.Error().Err(err).Msg("error leaving cluster")
+	}
 
 	m.log.Info().Msg("meerkat server stopped")
 

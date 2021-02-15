@@ -1,9 +1,11 @@
 package ingestion
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/storage"
 	"meerkat/internal/storage/colval"
+	"meerkat/internal/storage/encoding"
 	"meerkat/internal/util/sliceutil"
 	"sort"
 	"strconv"
@@ -36,7 +38,7 @@ func NewSegmentSource(table *TableBuffer) *SegmentSource {
 
 func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 
-	id := [16]byte(uuid.New())
+	id := uuid.New()
 
 	tsCol := table.Columns()[storage.TSColumnName].buf.(*TSBuffer)
 
@@ -44,8 +46,7 @@ func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 	tsTo := tsCol.Values()[tsCol.Len()-1]
 
 	info := storage.SegmentSourceInfo{
-		Id:           id[:],
-		DatabaseId:   nil,
+		Id:           id,
 		DatabaseName: "",
 		TableName:    table.tableName,
 		PartitionId:  table.partitionID,
@@ -66,7 +67,7 @@ func buildSrcInfo(table *TableBuffer) storage.SegmentSourceInfo {
 			Name:       name,
 			ColumnType: column.colType,
 			IndexType:  storage.IndexType_NONE,
-			Encoding:   storage.Encoding_PLAIN,
+			Encoding:   encoding.Plain,
 			Nullable:   nullable,
 			Len:        uint32(column.buf.Len()),
 		}
@@ -117,7 +118,7 @@ func (s *SegmentSource) createSrc(buf *ByteSliceSparseBuffer, columnType storage
 	case storage.ColumnType_STRING:
 		return NewByteSliceDynamicSrc(denseBuf, blockSize, s.perm)
 	default:
-		panic("unknown column type")
+		panic(fmt.Sprintf("unknown column type: %v ", columnType))
 	}
 
 }

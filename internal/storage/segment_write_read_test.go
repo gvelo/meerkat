@@ -359,8 +359,7 @@ func TestReadWriteSegment(t *testing.T) {
 
 	id := [16]byte(uuid.New())
 	segmentSrc := generateRandomSegmentSrc(SegmentSourceInfo{
-		Id:           id[:],
-		DatabaseId:   id[:],
+		Id:           id,
 		DatabaseName: "test-db",
 		TableName:    "test-table",
 		PartitionId:  0,
@@ -421,24 +420,16 @@ func TestReadWriteSegment(t *testing.T) {
 
 	segmentFile := path.Join(os.TempDir(), "test-segment")
 
-	err := WriteSegment(segmentFile, segmentSrc)
+	WriteSegment(segmentFile, segmentSrc)
 
-	if err != nil {
-		panic(err)
-	}
-
-	segment, err := ReadSegment(segmentFile)
-
-	if err != nil {
-		panic(err)
-	}
+	segment := ReadSegment(segmentFile)
 
 	checkColumnsIterators(t, segment, segmentSrc)
 	checkColumnsReads(t, segment, segmentSrc)
 
 }
 
-func checkColumnsIterators(t *testing.T, segment *Segment, src *TestSegmentSource) {
+func checkColumnsIterators(t *testing.T, segment *segment, src *TestSegmentSource) {
 
 	for _, info := range src.colInfo {
 
@@ -510,7 +501,7 @@ func readColumnIter(column interface{}, info ColumnSourceInfo, srcLen uint32) []
 
 }
 
-func checkColumnsReads(t *testing.T, segment *Segment, src *TestSegmentSource) {
+func checkColumnsReads(t *testing.T, segment *segment, src *TestSegmentSource) {
 
 	rids := []uint32{0, 123, 124, 1023, 2048, 8191, 8192, 8193, 10212, 20000, 24575}
 

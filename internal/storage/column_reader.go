@@ -202,6 +202,10 @@ func (cr *binaryColumn) Reader() ByteSliceReader {
 	)
 }
 
+func (cr *binaryColumn) Validity() *roaring.Bitmap {
+	return cr.valid
+}
+
 type BinaryColumnIterator struct {
 	dec     encoding.ByteSliceDecoder
 	br      encoding.BlockReader

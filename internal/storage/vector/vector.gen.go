@@ -19,6 +19,11 @@
 
 package vector
 
+import (
+	"meerkat/internal/util/sliceutil"
+	"unsafe"
+)
+
 type Int64Vector struct {
 	valid []uint64
 	buf   []int64
@@ -92,6 +97,15 @@ func NewInt64Vector(buf []int64, valid []uint64) Int64Vector {
 		valid: valid,
 		l:     len(buf),
 	}
+}
+
+func (v *Int64Vector) AsBytes() []byte {
+	b := v.buf[:v.l]
+	return sliceutil.AsByteSlice(8, unsafe.Pointer(&b))
+}
+
+func (v *Int64Vector) ValidityAsBytes() []byte {
+	return sliceutil.U642B(v.valid[:v.l/8])
 }
 
 type Int32Vector struct {
@@ -169,6 +183,15 @@ func NewInt32Vector(buf []int32, valid []uint64) Int32Vector {
 	}
 }
 
+func (v *Int32Vector) AsBytes() []byte {
+	b := v.buf[:v.l]
+	return sliceutil.AsByteSlice(4, unsafe.Pointer(&b))
+}
+
+func (v *Int32Vector) ValidityAsBytes() []byte {
+	return sliceutil.U642B(v.valid[:v.l/8])
+}
+
 type Float64Vector struct {
 	valid []uint64
 	buf   []float64
@@ -244,6 +267,15 @@ func NewFloat64Vector(buf []float64, valid []uint64) Float64Vector {
 	}
 }
 
+func (v *Float64Vector) AsBytes() []byte {
+	b := v.buf[:v.l]
+	return sliceutil.AsByteSlice(8, unsafe.Pointer(&b))
+}
+
+func (v *Float64Vector) ValidityAsBytes() []byte {
+	return sliceutil.U642B(v.valid[:v.l/8])
+}
+
 type BoolVector struct {
 	valid []uint64
 	buf   []bool
@@ -317,4 +349,13 @@ func NewBoolVector(buf []bool, valid []uint64) BoolVector {
 		valid: valid,
 		l:     len(buf),
 	}
+}
+
+func (v *BoolVector) AsBytes() []byte {
+	b := v.buf[:v.l]
+	return sliceutil.AsByteSlice(1, unsafe.Pointer(&b))
+}
+
+func (v *BoolVector) ValidityAsBytes() []byte {
+	return sliceutil.U642B(v.valid[:v.l/8])
 }

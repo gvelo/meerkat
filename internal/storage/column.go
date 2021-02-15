@@ -15,25 +15,16 @@ package storage
 
 import (
 	"github.com/RoaringBitmap/roaring"
-	"meerkat/internal/storage/encoding"
 	"meerkat/internal/storage/vector"
-	"time"
 )
 
-type SegmentRegistry interface {
-	Segment(indexId []byte, from *time.Time, to *time.Time) []*Segment
-}
-
 type Column interface {
-	Encoding() encoding.Type
 	Validity() *roaring.Bitmap
-	HasNulls() bool
-	Stats() *Stats
 }
 
 type Int64Column interface {
 	Column
-	Index() Int64Index
+	// Index() Int64Index
 	Reader() Int64ColumnReader
 	Iterator() Int64Iterator
 }
@@ -46,8 +37,8 @@ type Int64ColumnReader interface {
 
 type Float64Column interface {
 	Column
-	Index() FloatIndex
-	Read(pos []uint32) vector.Float64Vector
+	// Index() Float64Index
+	Reader() Float64ColumnReader
 	Iterator() Float64Iterator
 }
 
@@ -129,7 +120,7 @@ type Int64Index interface {
 	Le(i int64) *roaring.Bitmap
 }
 
-type FloatIndex interface {
+type Float64Index interface {
 	Eq(f float64) *roaring.Bitmap
 	Ne(f float64) *roaring.Bitmap
 	Gt(f float64) *roaring.Bitmap
@@ -141,12 +132,4 @@ type FloatIndex interface {
 type TimeIndex interface {
 	TimeRange(start int, end int) (startPos, endPos int)
 	TimeRangeAsBitmap(start int, end int) *roaring.Bitmap
-}
-
-type Stats struct {
-	Size        int // no compressed
-	Cardinality int
-	Compresed   int // size compressed
-	Max         interface{}
-	Min         interface{}
 }

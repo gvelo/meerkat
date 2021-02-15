@@ -44,6 +44,17 @@ var u2ns = map[string]int{
 	"days":         int(time.Hour * 24),
 }
 
+func Parse(query string) (stmt *TabularStmt, err error) {
+
+	p, err := NewParser(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return p.Parse()
+}
+
 type Parser struct {
 	scanner *Scanner
 	token   Token
@@ -311,7 +322,7 @@ func (p *Parser) parseTabularOperatorList() []Node {
 		tOps = append(tOps, op)
 	}
 
-	p.expect(PIPE, EOF)
+	p.expect(PIPE, EOF) // TODO(gvelo): PIPE ????
 
 	return tOps
 

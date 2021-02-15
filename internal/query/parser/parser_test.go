@@ -271,6 +271,13 @@ var cases = []TestCase{
 		isError:  false,
 		fun:      func(p *Parser) Node { return p.parseTabularOperator() },
 	},
+	{
+		name:     "test delete",
+		input:    "( A==1 and b>10) or (a==2 and b < 10)",
+		expected: "( SummarizeOp Agg ( CallExpr FuncName Avg ArgList ( ( LitExpr IDENT [ColA] string ) ) ) By ( ColumnExpr ColName  Expr ( LitExpr IDENT [ColB] string ) ) )",
+		isError:  false,
+		fun:      func(p *Parser) Node { return p.parseExpr() },
+	},
 }
 
 func TestParser(t *testing.T) {

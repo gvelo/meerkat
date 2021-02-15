@@ -30,7 +30,6 @@ type Node interface {
 
 // Query Statements
 
-// at the moment we only support Tabular Statement
 
 type TabularStmt struct {
 	TabularExpr *TabularExpr

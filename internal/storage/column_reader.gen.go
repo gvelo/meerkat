@@ -28,6 +28,9 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
+var _ Int64Column = &int64Column{}
+var _ Float64Column = &float64Column{}
+
 type int64Column struct {
 	b              []byte
 	valid          *roaring.Bitmap
@@ -134,8 +137,6 @@ func NewInt64Column(b []byte, bounds io.Bounds, numOfRows int) *int64Column {
 
 func (cr *int64Column) read() {
 
-	//fmt.Println(cr)
-
 	if cr.validityBounds.End != 0 {
 		cr.valid = roaring.NewBitmap()
 		_, err := cr.valid.FromBuffer(cr.b[cr.validityBounds.Start:cr.validityBounds.End])
@@ -203,6 +204,10 @@ func (cr *int64Column) Reader() Int64ColumnReader {
 		cr.numOfRows,
 		cr.blockLen,
 	)
+}
+
+func (cr *int64Column) Validity() *roaring.Bitmap {
+	return cr.valid
 }
 
 type IntColumnIterator struct {
@@ -651,8 +656,6 @@ func NewFloat64Column(b []byte, bounds io.Bounds, numOfRows int) *float64Column 
 
 func (cr *float64Column) read() {
 
-	//fmt.Println(cr)
-
 	if cr.validityBounds.End != 0 {
 		cr.valid = roaring.NewBitmap()
 		_, err := cr.valid.FromBuffer(cr.b[cr.validityBounds.Start:cr.validityBounds.End])
@@ -720,6 +723,10 @@ func (cr *float64Column) Reader() Float64ColumnReader {
 		cr.numOfRows,
 		cr.blockLen,
 	)
+}
+
+func (cr *float64Column) Validity() *roaring.Bitmap {
+	return cr.valid
 }
 
 type FloatColumnIterator struct {

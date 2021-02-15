@@ -18,3 +18,6 @@ do
    echo "creating container $i"
    docker run -d --network meerkat -e SEEDS=$SEED meerkat:latest
 done
+
+# docker run -d -p 8080:9090 --network meerkat -e SEEDS=172.19.0.2 meerkat:latest
+

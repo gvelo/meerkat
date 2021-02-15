@@ -1,0 +1,114 @@
+// Copyright 2020 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package meerkat.exec;
+option go_package = "meerkat/internal/query/execpb";
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+import "storage.proto";
+
+
+// ExecQuery setup que execution machinery in a node.
+message ExecQuery {
+  // id represents que query id. ( uuid )
+  bytes id   = 1;
+  // plan contains the fragments of the query execution plan
+  // serialized as gobs
+  bytes plan = 2;
+}
+
+// ExecCancel signal a execution cancellation.
+message ExecCancel {
+  // The error detail.
+  ExecError error = 1;
+}
+
+// ExecCmd represents an executor command ( exec query, cancel query, etc)
+message ExecCmd {
+  oneof cmd {
+    ExecQuery  execQuery  = 1;
+    ExecCancel execCancel = 2;
+  }
+}
+
+// ExecOKEvent signal that the  NodeExecutor was successfully created
+// and started.
+message ExecOKEvent {}
+
+// ExecStatsEvent send stats from the node to the coordinator.
+message ExecStatsEvent {}
+
+// ExecEvent are events that flow from the NodeExecutor to the coordinator.
+message ExecEvent {
+  oneof event {
+    ExecOKEvent    execOk    = 1;
+    ExecStatsEvent execStats = 2;
+  }
+}
+
+// Column represent a column in the vector batch
+message Column {
+  string             name = 1;
+  int64              group = 2;
+  int64              order = 3;
+  storage.ColumnType colType = 4;
+  bytes              vector = 5;
+  bytes              validity = 6;
+  bytes              offsets = 7;
+}
+
+// VectorBatch represents the group of vectors exchanged between nodes.
+message VectorBatch{
+  int64    len            = 1;
+  repeated Column columns = 2;
+}
+
+// StreamHeader is the first message sent on a VectorExchangeMsg stream. It is used
+// to identify the stream targuet exchange operator
+message StreamHeader{
+  bytes queryId       = 1;
+  int64 streamId      = 2;
+}
+
+// Error message used to signal errors on streams
+message ExecError{
+  // id is an uuid used to trace errors across nodes. ie to identify
+  // root causes of cancellations.
+  bytes     id = 1;
+  string    detail = 3;
+  string    nodeName = 4;
+  string    stack = 5;
+}
+
+// VectorExchangeMsg are the type of messages flowing through
+// VectorExchange streams.
+message VectorExchangeMsg{
+  oneof msg {
+    StreamHeader header = 1;
+    VectorBatch  vectorBatch = 2;
+    ExecError    error = 3;
+  }
+}
+
+message VectorExchangeResponse{}
+
+service Executor {
+  // Control stream is used by the coordinator to execute query
+  // plan fragments on cluster nodes.
+  rpc Control(stream ExecCmd) returns (stream ExecEvent);
+  // VectorExchange is used to push vectors to a specific node.
+  rpc VectorExchange(stream VectorExchangeMsg) returns (VectorExchangeResponse);
+}

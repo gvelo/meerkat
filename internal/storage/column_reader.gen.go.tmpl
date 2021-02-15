@@ -22,13 +22,16 @@ import (
 	"meerkat/internal/storage/vector"
 )
 
+var _ Int64Column = &int64Column{}
+var _ Float64Column = &float64Column{}
+
 {{range .}}
 
 type {{.type}}Column struct {
 	b              []byte
 	valid          *roaring.Bitmap
 	blkIdx         index.BlockIndexReader
-	encoding       encoding.EncodingType
+	encoding       encoding.Type
 	colBounds      io.Bounds
 	blkBounds      io.Bounds
 	blkIdxBounds   io.Bounds
@@ -84,7 +87,7 @@ func New{{.Type}}Column(b []byte, bounds io.Bounds, numOfRows int) *{{.type}}Col
 
 	e := 0
 
-	cr.encoding = encoding.EncodingType(br.ReadUVarint())
+	cr.encoding = encoding.Type(br.ReadUVarint())
 	cr.blkBounds.Start = cr.colBounds.Start
 	cr.blkBounds.End = br.ReadUVarint()
 
@@ -129,8 +132,6 @@ func New{{.Type}}Column(b []byte, bounds io.Bounds, numOfRows int) *{{.type}}Col
 }
 
 func (cr *{{.type}}Column) read() {
-
-	//fmt.Println(cr)
 
 	if cr.validityBounds.End != 0 {
 		cr.valid = roaring.NewBitmap()
@@ -199,6 +200,10 @@ func (cr *{{.type}}Column) Reader() {{.Type}}ColumnReader {
 		cr.numOfRows,
 		cr.blockLen,
 	)
+}
+
+func (cr *{{.type}}Column) Validity() *roaring.Bitmap {
+	return cr.valid
 }
 
 type {{.Family}}ColumnIterator struct {

@@ -428,7 +428,7 @@ func (op *SortOperator) appendSlices(src []interface{}) {
 			v.Append(s.Values())
 		case vector.ByteSliceVector:
 			v := op.slicesAppended[i].(vector.ByteSliceVector)
-			v.AppendSlice(s.Data())
+			v.AppendSlice(s.Buffer())
 		case vector.Float64Vector:
 			v := op.slicesAppended[i].(vector.Float64Vector)
 			v.Append(s.Values())

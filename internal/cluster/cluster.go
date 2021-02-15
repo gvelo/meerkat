@@ -14,11 +14,14 @@
 package cluster
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/hashicorp/serf/serf"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
 	"io/ioutil"
 	"net"
 	"os"
@@ -30,67 +33,153 @@ const (
 	confFile    = "cluster.json"
 	confPerm    = 0660
 	tagHostname = "hostname"
+	tagStatus   = "status"
 )
 
-// Cluster is used to track cluster node membership and to inform
-// local state to other members node. It is a thin  wraper around Serf.
-type Cluster interface {
+const (
+	created = "created"
+	Joining = "joining"
+	Ready   = "ready"
+	Leaving = "leaving"
+	Leave   = "leave"
+	Fail    = "fail"
+)
+
+type Node interface {
+	Id() string
+	Addr() net.IP
+	Tag(tagName string) string
+	Status() string
+	ClientConn() *grpc.ClientConn
+}
+
+type node struct {
+	id         string
+	addr       net.IP
+	tags       map[string]string
+	status     string
+	clientConn *grpc.ClientConn
+}
+
+func (n *node) Id() string {
+	return n.id
+}
+
+func (n *node) Addr() net.IP {
+	return n.addr
+}
+
+func (n *node) Tag(tagName string) string {
+	return n.tags[tagName]
+}
+
+func (n *node) Status() string {
+	return n.status
+}
+
+func (n *node) ClientConn() *grpc.ClientConn {
+	return n.clientConn
+}
+
+func (n *node) inStatus(statusList []string) bool {
+	for _, status := range statusList {
+		if status == n.status {
+			return true
+		}
+	}
+	return false
+}
+
+func (n *node) MarshalJSON() ([]byte, error) {
+
+	j := map[string]interface{}{
+		"id":     n.id,
+		"addr":   n.addr,
+		"status": n.status,
+		"tags":   n.tags,
+	}
+
+	return json.Marshal(j)
+
+}
+
+type NodeRegistry interface {
+	// Nodes return a list of nodes filtered by status.
+	// if excludeLocalNode is true the returned list will not contain the local
+	// node info.
+	Nodes(statusFilter []string, excludeLocalNode bool) []Node
+
+	Node(id string) Node
+
+	// Return the local node id
+	LocalNodeId() string
+}
+
+type StateManager interface {
+
+	// Join the cluster and transition to Joining state
+	Join() error
+
+	// Ready Set the node status to Ready
+	Ready() error
+
+	// Leaving set the node status to leaving
+	Leaving() error
+
+	// Leave the cluster gracefully and then shuts down the Serf instance,
+	// stopping all network activity and background maintenance associated with
+	// the instance.
+	Leave() error
+
 	// SetTag is used to dynamically update the tags associated with
 	// the local node. This will propagate the change to the rest of
 	// the cluster. Blocks until a the message is broadcast out.
 	SetTag(name string, value string) error
-
-	// Members returns a point-in-time snapshot of the members of
-	// this cluster. This includes failed, left and non-ready
-	// (not yet bootstrapped) nodes.
-	Members() []serf.Member
-
-	// LiveMembers returns a point-in-time snapshot of the members of
-	// this cluster. This includes only nodes ready to receive requests.
-	LiveMembers() []serf.Member
-
-	// Start trying to join the cluster.
-	Join()
-
-	// Shutdow first leave the cluster gracefully and then shuts down
-	// the Serf instance, stopping all network activity and background
-	// maintenance associated with the instance.
-	Shutdown()
-
-	// AddEventChan add a channel to receive serf events. Care must be taken
-	// that this channel doesn't block either by processing the event quick
-	// enough or providing a buffered channel with enought capacity,
-	// otherwise is can block states update withing Serf itself.
-	AddEventChan(ch chan serf.Event)
-
-	// RemoveEventChan removes a previously added channel.
-	RemoveEventChan(ch chan serf.Event)
-
-	// Return the local node name
-	NodeName() string
 }
 
-// clusterConfig store local node info and last known nodes.
-type clusterConfig struct {
-	Name  string
+// Manager is used to track cluster node membership and to inform
+// local state to other members node. It is a thin  wrapper around Serf.
+// ClusterStateManager
+type Manager interface {
+	NodeRegistry
+	StateManager
+}
+
+// config store local node info and last known nodes.
+type config struct {
+	Id    string
 	Nodes []net.IP
 }
 
-// NewCluster return a new cluster instance.
-func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
+// NewManager return a new Manager instance.
+func NewManager(port int, seeds []string, dbPath string) (Manager, error) {
 
-	c := &cluster{
-		port:      port,
-		confPath:  path.Join(dbPath, confFile),
-		seeds:     seeds,
-		log:       log.With().Str("src", "cluster").Logger(),
-		tags:      make(map[string]string),
-		eventChan: make(map[chan serf.Event]chan serf.Event),
+	c := &manager{
+		port:     port,
+		confPath: path.Join(dbPath, confFile),
+		seeds:    seeds,
+		log:      log.With().Str("src", "cluster").Logger(),
+		tags:     make(map[string]string),
+		status:   created,
+		serfChan: make(chan serf.Event, 1024),
+		nodes:    make(map[string]*node),
 	}
 
 	c.log.Info().Msg("creating cluster")
 
-	err := c.initConfig()
+	hostName, err := os.Hostname()
+
+	if err != nil {
+		c.log.Error().Err(err).Msg("unable to determine hostname")
+		return nil, err
+	}
+
+	c.log.Info().Msgf("hostname %v", hostName)
+
+	c.tags[tagStatus] = Joining
+	c.tags[tagHostname] = hostName
+
+	err = c.initConfig()
 
 	if err != nil {
 		return nil, err
@@ -106,37 +195,26 @@ func NewCluster(port int, seeds []string, dbPath string) (Cluster, error) {
 
 }
 
-type cluster struct {
-	port      int
-	seeds     []string
-	log       zerolog.Logger
-	conf      clusterConfig
-	confPath  string
-	serf      *serf.Serf
-	hostname  string
-	tags      map[string]string
-	mu        sync.Mutex
-	eventChan map[chan serf.Event]chan serf.Event
-	serfChan  chan serf.Event
+type manager struct {
+	port     int
+	seeds    []string
+	log      zerolog.Logger
+	conf     config
+	confPath string
+	serf     *serf.Serf
+	hostname string
+	tags     map[string]string
+	statusMu sync.Mutex
+	serfChan chan serf.Event
+	status   string
+	nodes    map[string]*node
+	nodesMu  sync.Mutex
 }
 
-func (c *cluster) AddEventChan(ch chan serf.Event) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *manager) SetTag(name string, value string) error {
 
-	c.eventChan[ch] = ch
-}
-
-func (c *cluster) RemoveEventChan(ch chan serf.Event) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	delete(c.eventChan, ch)
-}
-
-func (c *cluster) SetTag(name string, value string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
 
 	c.log.Info().Msgf("setting node tag [%v]=%v", name, value)
 
@@ -151,70 +229,136 @@ func (c *cluster) SetTag(name string, value string) error {
 	return err
 }
 
-func (c *cluster) Members() []serf.Member {
-	members := c.serf.Members()
+func (c *manager) Nodes(statusFilter []string, excludeLocalNode bool) []Node {
 
-	others := members[:0]
+	c.nodesMu.Lock()
+	defer c.nodesMu.Unlock()
 
-	for _, m := range members {
-		if m.Name != c.conf.Name {
-			others = append(others, m)
+	var result []Node
+
+	for _, node := range c.nodes {
+
+		if excludeLocalNode && node.id == c.conf.Id {
+			continue
 		}
-	}
 
-	return others
-
-}
-
-func (c *cluster) LiveMembers() []serf.Member {
-
-	members := c.serf.Members()
-
-	live := members[:0]
-
-	for _, m := range members {
-		if m.Status == serf.StatusAlive && m.Name != c.conf.Name {
-			live = append(live, m)
-		}
-	}
-
-	return live
-}
-
-func (c *cluster) Join() {
-
-	// TODO(gvelo): add retry if we are unable to join any nodes.
-
-	// first, try to join using the provided seeds.
-	if len(c.seeds) > 0 {
-
-		c.log.Info().Msgf("trying to join seeds %v", c.seeds)
-
-		n, err := c.serf.Join(c.seeds, true)
-
-		if err == nil {
-			c.log.Info().Msgf("%v nodes successfully joined", n)
-			return
+		if len(statusFilter) == 0 || node.inStatus(statusFilter) {
+			result = append(result, node)
 		}
 
 	}
 
-	// TODO(gvelo): if we are unable to contact the seeds try
-	// to contact the last known nodes in batch on N nodes.
-
-	if len(c.conf.Nodes) > 0 {
-		c.log.Info().Msgf("trying to join nodes %v", c.conf.Nodes)
-	}
-
-	c.log.Info().Msg("no nodes available")
-
-	return
+	return result
 
 }
 
-func (c *cluster) Shutdown() {
+func (c *manager) Node(id string) Node {
 
-	c.log.Info().Msg("stopping cluster")
+	c.nodesMu.Lock()
+	defer c.nodesMu.Unlock()
+
+	return c.nodes[id]
+}
+
+func (c *manager) Join() error {
+
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+
+	if c.status != created {
+		return fmt.Errorf("invalid state %v", c.status)
+	}
+
+	var nodes []string
+	nodes = append(nodes, c.seeds...)
+	for _, ip := range c.conf.Nodes {
+		nodes = append(nodes, ip.String())
+	}
+
+	if len(nodes) > 0 {
+
+		c.log.Info().Msgf("trying to join nodes %v", nodes)
+
+		// TODO(gvelo) contact nodes in batch.
+		n, err := c.serf.Join(nodes, true)
+
+		if err != nil {
+			c.log.Error().Msg("cannot contact any node")
+		}
+
+		c.log.Info().Msgf("%v nodes successfully contacted", n)
+
+		c.status = Joining
+
+		return nil
+
+	}
+
+	// there is no seeds or known hosts, we are the first node of a cluster
+
+	c.log.Info().Msg("no nodes to contact")
+
+	c.status = Joining
+	return nil
+
+}
+
+func (c *manager) Ready() error {
+
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+
+	if c.status != Joining {
+		return fmt.Errorf("cannot transition to ready state from %v", c.status)
+	}
+
+	c.tags[tagStatus] = Ready
+
+	err := c.serf.SetTags(c.tags)
+
+	if err != nil {
+		return fmt.Errorf("cannot update tags: %v", err)
+	}
+
+	c.status = Ready
+
+	return nil
+
+}
+
+func (c *manager) Leaving() error {
+
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+
+	if c.status != Ready {
+		return fmt.Errorf("cannot transition to leaving state from %v", c.status)
+	}
+
+	c.tags[tagStatus] = Leaving
+
+	err := c.serf.SetTags(c.tags)
+
+	if err != nil {
+		return fmt.Errorf("cannot update tags: %v", err)
+	}
+
+	c.status = Leaving
+
+	return nil
+
+}
+
+func (c *manager) Leave() error {
+
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+
+	if c.status != Leaving {
+		return fmt.Errorf("cannot transition to leave state from %v", c.status)
+	}
+
+	c.log.Info().Msg("leaving")
 
 	err := c.serf.Leave()
 
@@ -228,13 +372,16 @@ func (c *cluster) Shutdown() {
 
 	if err != nil {
 		c.log.Error().Err(err).Msg("error shuttingdown cluster")
-	} else {
-		c.log.Info().Msg("cluster shutdown ok")
+		return err
 	}
+
+	c.log.Info().Msg("cluster shutdown ok")
+
+	return nil
 
 }
 
-func (c *cluster) initConfig() error {
+func (c *manager) initConfig() error {
 
 	err := c.loadConfig()
 
@@ -251,57 +398,49 @@ func (c *cluster) initConfig() error {
 
 }
 
-func (c *cluster) NodeName() string {
-	return c.conf.Name
+func (c *manager) LocalNodeId() string {
+	return c.conf.Id
 }
 
-func (c *cluster) initSerf() error {
-
-	hostName, err := os.Hostname()
-
-	if err != nil {
-		c.log.Error().Err(err).Msg("unable to determine hostname")
-		return err
-	}
-
-	c.log.Info().Msgf("hostname %v", hostName)
-
-	c.serfChan = make(chan serf.Event, 1024)
-	go c.dispatchEvents()
+func (c *manager) initSerf() error {
 
 	serfConf := serf.DefaultConfig()
 	serfConf.Init()
-	serfConf.NodeName = c.conf.Name
-	serfConf.Tags[tagHostname] = hostName
+	serfConf.NodeName = c.conf.Id
 	serfConf.EventCh = c.serfChan
+
+	for tagName, tagValue := range c.tags {
+		serfConf.Tags[tagName] = tagValue
+	}
 
 	if c.port != -1 {
 		serfConf.MemberlistConfig.BindPort = c.port
 	}
 
-	// TODO(gvelo): redirect serf log to zerolog
-	// TODO(gvelo): save last known members to cluster config file
+	go c.handleSerfEvents()
 
+	var err error
 	c.serf, err = serf.Create(serfConf)
 
 	return err
 
 }
 
-func (c *cluster) newNode() error {
+func (c *manager) newNode() error {
 
 	c.log.Info().Msgf("creating new node")
 
-	c.conf.Name = uuid.New().String()
-	c.conf.Nodes = make([]net.IP, 0)
+	id := uuid.New()
 
-	c.log.Info().Msgf("new node created nodename=%v", c.conf.Name)
+	c.conf.Id = base64.RawURLEncoding.EncodeToString(id[:])
+
+	c.log.Info().Msgf("new node created %v", c.conf.Id)
 
 	return c.saveConfig()
 
 }
 
-func (c *cluster) loadConfig() error {
+func (c *manager) loadConfig() error {
 
 	c.log.Info().Msgf("loading cluster config from %v", c.confPath)
 
@@ -311,7 +450,7 @@ func (c *cluster) loadConfig() error {
 		return err
 	}
 
-	conf := clusterConfig{}
+	conf := config{}
 
 	err = json.Unmarshal(b, &conf)
 
@@ -325,7 +464,7 @@ func (c *cluster) loadConfig() error {
 
 }
 
-func (c *cluster) saveConfig() error {
+func (c *manager) saveConfig() error {
 
 	c.log.Info().Msgf("saving cluster configuration")
 
@@ -345,39 +484,153 @@ func (c *cluster) saveConfig() error {
 
 }
 
-func (c *cluster) dispatchEvents() {
+func (c *manager) handleSerfEvents() {
 
 	c.log.Info().Msg("starting serf event dispatcher")
 
-	for e := range c.serfChan {
+	for serfEvent := range c.serfChan {
 
-		c.log.Debug().Msgf("serf event received %v", e)
+		c.log.Debug().Msgf("serf event received %v", serfEvent)
 
-		// filter events from the local member
-		if me, ok := e.(serf.MemberEvent); ok {
-			f := me.Members[:0]
-			for _, m := range me.Members {
-				if m.Name != c.conf.Name {
-					f = append(f, m)
-				}
-			}
-			// drop event if it only contain local member
-			if len(f) == 0 {
-				continue
-			}
-		}
+		if memberEvent, ok := serfEvent.(serf.MemberEvent); ok {
 
-		c.log.Debug().Msgf("dispatching serf event %v", e)
+			switch memberEvent.EventType() {
 
-		for ch := range c.eventChan {
-			select {
-			case ch <- e:
-				c.log.Debug().Msgf("event dispated to %v", ch)
+			case serf.EventMemberJoin:
+				c.addNodes(memberEvent.Members)
+			case serf.EventMemberLeave:
+				c.updateNodes(memberEvent.Members)
+			case serf.EventMemberFailed:
+				c.updateNodes(memberEvent.Members)
+			case serf.EventMemberUpdate:
+				c.updateNodes(memberEvent.Members)
+			case serf.EventMemberReap:
+				c.removeNodes(memberEvent.Members)
 			default:
-				c.log.Error().Msgf("dispatcher blocks on event handler channel [%v]", ch)
-				ch <- e
+				c.log.Error().Msgf("unknown serf event %v", memberEvent.EventType())
 			}
+
 		}
 
 	}
+}
+
+func (c *manager) addNodes(members []serf.Member) {
+
+	for _, member := range members {
+
+		c.log.Debug().Msgf("adding node %v", member.Name)
+
+		var conn *grpc.ClientConn
+		var err error
+
+		// create a grpc connection to every node except the local one
+		if c.conf.Id != member.Name {
+
+			conn, err = c.createGrpcConn(member.Addr)
+
+			if err != nil {
+				c.log.Error().Err(err).Msgf("cannot create grpc connection to node %v")
+				continue
+			}
+
+		}
+
+		node := createNode(member)
+		node.clientConn = conn
+
+		c.nodesMu.Lock()
+		c.nodes[node.id] = node
+		c.nodesMu.Unlock()
+
+	}
+
+}
+
+func (c *manager) updateNodes(members []serf.Member) {
+
+	c.nodesMu.Lock()
+	defer c.nodesMu.Unlock()
+
+	for _, member := range members {
+
+		oldNode, ok := c.nodes[member.Name]
+
+		if !ok {
+			c.log.Error().Msgf("update node %v not found")
+			continue
+		}
+
+		c.log.Debug().Msgf("updating node %v state %v", member.Name, member.Status)
+
+		node := createNode(member)
+		node.clientConn = oldNode.clientConn
+		c.nodes[node.id] = node
+
+	}
+
+}
+
+func (c *manager) removeNodes(members []serf.Member) {
+
+	c.nodesMu.Lock()
+	defer c.nodesMu.Unlock()
+
+	for _, member := range members {
+
+		node, ok := c.nodes[member.Name]
+
+		if !ok {
+			c.log.Error().Msgf("node %v not found")
+			continue
+		}
+
+		c.log.Debug().Msgf("removing node %v state %v", member.Name, member.Status)
+
+		err := node.clientConn.Close()
+
+		if err != nil {
+			c.log.Error().Err(err).Msgf("error closing client connection")
+		}
+
+		delete(c.nodes, node.id)
+
+	}
+
+}
+
+func (c *manager) createGrpcConn(addr net.IP) (*grpc.ClientConn, error) {
+
+	// TODO(gvelo): add transport security.
+	// TODO(gvelo): externalize grpc port
+	target := addr.String() + ":9191"
+	// grpc.Dial is a non-blocking call so it is safe to use it inside the
+	// serf dispatching gorutine.
+	return grpc.Dial(target, grpc.WithInsecure())
+
+}
+
+func createNode(member serf.Member) *node {
+
+	node := &node{
+		id:   member.Name,
+		addr: member.Addr,
+		tags: member.Tags,
+	}
+
+	switch member.Status {
+	case serf.StatusAlive:
+		node.status = member.Tags[tagStatus]
+	case serf.StatusLeaving:
+		node.status = Leaving
+	case serf.StatusLeft:
+		node.status = Leave
+	case serf.StatusFailed:
+		node.status = Fail
+	default:
+		node.status = "unknown status"
+	}
+
+	return node
+
 }

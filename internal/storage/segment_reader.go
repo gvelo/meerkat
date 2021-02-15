@@ -14,11 +14,9 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"meerkat/internal/storage/io"
-	"time"
 )
 
 const (
@@ -31,12 +29,12 @@ type colData struct {
 	bounds  io.Bounds
 }
 
-func ReadSegment(path string) (*Segment, error) {
+func ReadSegment(path string) *segment {
 
 	f, err := io.MMap(path)
 
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	br := f.NewBinaryReader()
@@ -54,22 +52,22 @@ func ReadSegment(path string) (*Segment, error) {
 	switch segmentVersion {
 	case SegmentVersion1:
 		s := NewSegment(f)
-		err := s.read()
-		return s, err
+		s.read()
+		return s
 	default:
-		return nil, errors.New("unknown segment version")
+		panic("unknown segment version")
 	}
 
 }
 
-func NewSegment(f *io.MMFile) *Segment {
-	return &Segment{
+func NewSegment(f *io.MMFile) *segment {
+	return &segment{
 		f:       f,
-		columns: make(map[string]interface{}),
+		columns: make(map[string]Column),
 	}
 }
 
-type Segment struct {
+type segment struct {
 	f         *io.MMFile
 	id        uuid.UUID
 	from      int
@@ -79,11 +77,12 @@ type Segment struct {
 	tableId   string
 	tableName string
 	numOfCol  int
-	//columns   map[string]Column
-	columns map[string]interface{}
+	// columns   map[string]Column
+	columns     map[string]Column
+	segmentInfo *SegmentInfo
 }
 
-func (s *Segment) read() error {
+func (s *segment) read() {
 
 	// magicNumber + version
 	s.start = len(MagicNumber) + 1
@@ -113,18 +112,13 @@ func (s *Segment) read() error {
 
 	s.readColumns(cd)
 
-	// TODO(gvelo) recover from panic and return the err.
-
-	return nil
-
 }
 
-func (s *Segment) readColumns(cd []colData) {
+func (s *segment) readColumns(cd []colData) {
 
 	for _, cData := range cd {
 
-		//var col Column
-		var col interface{}
+		var col Column
 
 		switch cData.colType {
 		case ColumnType_TIMESTAMP:
@@ -145,26 +139,17 @@ func (s *Segment) readColumns(cd []colData) {
 
 }
 
-func (s *Segment) IndexName() string {
-	panic("implement me")
+func (s *segment) Info() *SegmentInfo {
+	return s.segmentInfo
 }
 
-func (s *Segment) IndexID() string {
-	panic("implement me")
+func (s *segment) Column(name string) Column {
+	return s.columns[name]
 }
 
-func (s *Segment) From() time.Time {
-	return time.Unix(0, int64(s.from))
-}
-
-func (s *Segment) To() time.Time {
-	return time.Unix(0, int64(s.to))
-}
-
-func (s *Segment) Rows() int {
-	return s.numOfRows
-}
-
-func (s *Segment) Col(id string) interface{} {
-	return s.columns[id]
+func (s *segment) Close() {
+	err := s.f.UnMap()
+	if err != nil {
+		panic(err)
+	}
 }

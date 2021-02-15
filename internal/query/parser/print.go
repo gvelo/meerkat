@@ -13,10 +13,32 @@
 
 package parser
 
-import "github.com/davecgh/go-spew/spew"
+//func PrintAST(ast Node) {
+//	spew.Config.Indent = "    "
+//	spew.Config.DisablePointerAddresses = true
+//	spew.Dump(ast)
+//}
 
-func PrintAST(ast Node) {
-	spew.Config.Indent = "    "
-	spew.Config.DisablePointerAddresses = true
-	spew.Dump(ast)
-}
+//type printVisitor struct {
+//	level int
+//}
+//
+//func (p *printVisitor) VisitPre(n Node) Node {
+//
+//	p.level++
+//
+//	switch node := n.(type) {
+//
+//	case *TabularStmt:
+//		node.TabularExpr.jdddd
+//	}
+//
+//}
+//
+//func (p *printVisitor) VisitPost(n Node) Node {
+//	p.level--
+//}
+//
+//func PrintAST(ast Node) {
+//
+//}

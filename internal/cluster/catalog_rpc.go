@@ -32,15 +32,15 @@ type SnapshotResult struct {
 }
 
 type catalogRPC struct {
-	log          zerolog.Logger
-	connRegistry ConnRegistry
+	log zerolog.Logger
+	cl  Manager
 }
 
-func NewCatalogRPC(connRegistry ConnRegistry) (CatalogRPC, error) {
+func NewCatalogRPC(cl Manager) (CatalogRPC, error) {
 
 	t := &catalogRPC{
-		log:          log.With().Str("component", "catalogRPC").Logger(),
-		connRegistry: connRegistry,
+		log: log.With().Str("component", "catalogRPC").Logger(),
+		cl:  cl,
 	}
 
 	t.log.Info().Msg("creating catalogRPC")
@@ -51,61 +51,67 @@ func NewCatalogRPC(connRegistry ConnRegistry) (CatalogRPC, error) {
 
 func (t *catalogRPC) SendDelta(ctx context.Context, delta []Entry) {
 
-	t.connRegistry.Range(func(member string, conn *grpc.ClientConn) bool {
+	nodes := t.cl.Nodes([]string{Ready, Joining}, true)
 
-		go func(m string, cc *grpc.ClientConn) {
+	for _, node := range nodes {
 
-			cl := NewCatalogClient(cc)
+		go func(nodeId string, cc *grpc.ClientConn) {
+
+			catalogClient := NewCatalogClient(cc)
 
 			request := &AddRequest{
 				Entries: delta,
 			}
 
-			t.log.Debug().Str("member", m).Msg("sending catalog delta to member")
+			t.log.Debug().Str("member", nodeId).Msg("sending catalog delta to member")
 
-			_, err := cl.Add(ctx, request)
+			_, err := catalogClient.Add(ctx, request)
 
 			if err != nil {
-				t.log.Error().Str("member", m).Err(err).Msg("error sending catalog delta")
+				t.log.Error().Str("member", nodeId).Err(err).Msg("error sending catalog delta")
 			}
 
-		}(member, conn)
+		}(node.Id(), node.ClientConn())
 
-		return true
-
-	})
+	}
 
 }
 
-func (t *catalogRPC) GetSnapShot(ctx context.Context, members []string) []SnapshotResult {
+func (t *catalogRPC) GetSnapShot(ctx context.Context, nodeIds []string) []SnapshotResult {
 
 	resultCh := make(chan SnapshotResult)
-	memberCount := len(members)
+	memberCount := len(nodeIds)
 	result := make([]SnapshotResult, memberCount)[:0]
 
-	t.connRegistry.RangeWithFilter(members, func(member string, conn *grpc.ClientConn, ok bool) bool {
+	for _, nodeId := range nodeIds {
 
-		go func(m string, cc *grpc.ClientConn) {
+		node := t.cl.Node(nodeId)
 
-			cl := NewCatalogClient(cc)
-			r, err := cl.SnapShot(ctx, &SnapshotRequest{})
+		if node.Status() == Joining || node.Status() == Ready {
 
-			if err != nil {
-				resultCh <- SnapshotResult{member: m, err: err}
-				return
-			}
+			go func(nodeId string, cc *grpc.ClientConn) {
 
-			resultCh <- SnapshotResult{
-				member:   m,
-				Snapshot: r.Entries,
-			}
+				cl := NewCatalogClient(cc)
 
-		}(member, conn)
+				r, err := cl.SnapShot(ctx, &SnapshotRequest{})
 
-		return true
+				if err != nil {
+					resultCh <- SnapshotResult{member: nodeId, err: err}
+					return
+				}
 
-	})
+				resultCh <- SnapshotResult{
+					member:   nodeId,
+					Snapshot: r.Entries,
+				}
 
+			}(node.Id(), node.ClientConn())
+
+		}
+
+	}
+
+	// TODO(gvelo): unsafe, use a wg
 	for i := 0; i < memberCount; i++ {
 		r := <-resultCh
 		result = append(result, r)
