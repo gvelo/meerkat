@@ -42,14 +42,14 @@ type nodeManager interface {
 func newNodeManager(
 	queryId uuid.UUID,
 	execCtx execbase.ExecutionContext,
-	cl cluster.Manager,
+	nodeReg cluster.NodeRegistry,
 ) nodeManager {
 
 	manager := &defaultNodeManager{
 		queryId: queryId,
 	}
 
-	clusterNodes := cl.Nodes([]string{cluster.Ready}, true)
+	clusterNodes := nodeReg.Nodes([]string{cluster.Ready}, true)
 
 	for _, node := range clusterNodes {
 		client := newNodeClient(execCtx, node.Id(), node.ClientConn())
@@ -274,19 +274,19 @@ func (n *nodeClient) close() {
 func NewCoordinatorExecutor(
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
-	cluster cluster.Manager,
+	nodeReg cluster.NodeRegistry,
 ) *coordinatorExecutor {
 
 	id := uuid.New()
 	execCtx := execbase.NewExecutionContext()
-	nodeManager := newNodeManager(id, execCtx, cluster)
+	nodeManager := newNodeManager(id, execCtx, nodeReg)
 
 	exec := &coordinatorExecutor{
 		id:          id,
 		segReg:      segReg,
 		nodeManager: nodeManager,
 		streamReg:   streamReg,
-		nodeReg:     cluster,
+		nodeReg:     nodeReg,
 		execCtx:     execCtx,
 		log: log.With().
 			Str("component", "coordinatorExecutor").

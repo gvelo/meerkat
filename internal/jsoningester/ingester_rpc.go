@@ -10,19 +10,19 @@ type IngesterRpc interface {
 	SendRequest(ctx context.Context, member string, request *ingestion.IngestionRequest) error
 }
 
-func NewIngestRPC(cl cluster.Manager) IngesterRpc {
+func NewIngestRPC(nodeReg cluster.NodeRegistry) IngesterRpc {
 	return &ingestRpc{
-		cl: cl,
+		nodeReg: nodeReg,
 	}
 }
 
 type ingestRpc struct {
-	cl cluster.Manager
+	nodeReg cluster.NodeRegistry
 }
 
 func (i ingestRpc) SendRequest(ctx context.Context, nodeId string, request *ingestion.IngestionRequest) error {
 
-	node := i.cl.Node(nodeId)
+	node := i.nodeReg.Node(nodeId)
 
 	if node == nil {
 		// TODO(gvelo): handle

@@ -33,12 +33,12 @@ type Executor interface {
 func NewExecutor(
 	segReg storage.SegmentRegistry,
 	streamReg physical.StreamRegistry,
-	cluster cluster.Manager,
+	nodeReg cluster.NodeRegistry,
 ) Executor {
 
 	return &executor{
 		segReg:    segReg,
-		cluster:   cluster,
+		nodeReg:   nodeReg,
 		streamReg: streamReg,
 	}
 
@@ -47,12 +47,12 @@ func NewExecutor(
 type executor struct {
 	segReg    storage.SegmentRegistry
 	streamReg physical.StreamRegistry
-	cluster   cluster.Manager
+	nodeReg   cluster.NodeRegistry
 }
 
 func (e executor) ExecuteQuery(query string, writer execbase.QueryOutputWriter) error {
 
-	coordinator := NewCoordinatorExecutor(e.segReg, e.streamReg, e.cluster)
+	coordinator := NewCoordinatorExecutor(e.segReg, e.streamReg, e.nodeReg)
 
 	return coordinator.exec(query, writer)
 
