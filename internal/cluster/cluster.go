@@ -530,7 +530,7 @@ func (c *manager) addNodes(members []serf.Member) {
 			conn, err = c.createGrpcConn(member.Addr)
 
 			if err != nil {
-				c.log.Error().Err(err).Msgf("cannot create grpc connection to node %v")
+				c.log.Error().Err(err).Msgf("cannot create grpc connection to node %v",member)
 				continue
 			}
 
@@ -557,7 +557,7 @@ func (c *manager) updateNodes(members []serf.Member) {
 		oldNode, ok := c.nodes[member.Name]
 
 		if !ok {
-			c.log.Error().Msgf("update node %v not found")
+			c.log.Error().Msgf("update node %v not found",member)
 			continue
 		}
 
@@ -581,7 +581,7 @@ func (c *manager) removeNodes(members []serf.Member) {
 		node, ok := c.nodes[member.Name]
 
 		if !ok {
-			c.log.Error().Msgf("node %v not found")
+			c.log.Error().Msgf("node %v not found",member)
 			continue
 		}
 

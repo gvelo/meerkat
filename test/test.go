@@ -62,9 +62,9 @@ func generateData() {
 		s = s + fmt.Sprintf("{\"field1\":%v}\n", i)
 	}
 
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 10; i++ {
 
-		go Post("http://127.0.0.1:9090/testTable/ingest", s)
+		go Post("http://localhost:8080/ingest/testtable", s)
 
 		time.Sleep(100 * time.Millisecond)
 

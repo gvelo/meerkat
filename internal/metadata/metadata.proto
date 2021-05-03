@@ -1,0 +1,119 @@
+// Copyright 2021 The Meerkat Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package meerkat.cluster;
+option go_package = "metadata";
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
+import "storage.proto";
+
+
+
+
+message NodeIdList {
+  repeated bytes node_id = 1;
+}
+
+message UpdateRootOP {
+  map<string, string>  database_ingestion_aliases = 1;
+  map<string, string>  database_query_aliases = 2;
+}
+
+message CreateDabaseOP{
+  string              name = 1;
+  int32               num_of_partitions = 2;
+  repeated NodeIdList partition_alloc_map = 3;
+  map<string, string> table_ingestion_aliases = 4;
+  map<string, string> table_query_aliases = 5;
+  bool                allow_dynamic_table_creation = 6;
+}
+
+message UpdateDabaseOP{
+  string              name = 1;
+  int32               num_of_partitions = 2;
+  repeated NodeIdList partition_alloc_map = 3;
+  map<string, string> table_ingestion_aliases = 4;
+  map<string, string> table_query_aliases = 5;
+  bool                allow_dynamic_table_creation = 6;
+}
+
+message DeleteDabaseOP{
+  string              name = 1;
+}
+
+
+message ColumnMapping {
+  storage.ColumnType type = 1;
+  bool               nullable = 2;
+  bool indexed = 3;
+}
+
+message CreateTableOP {
+  string name = 1;
+  string database = 2;
+  int32 num_of_partitions = 3;
+  repeated NodeIdList partition_alloc_map = 4;
+  bool allow_dynamic_column_creation = 5;
+  map<string, ColumnMapping> column_mappings = 6;
+  map<string, string> column_query_aliases = 7;
+  map<string, string> column_ingestion_aliases = 8;
+}
+
+message UpdateTableOP {
+  string name = 1;
+  string database = 2;
+  repeated NodeIdList partition_alloc_map = 4;
+  bool allow_dynamic_column_creation = 5;
+  map<string, ColumnMapping> column_mappings = 6;
+  map<string, string> column_query_aliases = 7;
+  map<string, string> column_ingestion_aliases = 8;
+}
+
+message DeleteTableOP {
+  string name = 1;
+  string database = 2;
+}
+
+message LogEntry {
+  bytes id = 1 ;
+  google.protobuf.Timestamp time = 2 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+  string src = 3;
+  oneof op {
+    UpdateRootOP update_root_op = 4;
+    CreateDabaseOP create_database_op = 5;
+    UpdateDabaseOP update_database_op = 6;
+    DeleteDabaseOP deleta_databse_op = 7;
+    CreateTableOP create_table_op = 8;
+    UpdateTableOP update_table_op = 9;
+    DeleteTableOP delete_table_op = 10;
+  }
+}
+
+message AddLogEntryRequest{
+  repeated LogEntry entries = 1 [(gogoproto.nullable) = false];
+}
+
+message AddLogEntryResponse{}
+
+message SnapshotRequest{}
+
+message SnapshotResponse{
+  repeated LogEntry entries = 1 [(gogoproto.nullable) = false];
+}
+
+service Metadata {
+  rpc AddLogEntry(AddLogEntryRequest) returns (AddLogEntryResponse) {}
+  rpc SnapShot(SnapshotRequest) returns (SnapshotResponse) {}
+}

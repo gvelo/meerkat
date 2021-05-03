@@ -1,0 +1,5 @@
+curl --location --request POST 'http://localhost:8080/query' --header 'Content-Type: application/json' --data-raw '{"query":"T"}'
+
+
+curl --location --request POST 'http://172.19.0.7:9090/query' --header 'Content-Type: application/json' --data-raw '{"query":"T"}'
+
